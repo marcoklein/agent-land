@@ -19,7 +19,7 @@ COPY --from=build /app/dist/ ./dist/
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY src/views/ ./src/views/
+COPY src/views/ ./dist/views/
 COPY public/ ./public/
 COPY agent-image/ /agent-image/
 
