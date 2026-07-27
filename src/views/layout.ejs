@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Land</title>
+  <link rel="stylesheet" href="/pico.min.css">
+  <script src="/htmx.min.js"></script>
+  <script src="/htmx-sse.js"></script>
+  <style>
+    .container { max-width: 900px; }
+    nav { margin-bottom: var(--pico-spacing); }
+    .log-container {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: var(--pico-spacing);
+      border-radius: var(--pico-border-radius);
+      font-family: var(--pico-font-family-monospace);
+      font-size: 0.85rem;
+      max-height: 500px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .log-agent-start  { color: #60a5fa; }
+    .log-turn         { color: #a78bfa; margin-top: 4px; }
+    .log-tool         { color: #94a3b8; }
+    .log-tool-ok      { color: #4ade80; }
+    .log-tool-err     { color: #f87171; }
+    .log-assistant    { color: #e2e8f0; margin: 8px 0; padding: 4px 0; border-left: 2px solid #475569; padding-left: 12px; }
+    .log-error        { color: #f87171; }
+    .run-completed    { color: #4ade80; text-align: center; padding: 8px; border-top: 1px solid #334155; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <%- include("partials/nav") %>
+    <%- include("partials/flash") %>
+    <%- include(view) %>
+  </main>
+</body>
+</html>

@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  orchestrator:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./secrets:/app/secrets
+      - ./data:/app/data
+      - agent_land_sessions:/sessions
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - SESSION_VOLUME=agent_land_sessions
+      - DATA_VOLUME=agent_land_data
+
+volumes:
+  agent_land_sessions:
+  agent_land_data:

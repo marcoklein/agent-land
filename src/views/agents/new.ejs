@@ -1,0 +1,29 @@
+<article>
+  <header><h2>Launch Agent</h2></header>
+  <p><small>Runs <code>pi --mode json</code> in a Docker container with the selected connectors' credentials. Connector info is prepended automatically — just write your task.</small></p>
+
+  <form method="POST" action="/agents/run">
+    <label for="task">Task / Prompt</label>
+    <textarea id="task" name="task" rows="4"
+              placeholder="Clone github.com/me/my-project, read Jira issue ABC-123, and fix the login rate limiting" required></textarea>
+
+    <fieldset>
+      <legend>Connectors</legend>
+      <% connectors.forEach(c => { %>
+      <label>
+        <input type="checkbox" name="connectors" value="<%= c.name %>">
+        <strong><%= c.name %></strong> <small>(<%= c.type %>)</small>
+      </label>
+      <% }) %>
+      <% if (connectors.length === 0) { %>
+      <p><small><em>No connectors defined. <a href="/connectors/new">Create one</a> first.</em></small></p>
+      <% } %>
+    </fieldset>
+
+    <label for="model">Model (optional)</label>
+    <input type="text" id="model" name="model" placeholder="deepseek-v4-pro">
+
+    <button type="submit">Launch Agent</button>
+    <a href="/agents" role="button" class="outline">Cancel</a>
+  </form>
+</article>

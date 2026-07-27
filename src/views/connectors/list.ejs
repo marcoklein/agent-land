@@ -1,0 +1,43 @@
+<article>
+  <header>
+    <h2>Connectors</h2>
+    <small>Pointers to secrets + external system metadata.</small>
+  </header>
+
+  <a href="/connectors/new" role="button">Add Connector</a>
+
+  <% if (connectors.length === 0) { %>
+  <p><em>No connectors yet.</em></p>
+  <% } else { %>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>URL</th>
+        <th>Secret</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% connectors.forEach(c => { %>
+      <tr>
+        <td><strong><%= c.name %></strong></td>
+        <td><mark><%= c.type %></mark></td>
+        <td><small><%= c.url %></small></td>
+        <td><code><%= c.secretFile %></code></td>
+        <td>
+          <form method="POST" action="/connectors/<%= c.name %>/delete" style="display:inline"
+                hx-post="/connectors/<%= c.name %>/delete"
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                hx-confirm="Delete connector '<%= c.name %>'?">
+            <button type="submit" class="outline secondary" style="padding:2px 8px;font-size:0.8rem">Delete</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+</article>

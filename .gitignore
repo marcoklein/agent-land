@@ -1,0 +1,8 @@
+node_modules/
+dist/
+secrets/*.yaml
+!.sops.yaml
+data/
+*.log
+.env
+.age-key

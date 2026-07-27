@@ -1,0 +1,34 @@
+<article>
+  <header><h2>Add Connector</h2></header>
+  <p><small>A connector maps a secret to an external system. The secret file must already exist in <code>secrets/</code>.</small></p>
+
+  <form method="POST" action="/connectors">
+    <label for="name">Connector name</label>
+    <input type="text" id="name" name="name" placeholder="e.g. Work Jira" required>
+
+    <label for="type">Type</label>
+    <select id="type" name="type" required>
+      <option value="jira">Jira</option>
+      <option value="github">GitHub</option>
+      <option value="gmail">Gmail</option>
+      <option value="custom">Custom</option>
+    </select>
+
+    <label for="url">URL</label>
+    <input type="text" id="url" name="url" placeholder="e.g. https://your-domain.atlassian.net" required>
+
+    <label for="secretFile">Secret file</label>
+    <select id="secretFile" name="secretFile" required>
+      <option value="">Select a secret...</option>
+      <% availableSecrets.forEach(s => { %>
+      <option value="<%= s.filename %>"><%= s.name %></option>
+      <% }) %>
+    </select>
+    <% if (availableSecrets.length === 0) { %>
+    <p><small><em>No secrets defined. <a href="/secrets/new">Create one</a> first.</em></small></p>
+    <% } %>
+
+    <button type="submit" <%= availableSecrets.length === 0 ? 'disabled' : '' %>>Create Connector</button>
+    <a href="/connectors" role="button" class="outline">Cancel</a>
+  </form>
+</article>

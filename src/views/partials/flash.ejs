@@ -1,0 +1,12 @@
+<% if (locals.flashMessages) { %>
+  <% if (flashMessages.success && flashMessages.success.length) { %>
+    <% flashMessages.success.forEach(msg => { %>
+      <ins><%= msg %></ins>
+    <% }) %>
+  <% } %>
+  <% if (flashMessages.error && flashMessages.error.length) { %>
+    <% flashMessages.error.forEach(msg => { %>
+      <del><%= msg %></del>
+    <% }) %>
+  <% } %>
+<% } %>

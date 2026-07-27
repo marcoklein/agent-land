@@ -1,0 +1,50 @@
+<article>
+  <header><h2>Dashboard</h2></header>
+
+  <div class="grid">
+    <div>
+      <h3>Agents</h3>
+      <p><strong><%= runCount %></strong> runs total<% if (runningCount > 0) { %>, <mark><%= runningCount %> running</mark><% } %></p>
+      <a href="/agents" role="button" class="outline">View all</a>
+      <a href="/agents/new" role="button">Launch new</a>
+    </div>
+    <div>
+      <h3>Connectors</h3>
+      <p><strong><%= connectorCount %></strong> defined</p>
+      <a href="/connectors" role="button" class="outline">View all</a>
+      <a href="/connectors/new" role="button">Add</a>
+    </div>
+    <div>
+      <h3>Secrets</h3>
+      <p><strong><%= secretCount %></strong> stored (encrypted)</p>
+      <a href="/secrets" role="button" class="outline">View all</a>
+      <a href="/secrets/new" role="button">Add</a>
+    </div>
+  </div>
+
+  <% if (recentRuns.length > 0) { %>
+  <h3 style="margin-top:24px">Recent Runs</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Started</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% recentRuns.forEach(run => { %>
+      <tr>
+        <td><code><%= run.id %></code></td>
+        <td><small><%= run.task.substring(0, 60) %><%= run.task.length > 60 ? '...' : '' %></small></td>
+        <td><mark class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : 'pico-color-red-100' %>"><%= run.status %></mark></td>
+        <td><small><%= new Date(run.startedAt).toLocaleString() %></small></td>
+        <td><a href="/agents/<%= run.id %>">View</a></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+</article>

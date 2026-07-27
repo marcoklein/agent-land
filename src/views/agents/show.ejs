@@ -1,0 +1,43 @@
+<article>
+  <header style="display:flex; justify-content:space-between; align-items:flex-start">
+    <hgroup>
+      <h2>Agent <code><%= run.id %></code></h2>
+      <p>
+        <strong>Task:</strong> <small><%= run.task.substring(0, 100) %><%= run.task.length > 100 ? '...' : '' %></small><br>
+        <strong>Connectors:</strong> <%= run.connectors.join(", ") || "none" %><br>
+        <strong>Started:</strong> <%= new Date(run.startedAt).toLocaleString() %>
+        <% if (run.finishedAt) { %>
+        <br><strong>Finished:</strong> <%= new Date(run.finishedAt).toLocaleString() %>
+        <br><strong>Duration:</strong> <%= formatDuration((new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()) / 1000) %>
+        <% } else { %>
+        <br><strong>Duration:</strong> <span id="duration"><%= formatDuration((Date.now() - new Date(run.startedAt).getTime()) / 1000) %></span>
+        <% } %>
+      </p>
+    </hgroup>
+    <span id="status-badge"
+          hx-get="/agents/<%= run.id %>/status-badge"
+          hx-trigger="<%= run.status === 'running' ? 'agent-done from:#log-container' : '' %>">
+      <mark class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : 'pico-color-red-100' %>">
+        <%= run.status %>
+      </mark>
+    </span>
+  </header>
+
+  <h4>Logs</h4>
+  <div id="log-container"
+       class="log-container"
+       hx-sse:connect="/agents/<%= run.id %>/logs"
+       hx-swap="beforeend"
+       hx-sse:close="agent-done">
+    <% if (run.status !== 'running') { %>
+    <div class="run-completed">Agent <%= run.status %> (exit code: <%= run.exitCode %>)</div>
+    <% } %>
+  </div>
+
+  <footer style="margin-top: 16px;">
+    <a href="/agents" role="button" class="outline">Back to Agents</a>
+    <% if (run.sessionFile) { %>
+    <small style="margin-left:12px">Session: <code><%= run.sessionFile %></code></small>
+    <% } %>
+  </footer>
+</article>
