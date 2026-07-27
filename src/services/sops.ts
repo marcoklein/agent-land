@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
-import { readdir, stat, unlink, readFile } from "fs/promises";
+import { readdir, stat, unlink, readFile, writeFile } from "fs/promises";
 import path from "path";
+import os from "os";
 import { SecretInfo, DecryptedSecret } from "../types.js";
 
 export class SopsService {
@@ -36,6 +37,8 @@ export class SopsService {
     if (!match) throw new Error("Could not find age public key in .sops.yaml");
 
     const agePublicKey = match[1];
+    const tmpPath = path.join(os.tmpdir(), `sops-${name}-${Date.now()}.yaml`);
+    await writeFile(tmpPath, plaintext);
 
     return new Promise((resolve, reject) => {
       const child = execFile(
@@ -45,19 +48,20 @@ export class SopsService {
           "--age", agePublicKey,
           "--input-type", "yaml",
           "--output-type", "yaml",
-          "-",
+          tmpPath,
         ],
         { env: { ...process.env, SOPS_AGE_KEY_FILE: this.ageKeyFile } },
-        (err, stdout) => {
+        async (err, stdout) => {
+          await unlink(tmpPath).catch(() => {});
           if (err) return reject(new Error(`SOPS encrypt failed: ${err.message}`));
           resolve(stdout);
         }
       );
 
-      if (child.stdin) {
-        child.stdin.write(plaintext);
-        child.stdin.end();
-      }
+      child.on("error", async () => {
+        await unlink(tmpPath).catch(() => {});
+        reject(new Error("SOPS encrypt process failed to start"));
+      });
     });
   }
 
