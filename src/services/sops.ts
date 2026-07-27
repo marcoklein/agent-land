@@ -45,7 +45,7 @@ export class SopsService {
           "--age", agePublicKey,
           "--input-type", "yaml",
           "--output-type", "yaml",
-          "/dev/stdin",
+          "-",
         ],
         { env: { ...process.env, SOPS_AGE_KEY_FILE: this.ageKeyFile } },
         (err, stdout) => {
