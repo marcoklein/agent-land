@@ -50,6 +50,7 @@ export class AgentRunner {
     }
 
     run.status = "running";
+    await this.docker.ensureAgentImage(config.agentImage);
     const container = await this.docker.createAndStartContainer({
       task: options.task,
       envVars: Object.fromEntries(envVarsMap),

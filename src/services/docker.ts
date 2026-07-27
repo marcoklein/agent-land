@@ -1,5 +1,9 @@
 import Docker from "dockerode";
 import { PassThrough, Transform } from "stream";
+import { execFile } from "child_process";
+import { promisify } from "util";
+
+const execFileAsync = promisify(execFile);
 
 interface RunAgentOptions {
   task: string;
@@ -102,6 +106,16 @@ export class DockerService {
   async stopContainer(id: string): Promise<void> {
     const container = this.docker.getContainer(id);
     await container.stop().catch(() => {});
+  }
+
+  async ensureAgentImage(image: string): Promise<void> {
+    try {
+      await this.docker.getImage(image).inspect();
+    } catch {
+      await execFileAsync("docker", ["build", "/agent-image", "-t", image], {
+        timeout: 300_000,
+      });
+    }
   }
 
   async removeContainer(id: string): Promise<void> {

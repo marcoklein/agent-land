@@ -1,15 +1,27 @@
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY src/ ./src/
+COPY tsconfig.json ./
+RUN npx tsc
+
 FROM node:22-alpine
 
 RUN apk add --no-cache sops age
 
 WORKDIR /app
 
+COPY --from=build /app/dist/ ./dist/
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY dist/ ./dist/
 COPY src/views/ ./src/views/
 COPY public/ ./public/
+COPY agent-image/ /agent-image/
 
 ENV NODE_ENV=production
 ENV PORT=3000
