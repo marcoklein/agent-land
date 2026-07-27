@@ -32,7 +32,7 @@ export class SopsService {
   async encrypt(name: string, plaintext: string): Promise<string> {
     const sopsYamlPath = path.join(this.secretsDir, ".sops.yaml");
     const sopsConfig = await readFile(sopsYamlPath, "utf-8");
-    const match = sopsConfig.match(/age:\s*>[-|]?\s*(age1\S+)/m);
+    const match = sopsConfig.match(/age:\s*(?:>[-|]?\s*)?(age1\S+)/m);
     if (!match) throw new Error("Could not find age public key in .sops.yaml");
 
     const agePublicKey = match[1];
