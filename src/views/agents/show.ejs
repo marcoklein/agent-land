@@ -3,7 +3,12 @@
     <hgroup>
       <h2>Agent <code><%= run.id %></code></h2>
       <p>
-        <strong>Task:</strong> <small><%= run.task.substring(0, 100) %><%= run.task.length > 100 ? '...' : '' %></small><br>
+        <strong>Task:</strong>
+        <details>
+          <summary><small><%= run.task.substring(0, 100) %><%= run.task.length > 100 ? '...' : '' %></small></summary>
+          <pre style="white-space: pre-wrap; font-size: 0.85em; max-height: 400px; overflow-y: auto; margin-top: 0.5rem;"><%= run.task %></pre>
+        </details>
+        <br>
         <strong>Connectors:</strong> <%= run.connectors.join(", ") || "none" %><br>
         <strong>Started:</strong> <%= new Date(run.startedAt).toLocaleString() %>
         <% if (run.finishedAt) { %>
@@ -26,9 +31,10 @@
   <h4>Logs</h4>
   <div id="log-container"
        class="log-container"
-       hx-sse:connect="/agents/<%= run.id %>/logs"
-       hx-swap="beforeend"
-       hx-sse:close="agent-done">
+       <% if (run.status === 'running') { %>
+       hx-sse="connect:/agents/<%= run.id %>/logs?after=<%= totalLogCount %> swap:beforeend close:agent-done"
+       <% } %>>
+    <%- renderedLogs.join("\n") %>
     <% if (run.status !== 'running') { %>
     <div class="run-completed">Agent <%= run.status %> (exit code: <%= run.exitCode %>)</div>
     <% } %>
@@ -41,3 +47,23 @@
     <% } %>
   </footer>
 </article>
+
+<script>
+(function() {
+  var container = document.getElementById("log-container");
+  if (!container) return;
+
+  var userScrolledUp = false;
+
+  container.addEventListener("scroll", function() {
+    var dist = container.scrollHeight - container.scrollTop - container.clientHeight;
+    userScrolledUp = dist > 50;
+  });
+
+  document.body.addEventListener("htmx:afterSettle", function() {
+    if (!userScrolledUp) {
+      container.scrollTop = container.scrollHeight;
+    }
+  });
+})();
+</script>

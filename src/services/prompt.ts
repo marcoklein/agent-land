@@ -13,8 +13,6 @@ export function buildPrompt(task: string, connectors: Connector[]): string {
     parts.push("");
   }
 
-  parts.push("---");
-  parts.push("");
   parts.push(task);
 
   return parts.join("\n");

@@ -58,7 +58,7 @@ export class DockerService {
       Cmd: [
         "--mode", "json",
         "--print",
-        "--provider", "opencode-go",
+        "--provider", "opencode",
         "--model", options.model,
         "--session-dir", "/sessions",
         "--approve",
