@@ -1,6 +1,6 @@
 # Agent Land
 
-Minimal, self-hosted platform for running Dockerized AI coding agents. Choose connectors (Jira, GitHub, Gmail), write a task, and get live-streamed agent output with encrypted secret management via SOPS/Age.
+Minimal, self-hosted platform for running Dockerized AI coding agents. Choose connectors, write a task, and get live-streamed agent output with encrypted secret management via SOPS/Age.
 
 ## Architecture
 
