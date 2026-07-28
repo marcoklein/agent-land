@@ -2,13 +2,15 @@
 
 ## Setup
 
+**Prerequisites:** Node.js 22+, Docker, SOPS, Age, and an [OpenCode](https://opencode.ai) API key.
+
 ```bash
 npm install
 cp .env.example .env
 # Set OPENCODE_API_KEY in .env
-brew install sops age
-cd agent-image && docker build -t agent-land-pi:latest . && cd ..
+docker build -t agent-land-pi:latest ./agent-image
 npm run dev
+# → http://localhost:3000
 ```
 
 ## Before Submitting
