@@ -11,7 +11,7 @@ RUN npx tsc
 
 FROM node:22-alpine
 
-RUN apk add --no-cache sops age
+RUN apk add --no-cache sops age docker
 
 WORKDIR /app
 
