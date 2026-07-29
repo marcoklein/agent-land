@@ -13,26 +13,37 @@ export function secretsRouter(sops: SopsService) {
   });
 
   router.get("/new", (req, res) => {
-    res.render("layout", { view: "secrets/new", currentPage: "secrets" });
+    res.render("layout", { view: "secrets/new", currentPage: "secrets", name: "", content: "" });
   });
 
   router.post("/", async (req, res) => {
     const { name, content } = req.body;
+
+    function renderError(message: string) {
+      return res.render("layout", {
+        view: "secrets/new",
+        currentPage: "secrets",
+        name,
+        content,
+        error: message,
+      });
+    }
+
     try {
       if (!name || !content) {
-        req.flash("error", "Name and content are required.");
-        return res.redirect("/secrets/new");
+        return renderError("Name and content are required.");
       }
       if (await sops.secretExists(name)) {
-        req.flash("error", `Secret "${name}" already exists.`);
-        return res.redirect("/secrets/new");
+        return renderError(`Secret "${name}" already exists.`);
       }
       await sops.saveEncrypted(name, content);
       req.flash("success", `Secret "${name}" encrypted and saved.`);
       res.redirect("/secrets");
     } catch (err: any) {
-      req.flash("error", `Encrypt failed: ${err.message}`);
-      res.redirect("/secrets/new");
+      const hint = err.message.includes("unmarshal")
+        ? `Encrypt failed: content is not valid YAML. Use <code>KEY: value</code> format (not <code>KEY=value</code>), one per line.`
+        : `Encrypt failed: ${err.message}`;
+      return renderError(hint);
     }
   });
 
