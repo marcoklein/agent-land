@@ -1,14 +1,12 @@
 import { Router } from "express";
-import { SopsService } from "../services/sops.js";
 import { getConfig } from "../config.js";
 
 const config = getConfig();
 
-export function indexRouter(sops: SopsService) {
+export function indexRouter() {
   const router = Router();
 
   router.get("/", async (req, res) => {
-    const secrets = await sops.listSecrets();
     const connectorCount = await getConnectorCount();
     const runs = await getRecentRuns();
     res.render("layout", {
@@ -17,7 +15,6 @@ export function indexRouter(sops: SopsService) {
       runCount: runs.length,
       runningCount: runs.filter((r: any) => r.status === "running").length,
       connectorCount,
-      secretCount: secrets.length,
       recentRuns: runs.slice(0, 5),
     });
   });

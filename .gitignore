@@ -6,3 +6,5 @@ data/
 *.log
 .env
 .age-key
+src/__tests__/fixtures/secrets/
+src/__tests__/tmp-test-data/

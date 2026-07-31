@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { getConfig } from "./config.js";
 import { indexRouter } from "./routes/index.js";
-import { secretsRouter } from "./routes/secrets.js";
 import { agentsRouter } from "./routes/agents.js";
 import { connectorsRouter } from "./routes/connectors.js";
 import { SopsService } from "./services/sops.js";
@@ -48,8 +47,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/", indexRouter(sops));
-app.use("/secrets", secretsRouter(sops));
+app.use("/", indexRouter());
 app.use("/agents", agentsRouter(sops));
 app.use("/connectors", connectorsRouter(sops));
 
