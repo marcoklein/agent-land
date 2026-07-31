@@ -111,7 +111,7 @@ The orchestrator spawns sibling containers by mounting `/var/run/docker.sock`. S
 
 ### 3. SOPS/Age — One File Per Connector
 
-Each connector gets its own SOPS-encrypted YAML file:
+Each connector's secret is encrypted as a single SOPS-encrypted YAML file, auto-named from the connector name (e.g. "GitHub Personal" → `github-personal.yaml`). The `secretFile` field on the connector records the filename.
 
 ```yaml
 # secrets/github-personal.yaml (after sops --decrypt)
@@ -123,14 +123,14 @@ Files are encrypted at rest, decrypted in-memory only at agent launch time. Decr
 
 ### 4. Connector Model
 
-A connector is a named pointer to a secret + metadata about the external system. It is NOT a tool bundle — tools are pre-baked in the agent image and the agent installs any extras at runtime.
+A connector combines external system metadata with its credentials in a single entity. It is NOT a tool bundle — tools are pre-baked in the agent image and the agent installs any extras at runtime.
 
 ```json
 {
   "name": "Work Jira",
   "type": "jira",
   "url": "https://your-domain.atlassian.net",
-  "secretFile": "jira-work.yaml"
+  "secretFile": "work-jira.yaml"
 }
 ```
 
@@ -139,9 +139,9 @@ A connector is a named pointer to a secret + metadata about the external system.
 | `name` | Label in UI | "Work Jira" |
 | `type` | Maps to connector SKILL.md and env var names | `jira` → `$JIRA_URL`, `$JIRA_API_TOKEN` |
 | `url` | Shown in connector list without decrypting | `https://...` |
-| `secretFile` | SOPS file to decrypt at launch | `jira-work.yaml` |
+| `secretFile` | Auto-generated from name; SOPS file to decrypt at launch | `work-jira.yaml` |
 
-The SOPS file can contain any YAML — all key-value pairs become env vars passed to the container.
+The user pastes secret YAML when creating the connector. The file is encrypted immediately and the filename is derived automatically. Deleting a connector also deletes its encrypted secret file. No separate secrets management UI exists.
 
 ### 5. Agent Tool Strategy
 
@@ -283,27 +283,28 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph UI["HTMX UI"]
-        Form[Create/Edit Form]
-        List[Secret List]
+        Form[Connector Form]
+        List[Connector List]
     end
 
     subgraph Orchestrator["Orchestrator"]
-        Encrypt[POST /secrets]
-        Delete[DELETE /secrets/:name]
+        Create[POST /connectors]
+        Delete[POST /connectors/:name/delete]
+        Decrypt["sops --decrypt (launch only)"]
     end
 
     subgraph FS["Filesystem"]
-        Plain["Plaintext<br/>(never on disk)"]
         Encrypted["secrets/*.yaml<br/>(SOPS encrypted)"]
     end
 
-    Form -->|"plaintext YAML"| Encrypt
-    Encrypt -->|"sops --encrypt"| Encrypted
-    List -->|"ls secrets/"| Encrypted
-    Decrypt["sops --decrypt"] -->|"in-memory, only at launch"| Plain
+    Form -->|"plaintext YAML"| Create
+    Create -->|"sops --encrypt"| Encrypted
+    List -->|"view connectors"| Create
+    Delete -->|"remove"| Encrypted
+    Decrypt -->|"in-memory env vars"| Agent
 ```
 
-Secrets are never written to disk in plaintext. Creation: user pastes YAML → orchestrator pipes to `sops --encrypt /dev/stdin > secrets/name.yaml`. Decryption: only at agent launch time via `sops --decrypt`, output captured in-memory.
+Secret YAML is pasted directly in the connector creation form and encrypted immediately. The filename is auto-generated from the connector name. Deleting a connector removes its encrypted secret file. Decryption happens only at agent launch time, in-memory, never written to disk.
 
 ## Security Boundaries
 
