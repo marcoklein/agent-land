@@ -7,6 +7,7 @@ import { SopsService } from "../services/sops.js";
 import { DockerService } from "../services/docker.js";
 import { buildPrompt } from "../services/prompt.js";
 import { renderLogEntry, renderLogEntryFull } from "../services/log-renderer.js";
+import { getModels } from "../services/providers.js";
 import { getConfig } from "../config.js";
 import { Connector, LogEntry } from "../types.js";
 import path from "path";
@@ -27,7 +28,8 @@ export function agentsRouter(sops: SopsService) {
 
   router.get("/new", async (req, res) => {
     const connectors = await loadConnectors();
-    res.render("layout", { view: "agents/new", currentPage: "new-agent", connectors });
+    const models = await getModels().catch(() => [] as string[]);
+    res.render("layout", { view: "agents/new", currentPage: "new-agent", connectors, models });
   });
 
   router.post("/run", async (req, res) => {

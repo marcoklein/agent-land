@@ -20,8 +20,12 @@
       <% } %>
     </fieldset>
 
-    <label for="model">Model (optional)</label>
-    <input type="text" id="model" name="model" placeholder="deepseek-v4-pro">
+    <label for="model">Model <% if (models.length > 0) { %><small>(<%= models.length %> available)</small><% } %></label>
+    <select id="model" name="model">
+      <% models.forEach(m => { %>
+        <option value="<%= m %>"<%= m === 'deepseek-v4-pro' ? ' selected' : '' %>><%= m %></option>
+      <% }) %>
+    </select>
 
     <button type="submit">Launch Agent</button>
     <a href="/agents" role="button" class="outline">Cancel</a>

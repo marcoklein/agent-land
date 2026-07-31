@@ -20,7 +20,7 @@ export function getConfig(): Config {
     dataDir: path.resolve(process.env.DATA_DIR || "./data"),
     agentImage: process.env.AGENT_IMAGE || "agent-land-pi:latest",
     ageKeyFile: path.resolve(process.env.AGE_KEY_FILE || "./.age-key"),
-    opencodeGoUrl: process.env.OPENCODE_API_URL || "https://api.opencode.ai",
+    opencodeGoUrl: process.env.OPENCODE_API_URL || "https://opencode.ai/zen/go/v1",
     opencodeGoApiKey: process.env.OPENCODE_API_KEY || "",
     defaultModel: process.env.DEFAULT_MODEL || "deepseek-v4-pro",
   };

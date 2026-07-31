@@ -1,0 +1,85 @@
+---
+name: okf
+description: Write knowledge documents in OKF (Open Knowledge Format) v0.2. Active when capturing learnings, writing reference docs, or creating files under knowledge/.
+---
+
+## Concept template
+
+Every concept is a markdown file with YAML frontmatter:
+
+```yaml
+---
+type: Reference                    # REQUIRED. Pick a descriptive name.
+title: <display name>
+description: <one-line summary>
+resource: <canonical URI>          # for concepts bound to an underlying asset
+tags: [<tag>, ...]
+status: draft                      # draft | stable | deprecated. Omit ⇒ stable.
+generated: { by: <agent>/<version>, at: YYYY-MM-DDTHH:MM:SSZ }
+verified: { by: human:<id>, at: YYYY-MM-DDTHH:MM:SSZ }  # omit if unreviewed
+stale_after: YYYY-MM-DD            # omit ⇒ never expires
+sources:
+  - id: <stable-key>               # for per-claim footnotes: [^key]
+    resource: <URL or /path>       #   REQUIRED in each entry
+    title: <label>
+    author: <actor>                # credibility signal
+    usage_count: <number>
+    last_modified: YYYY-MM-DD
+usage_window: { from: YYYY-MM-DD, to: YYYY-MM-DD }  # frames usage_count
+---
+```
+
+`type` is the only required field. Add any extra keys — OKF tolerates unknown fields.
+
+## Actor rule
+
+Use your own identity for `generated.by`, never the user's. Only set `verified` when a human actually confirmed the content.
+
+`verified` takes a list or a single `{ by, at }` mapping. Consumers treat a bare mapping as one element.
+
+- `human:<id>` — person
+- `<tool>/<version>` — agent (you)
+- `process:<id>` — automation
+
+## Per-claim attribution
+
+Attribute specific claims to sources using markdown footnotes keyed to `sources[].id`:
+
+```markdown
+The models endpoint is public.[^opencode-docs]
+
+[^opencode-docs]: OpenCode API documentation
+```
+
+Use stable `id` keys, never positional indexes — agents reorder source lists.
+
+## Index files
+
+Plain markdown, no frontmatter (except bundle root may carry `okf_version: "0.2"`). Reserved: `index.md`, `log.md`.
+
+```markdown
+# Section
+
+* [Title](concept.md) — one-line summary from the concept's `description`
+* [Subdir](subdir/) — what it covers
+```
+
+## Cross-linking
+
+Prefer bundle-relative paths (start with `/`) — they survive file moves. Links are untyped — meaning is in the prose.
+
+```markdown
+See [OpenCode API](/providers/opencode-api.md) for endpoints.
+```
+
+## Where to write
+
+Under `knowledge/`, organized by domain. Create `index.md` in each directory.
+
+```
+knowledge/
+  index.md
+  providers/
+    index.md
+    opencode-api.md
+```
