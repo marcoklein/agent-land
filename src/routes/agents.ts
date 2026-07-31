@@ -82,12 +82,20 @@ export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
       if (result.html) renderedLogs.push(result.html);
     }
 
-    res.render("layout", {
-      view: "agents/show",
-      currentPage: "agents",
+    const viewData = {
       run,
       renderedLogs,
       totalLogCount: run.logs.length,
+    };
+
+    if (req.headers["hx-request"]) {
+      return res.render("agents/show", viewData);
+    }
+
+    res.render("layout", {
+      ...viewData,
+      view: "agents/show",
+      currentPage: "agents",
     });
   });
 
@@ -209,6 +217,28 @@ export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
     } else {
       res.redirect(`/agents/${run.id}`);
     }
+  });
+
+  router.get("/:id/stats", async (req, res) => {
+    const run = await runner.getRun(req.params.id);
+    if (!run) return res.send("");
+
+    const durationSec = ((run.finishedAt ? new Date(run.finishedAt).getTime() : Date.now()) - new Date(run.startedAt).getTime()) / 1000;
+    const durationHtml = `<br><strong>Duration:</strong> ${res.locals.formatDuration(durationSec)}`;
+
+    let tokensHtml = "";
+    if (run.totalTokens) {
+      tokensHtml = `<br><strong>Tokens:</strong> ${run.totalTokens.toLocaleString()}`;
+      if (run.killSwitch.maxTokens) tokensHtml += ` / ${run.killSwitch.maxTokens.toLocaleString()}`;
+    }
+
+    let costHtml = "";
+    if (run.totalCost) {
+      costHtml = `<br><strong>Cost:</strong> $${run.totalCost.toFixed(4)}`;
+      if (run.killSwitch.maxCost) costHtml += ` / $${run.killSwitch.maxCost}`;
+    }
+
+    res.send(`${durationHtml}${tokensHtml}${costHtml}`);
   });
 
   router.get("/:id/status-badge", async (req, res) => {

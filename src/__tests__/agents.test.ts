@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import * as cheerio from "cheerio";
 import { AgentsApi } from "./helpers/agents-api.js";
-import { setupDataDir, cleanupDataDir } from "./helpers/setup.js";
+import { setupDataDir, cleanupDataDir, createAgentTestApp, MockDockerService } from "./helpers/setup.js";
+import request from "supertest";
 
 describe("Agents — Launch screen", () => {
   const api = new AgentsApi();
 
   beforeEach(async () => {
     await setupDataDir();
+    api.mockDocker.reset();
   });
 
   afterAll(async () => {
@@ -97,6 +99,87 @@ describe("Agents — Launch screen", () => {
       const res = await api.launch({ task: "htmx test" });
       // HTMX without header just redirects normally
       expect(res.status).toBe(302);
+    });
+  });
+
+  describe("GET /agents/:id — SSE", () => {
+    it("streams log events to the detail page", async () => {
+      const launchRes = await api.launch({ task: "log stream" });
+      const runId = api.getRunIdFromRedirect(launchRes);
+
+      api.sendEvent({ type: "turn_start" });
+      api.sendEvent({ type: "message_start", message: { role: "assistant" } });
+      api.sendEvent({ type: "content_block_delta", delta: { text: "Hello" } });
+      api.sendEvent({ type: "content_block_delta", delta: { text: " from agent" } });
+      api.sendEvent({ type: "message_end", message: { role: "assistant", content: "Hello from agent", usage: { totalTokens: 42 } } });
+      api.sendEvent({ type: "tool_execution_start", toolName: "bash", args: { command: "echo ok" } });
+      api.sendEvent({ type: "tool_execution_end", toolName: "bash", result: "ok", isError: false });
+      api.sendEvent({ type: "agent_end", exitCode: 0 });
+      api.completeRun(0);
+
+      // Wait for log stream to flush and exit promise to resolve
+      await new Promise(r => setTimeout(r, 500));
+
+      const detailRes = await api.getRun(runId);
+      const parsed = api.parseRunDetail(detailRes);
+
+      expect(parsed.status).toContain("completed");
+      expect(parsed.taskText).toContain("log stream");
+      expect(parsed.showLogs).toContain("Hello from agent");
+      expect(parsed.showLogs).toContain("Turn 1");
+      expect(parsed.showLogs).toContain("bash");
+    });
+
+    it("returns stats fragment with duration for running agent", async () => {
+      const launchRes = await api.launch({ task: "stats test" });
+      const runId = api.getRunIdFromRedirect(launchRes);
+
+      const res = await api.agent.get(`/agents/${runId}/stats`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("<strong>Duration:</strong>");
+      expect(res.text).toMatch(/\d+s/);
+    });
+
+    it("returns stats with tokens and cost after usage events", async () => {
+      const launchRes = await api.launch({ task: "stats with usage", maxTokens: "5000", maxCost: "0.50" });
+      const runId = api.getRunIdFromRedirect(launchRes);
+
+      api.sendEvent({ type: "message_end", message: { role: "assistant", content: "hello", usage: { totalTokens: 100, cost: { total: 0.05 } } } });
+      await new Promise(r => setTimeout(r, 100));
+
+      const res = await api.agent.get(`/agents/${runId}/stats`);
+
+      expect(res.text).toContain("<strong>Tokens:</strong> 100 / 5,000");
+      expect(res.text).toContain("<strong>Cost:</strong> $0.0500 / $0.5");
+    });
+
+    it("returns article-only when hx-request header is set", async () => {
+      const launchRes = await api.launch({ task: "htmx card" });
+      const runId = api.getRunIdFromRedirect(launchRes);
+
+      // Normal request includes layout
+      const fullRes = await api.agent.get(`/agents/${runId}`);
+      expect(fullRes.text).toContain("<html");
+      expect(fullRes.text).toContain("<body");
+
+      // HTMX request returns article only
+      const htmxRes = await api.agent.get(`/agents/${runId}`).set("hx-request", "true");
+      expect(htmxRes.status).toBe(200);
+      expect(htmxRes.text).not.toContain("<html");
+      expect(htmxRes.text).not.toContain("<body");
+      expect(htmxRes.text).toContain("<article");
+    });
+
+    it("htmx card refresh does not show kill button when agent is done", async () => {
+      const launchRes = await api.launch({ task: "done card" });
+      const runId = api.getRunIdFromRedirect(launchRes);
+
+      api.completeRun(0);
+      await new Promise(r => setTimeout(r, 500));
+
+      const htmxRes = await api.agent.get(`/agents/${runId}`).set("hx-request", "true");
+      expect(htmxRes.text).not.toContain("Kill Agent");
     });
   });
 });

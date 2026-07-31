@@ -56,12 +56,22 @@ export class MockDockerService {
   logStream = new PassThrough();
   private _stopCalled = false;
   private _exitResolve?: (code: number) => void;
-  private _exitPromise: Promise<number>;
+  private _exitPromise!: Promise<number>;
 
   constructor() {
+    this._resetState();
+  }
+
+  private _resetState() {
     this._exitPromise = new Promise((resolve) => {
       this._exitResolve = resolve;
     });
+    this._stopCalled = false;
+  }
+
+  reset() {
+    this.logStream = new PassThrough();
+    this._resetState();
   }
 
   get stopCalled() { return this._stopCalled; }

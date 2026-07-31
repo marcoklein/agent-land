@@ -59,8 +59,52 @@ New CSS classes go in `src/views/layout.ejs` within the existing `<style>` block
 
 ### Use `<a>` for button links
 
-When a button navigates or triggers an action without form data, prefer `<a role="button">` over `<form><button>`. This ensures consistent styling since Pico renders both identically. For POST actions from a link, use a small JS one-liner that creates and submits a hidden form:
+When a button navigates or triggers an action without form data, prefer `<a role="button">` over `<form><button>`. Pico renders both identically. For POST/DELETE actions, use HTMX attributes — no inline JavaScript:
 
 ```html
-<a href="#" role="button" class="outline destructive" onclick="event.preventDefault();if(confirm('Confirm?')){const f=document.createElement('form');f.method='POST';f.action='/path';document.body.appendChild(f);f.submit();}">Action</a>
+<a href="#" role="button" class="outline destructive"
+   hx-post="/agents/:id/kill"
+   hx-confirm="Kill this agent?">Kill Agent</a>
 ```
+
+## HTMX v4 Patterns
+
+### SSE extension syntax
+
+The v4 SSE extension uses namespaced attributes, not the old `hx-sse="connect:... swap:... close:..."` single-attribute format:
+
+| Concern | Attribute |
+|---------|-----------|
+| Connection URL | `hx-sse:connect="/path"` |
+| Swap strategy | `hx-swap="beforeend"` or `hx-swap="afterbegin"` |
+| Close on event | `hx-sse:close="event-name"` |
+
+Unnamed SSE messages are auto-swapped into the element. Named SSE events are dispatched as DOM events (use `hx-trigger="event-name from:#source"` to react).
+
+### Card refresh pattern
+
+When server state changes and the client needs a full re-render, trigger `hx-get` on the parent element. The server detects `hx-request` header and returns just the partial (no layout wrapper):
+
+```html
+<article hx-get="/resource/:id"
+         hx-trigger="done-event from:#child"
+         hx-swap="outerHTML">
+```
+
+```typescript
+if (req.headers["hx-request"]) return res.render("view", data);
+res.render("layout", { view: "view", ...data });
+```
+
+### Polling
+
+Use `hx-trigger="every Ns"` on a `<span>` for lightweight stats polling. The endpoint returns just the inner HTML fragment.
+
+## Vendor Assets
+
+Vendor JS/CSS is pinned and downloaded via `scripts/vendor-assets.sh`. Versions live at the top of the script. Both minified and non-minified variants are kept in `public/` — layout.ejs loads the minified versions.
+
+- HTMX v4 (htmx.min.js + hx-sse.min.js) from `htmx.org@4.0.0-beta6`
+- Pico CSS (pico.min.css) from `@picocss/pico@2.1.1`
+
+See also: [ADR-013: Real-Time Agent UI with HTMX v4 SSE](../../docs/adrs/013-real-time-agent-ui-htmx4-sse.md)

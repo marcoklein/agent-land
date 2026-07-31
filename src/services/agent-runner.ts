@@ -94,13 +94,19 @@ export class AgentRunner {
     const onLogLine: LogCallback = (event) => {
       const usage = extractUsage(event);
       if (usage) {
+        let changed = false;
         if (usage.tokens !== undefined) {
           totalTokens += usage.tokens;
           run.totalTokens = totalTokens;
+          changed = true;
         }
         if (usage.cost !== undefined) {
           totalCost += usage.cost;
           run.totalCost = totalCost;
+          changed = true;
+        }
+        if (changed) {
+          this.saveRun(run).catch(() => {});
         }
       }
       if (ks.maxTokens !== null && totalTokens > ks.maxTokens) {

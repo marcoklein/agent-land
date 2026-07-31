@@ -1,4 +1,6 @@
-<article>
+<article hx-get="/agents/<%= run.id %>"
+         hx-trigger="<%= run.status === 'running' ? 'agent-done from:#log-container' : '' %>"
+         hx-swap="outerHTML">
   <header class="agent-header">
     <hgroup>
       <h2>Agent <code><%= run.id %></code></h2>
@@ -14,16 +16,23 @@
         <strong>Started:</strong> <%= new Date(run.startedAt).toLocaleString() %>
         <% if (run.finishedAt) { %>
         <br><strong>Finished:</strong> <%= new Date(run.finishedAt).toLocaleString() %>
-        <br><strong>Duration:</strong> <%= formatDuration((new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()) / 1000) %>
-        <% } else { %>
-        <br><strong>Duration:</strong> <span id="duration"><%= formatDuration((Date.now() - new Date(run.startedAt).getTime()) / 1000) %></span>
         <% } %>
-        <% if (run.totalTokens) { %>
-        <br><strong>Tokens:</strong> <%= run.totalTokens.toLocaleString() %><% if (run.killSwitch.maxTokens) { %> / <%= run.killSwitch.maxTokens.toLocaleString() %><% } %>
-        <% } %>
-        <% if (run.totalCost) { %>
-        <br><strong>Cost:</strong> $<%= run.totalCost.toFixed(4) %><% if (run.killSwitch.maxCost) { %> / $<%= run.killSwitch.maxCost %><% } %>
-        <% } %>
+        <span id="agent-stats"
+              hx-get="/agents/<%= run.id %>/stats"
+              hx-trigger="<%= run.status === 'running' ? 'every 2s' : '' %>"
+              hx-swap="innerHTML">
+          <% if (run.finishedAt) { %>
+          <br><strong>Duration:</strong> <%= formatDuration((new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()) / 1000) %>
+          <% } else { %>
+          <br><strong>Duration:</strong> <%= formatDuration((Date.now() - new Date(run.startedAt).getTime()) / 1000) %>
+          <% } %>
+          <% if (run.totalTokens) { %>
+          <br><strong>Tokens:</strong> <%= run.totalTokens.toLocaleString() %><% if (run.killSwitch.maxTokens) { %> / <%= run.killSwitch.maxTokens.toLocaleString() %><% } %>
+          <% } %>
+          <% if (run.totalCost) { %>
+          <br><strong>Cost:</strong> $<%= run.totalCost.toFixed(4) %><% if (run.killSwitch.maxCost) { %> / $<%= run.killSwitch.maxCost %><% } %>
+          <% } %>
+        </span>
       </p>
     </hgroup>
     <span id="status-badge"
@@ -39,12 +48,14 @@
   <div id="log-container"
        class="log-container"
        <% if (run.status === 'running') { %>
-       hx-sse="connect:/agents/<%= run.id %>/logs?after=<%= totalLogCount %> swap:beforeend scroll:bottom close:agent-done"
+       hx-sse:connect="/agents/<%= run.id %>/logs?after=<%= totalLogCount %>"
+       hx-swap="afterbegin"
+       hx-sse:close="agent-done"
        <% } %>>
-    <%- renderedLogs.join("\n") %>
     <% if (run.status !== 'running') { %>
     <div class="run-completed">Agent <%= run.status %> (exit code: <%= run.exitCode %>)</div>
     <% } %>
+    <%- renderedLogs.reverse().join("\n") %>
   </div>
 
   <footer class="agent-footer">
