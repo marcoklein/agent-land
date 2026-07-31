@@ -1,15 +1,16 @@
 <article>
-  <header style="display:flex; justify-content:space-between; align-items:flex-start">
+  <header class="agent-header">
     <hgroup>
       <h2>Agent <code><%= run.id %></code></h2>
       <p>
         <strong>Task:</strong>
         <details>
           <summary><small><%= run.task.substring(0, 100) %><%= run.task.length > 100 ? '...' : '' %></small></summary>
-          <pre style="white-space: pre-wrap; font-size: 0.85em; max-height: 400px; overflow-y: auto; margin-top: 0.5rem;"><%= run.task %></pre>
+          <pre class="agent-task-pre"><%= run.task %></pre>
         </details>
         <br>
         <strong>Connectors:</strong> <%= run.connectors.join(", ") || "none" %><br>
+        <strong>Model:</strong> <%= run.model %><br>
         <strong>Started:</strong> <%= new Date(run.startedAt).toLocaleString() %>
         <% if (run.finishedAt) { %>
         <br><strong>Finished:</strong> <%= new Date(run.finishedAt).toLocaleString() %>
@@ -17,13 +18,19 @@
         <% } else { %>
         <br><strong>Duration:</strong> <span id="duration"><%= formatDuration((Date.now() - new Date(run.startedAt).getTime()) / 1000) %></span>
         <% } %>
+        <% if (run.totalTokens) { %>
+        <br><strong>Tokens:</strong> <%= run.totalTokens.toLocaleString() %><% if (run.killSwitch.maxTokens) { %> / <%= run.killSwitch.maxTokens.toLocaleString() %><% } %>
+        <% } %>
+        <% if (run.totalCost) { %>
+        <br><strong>Cost:</strong> $<%= run.totalCost.toFixed(4) %><% if (run.killSwitch.maxCost) { %> / $<%= run.killSwitch.maxCost %><% } %>
+        <% } %>
       </p>
     </hgroup>
     <span id="status-badge"
           hx-get="/agents/<%= run.id %>/status-badge"
           hx-trigger="<%= run.status === 'running' ? 'agent-done from:#log-container' : '' %>">
-      <mark class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : 'pico-color-red-100' %>">
-        <%= run.status %>
+      <mark class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : run.status === 'killed' ? 'pico-color-yellow-100' : 'pico-color-red-100' %>">
+        <%= run.status %><% if (run.killReason) { %>: <%= run.killReason %><% } %>
       </mark>
     </span>
   </header>
@@ -32,7 +39,7 @@
   <div id="log-container"
        class="log-container"
        <% if (run.status === 'running') { %>
-       hx-sse="connect:/agents/<%= run.id %>/logs?after=<%= totalLogCount %> swap:beforeend close:agent-done"
+       hx-sse="connect:/agents/<%= run.id %>/logs?after=<%= totalLogCount %> swap:beforeend scroll:bottom close:agent-done"
        <% } %>>
     <%- renderedLogs.join("\n") %>
     <% if (run.status !== 'running') { %>
@@ -40,30 +47,16 @@
     <% } %>
   </div>
 
-  <footer style="margin-top: 16px;">
+  <footer class="agent-footer">
     <a href="/agents" role="button" class="outline">Back to Agents</a>
+    <% if (run.status === 'running') { %>
+    <a href="#" role="button" class="outline destructive"
+       hx-post="/agents/<%= run.id %>/kill"
+       hx-confirm="Kill this agent?">Kill Agent</a>
+    <% } %>
     <% if (run.sessionFile) { %>
-    <small style="margin-left:12px">Session: <code><%= run.sessionFile %></code></small>
+    <small>Session: <code><%= run.sessionFile %></code></small>
     <% } %>
   </footer>
 </article>
 
-<script>
-(function() {
-  var container = document.getElementById("log-container");
-  if (!container) return;
-
-  var userScrolledUp = false;
-
-  container.addEventListener("scroll", function() {
-    var dist = container.scrollHeight - container.scrollTop - container.clientHeight;
-    userScrolledUp = dist > 50;
-  });
-
-  document.body.addEventListener("htmx:afterSettle", function() {
-    if (!userScrolledUp) {
-      container.scrollTop = container.scrollHeight;
-    }
-  });
-})();
-</script>

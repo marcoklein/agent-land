@@ -14,8 +14,8 @@ import path from "path";
 
 const config = getConfig();
 
-export function agentsRouter(sops: SopsService) {
-  const docker = new DockerService(
+export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
+  const docker = dockerSvc || new DockerService(
     process.env.DOCKER_SOCKET || "/var/run/docker.sock"
   );
   const runner = new AgentRunner(sops, docker);
@@ -33,10 +33,15 @@ export function agentsRouter(sops: SopsService) {
   });
 
   router.post("/run", async (req, res) => {
-    const { task, connectors, model } = req.body;
+    const { task, connectors, model, timeout, maxTokens, maxCost } = req.body;
     const connectorList: string[] = Array.isArray(connectors)
       ? connectors
       : connectors ? [connectors] : [];
+
+    const killSwitch: Partial<import("../types.js").KillSwitch> = {};
+    if (timeout !== undefined && timeout !== "") killSwitch.timeoutSeconds = parseInt(timeout, 10) || null;
+    if (maxTokens !== undefined && maxTokens !== "") killSwitch.maxTokens = parseInt(maxTokens, 10) || null;
+    if (maxCost !== undefined && maxCost !== "") killSwitch.maxCost = parseFloat(maxCost) || null;
 
     const isHtmx = !!req.headers["hx-request"];
 
@@ -44,7 +49,7 @@ export function agentsRouter(sops: SopsService) {
       const allConnectors = await loadConnectors();
       const selected = allConnectors.filter(c => connectorList.includes(c.name));
       const prompt = buildPrompt(task, selected);
-      const run = await runner.launch({ task: prompt, connectors: connectorList, model });
+      const run = await runner.launch({ task: prompt, connectors: connectorList, model, killSwitch });
       if (isHtmx) {
         res.header("HX-Redirect", `/agents/${run.id}`);
         res.status(204).end();
@@ -177,10 +182,39 @@ export function agentsRouter(sops: SopsService) {
     }
   });
 
+  router.post("/:id/kill", async (req, res) => {
+    const run = await runner.getRun(req.params.id);
+    const isHtmx = !!req.headers["hx-request"];
+
+    if (!run) {
+      req.flash("error", "Agent run not found.");
+      if (isHtmx) {
+        res.header("HX-Redirect", "/agents");
+        return res.status(204).end();
+      }
+      return res.redirect("/agents");
+    }
+    if (run.status !== "running") {
+      req.flash("error", "Agent is not running.");
+      if (isHtmx) {
+        res.header("HX-Redirect", `/agents/${run.id}`);
+        return res.status(204).end();
+      }
+      return res.redirect(`/agents/${run.id}`);
+    }
+    await runner.kill(run, "manual kill by user");
+    if (isHtmx) {
+      res.header("HX-Redirect", `/agents/${run.id}`);
+      res.status(204).end();
+    } else {
+      res.redirect(`/agents/${run.id}`);
+    }
+  });
+
   router.get("/:id/status-badge", async (req, res) => {
     const run = await runner.getRun(req.params.id);
     if (!run) return res.send(`<mark>not found</mark>`);
-    const cls = run.status === "running" ? "" : run.status === "completed" ? "pico-color-jade-100" : "pico-color-red-100";
+    const cls = run.status === "running" ? "" : run.status === "completed" ? "pico-color-jade-100" : run.status === "killed" ? "pico-color-yellow-100" : "pico-color-red-100";
     res.send(`<mark id="status-badge" class="${cls}">${run.status}</mark>`);
   });
 

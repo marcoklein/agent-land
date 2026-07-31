@@ -27,6 +27,25 @@
       <% }) %>
     </select>
 
+    <details>
+      <summary>Kill Switch</summary>
+      <div class="kill-switch-grid">
+        <label>
+          Timeout (seconds)
+          <input type="number" name="timeout" value="3600" min="0" placeholder="3600">
+        </label>
+        <label>
+          Max Tokens
+          <input type="number" name="maxTokens" value="100000" min="0" placeholder="100000">
+        </label>
+        <label>
+          Max Cost ($)
+          <input type="number" name="maxCost" value="1" min="0" step="0.01" placeholder="1.00">
+        </label>
+      </div>
+      <small>Agent will be killed if it exceeds any of these limits. Leave empty to disable.</small>
+    </details>
+
     <button type="submit">Launch Agent</button>
     <a href="/agents" role="button" class="outline">Cancel</a>
   </form>

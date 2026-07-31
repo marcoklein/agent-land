@@ -26,7 +26,7 @@
         <td><code><%= run.id %></code></td>
         <td><small><%= run.task.substring(0, 50) %><%= run.task.length > 50 ? '...' : '' %></small></td>
         <td><small><%= run.connectors.join(", ") || "none" %></small></td>
-        <td><mark id="status-<%= run.id %>" class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : 'pico-color-red-100' %>"><%= run.status %></mark></td>
+        <td><mark id="status-<%= run.id %>" class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : run.status === 'killed' ? 'pico-color-yellow-100' : 'pico-color-red-100' %>"><%= run.status %></mark></td>
         <td><small><%= new Date(run.startedAt).toLocaleString() %></small></td>
         <td><a href="/agents/<%= run.id %>">View</a></td>
       </tr>

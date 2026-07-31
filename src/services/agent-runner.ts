@@ -3,14 +3,21 @@ import { readFile, writeFile, stat, mkdir, readdir } from "fs/promises";
 import { createWriteStream } from "fs";
 import path from "path";
 import readline from "readline";
-import { AgentRun, AgentRunWithLogs, LogEntry, Connector } from "../types.js";
+import { AgentRun, AgentRunWithLogs, LogEntry, Connector, KillSwitch, DEFAULT_KILL_SWITCH } from "../types.js";
 import { SopsService } from "./sops.js";
 import { DockerService } from "./docker.js";
 import { getConfig } from "../config.js";
 
 const config = getConfig();
 
+interface LogCallback {
+  (event: Record<string, any>): boolean | void;
+}
+
 export class AgentRunner {
+  private killed = new Set<string>();
+  private timeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
   constructor(
     private sops: SopsService,
     private docker: DockerService
@@ -20,7 +27,13 @@ export class AgentRunner {
     task: string;
     connectors: string[];
     model?: string;
+    killSwitch?: Partial<KillSwitch>;
   }): Promise<AgentRun> {
+    const ks: KillSwitch = {
+      ...DEFAULT_KILL_SWITCH,
+      ...options.killSwitch,
+    };
+
     const run: AgentRun = {
       id: randomUUID().slice(0, 8),
       task: options.task,
@@ -32,6 +45,7 @@ export class AgentRunner {
       startedAt: new Date().toISOString(),
       finishedAt: null,
       exitCode: null,
+      killSwitch: ks,
     };
 
     const connectorsData = await this.loadConnectorsData();
@@ -68,12 +82,45 @@ export class AgentRunner {
 
     await this.saveRun(run);
 
-    const logPromise = this.streamLogs(run, logStream);
+    if (ks.timeoutSeconds !== null) {
+      const t = setTimeout(() => {
+        this.kill(run, `timeout after ${ks.timeoutSeconds}s`);
+      }, ks.timeoutSeconds * 1000);
+      this.timeouts.set(run.id, t);
+    }
+
+    let totalTokens = 0;
+    let totalCost = 0;
+    const onLogLine: LogCallback = (event) => {
+      const usage = extractUsage(event);
+      if (usage) {
+        if (usage.tokens !== undefined) {
+          totalTokens += usage.tokens;
+          run.totalTokens = totalTokens;
+        }
+        if (usage.cost !== undefined) {
+          totalCost += usage.cost;
+          run.totalCost = totalCost;
+        }
+      }
+      if (ks.maxTokens !== null && totalTokens > ks.maxTokens) {
+        this.kill(run, `exceeded token limit (${totalTokens}/${ks.maxTokens})`);
+        return true;
+      }
+      if (ks.maxCost !== null && totalCost > ks.maxCost) {
+        this.kill(run, `exceeded cost limit ($${totalCost.toFixed(4)}/$${ks.maxCost})`);
+        return true;
+      }
+    };
+
+    const logPromise = this.streamLogs(run, logStream, onLogLine);
     const exitPromise = this.docker
       .waitForExit(container.id)
       .then(async (exitCode) => {
         await logPromise;
         logStream.end();
+
+        if (run.status === "killed") return;
 
         run.exitCode = exitCode;
         run.status = exitCode === 0 ? "completed" : "failed";
@@ -85,6 +132,7 @@ export class AgentRunner {
       .catch(async (err) => {
         console.error(`Agent ${run.id} lifecycle error:`, err);
         logStream.end();
+        if (run.status === "killed") return;
         run.exitCode = -1;
         run.status = "failed";
         run.finishedAt = new Date().toISOString();
@@ -94,7 +142,38 @@ export class AgentRunner {
     return run;
   }
 
-  private async streamLogs(run: AgentRun, writeStream: ReturnType<typeof createWriteStream>): Promise<void> {
+  async kill(run: AgentRun, reason: string): Promise<void> {
+    if (this.killed.has(run.id)) return;
+    this.killed.add(run.id);
+
+    const timeout = this.timeouts.get(run.id);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.timeouts.delete(run.id);
+    }
+
+    console.log(`Killing agent ${run.id}: ${reason}`);
+
+    run.status = "killed";
+    run.killReason = reason;
+    run.finishedAt = new Date().toISOString();
+
+    if (run.containerId) {
+      await this.docker.stopContainer(run.containerId);
+    }
+
+    await this.saveRun(run);
+
+    if (run.containerId) {
+      await this.docker.removeContainer(run.containerId).catch(() => {});
+    }
+  }
+
+  private async streamLogs(
+    run: AgentRun,
+    writeStream: ReturnType<typeof createWriteStream>,
+    onLine?: LogCallback
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       this.docker.streamLogs(run.containerId!).then((demuxed) => {
         const rl = readline.createInterface({ input: demuxed });
@@ -109,6 +188,13 @@ export class AgentRunner {
             if (event.type === "session" && event.id) {
               run.sessionFile = `${event.id}.jsonl`;
               this.saveRun(run).catch(() => {});
+            }
+
+            if (onLine) {
+              const shouldStop = onLine(event);
+              if (shouldStop) {
+                rl.close();
+              }
             }
 
             const logEntry: LogEntry = {
@@ -195,4 +281,16 @@ export class AgentRunner {
       return [];
     }
   }
+}
+
+function extractUsage(event: Record<string, any>): { tokens?: number; cost?: number } | undefined {
+  if (event.type !== "message_end") return undefined;
+  const msg = event.message;
+  if (!msg || msg.role !== "assistant") return undefined;
+  const usage = msg.usage;
+  if (!usage) return undefined;
+  const result: { tokens?: number; cost?: number } = {};
+  if (typeof usage.totalTokens === "number") result.tokens = usage.totalTokens;
+  if (usage.cost && typeof usage.cost.total === "number") result.cost = usage.cost.total;
+  return Object.keys(result).length > 0 ? result : undefined;
 }
