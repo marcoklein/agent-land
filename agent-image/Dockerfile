@@ -18,7 +18,7 @@ RUN npm install -g @earendil-works/pi-coding-agent@0.82.1
 
 WORKDIR /workspace
 
-COPY skills/ ~/.pi/agent/skills/
+COPY skills/ /tmp/pi-config/skills/
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
