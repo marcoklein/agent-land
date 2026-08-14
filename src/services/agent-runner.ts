@@ -5,7 +5,7 @@ import path from "path";
 import readline from "readline";
 import { AgentRun, AgentRunWithLogs, LogEntry, Connector, KillSwitch, DEFAULT_KILL_SWITCH } from "../types.js";
 import { SopsService } from "./sops.js";
-import { DockerService } from "./docker.js";
+import { DockerService, SESSION_VOLUME_NAME } from "./docker.js";
 import { getConfig } from "../config.js";
 
 const config = getConfig();
@@ -22,6 +22,23 @@ export class AgentRunner {
     private sops: SopsService,
     private docker: DockerService
   ) {}
+
+  async resolveAgentEnv(connectorNames: string[]): Promise<Map<string, string>> {
+    const connectorsData = await this.loadConnectorsData();
+    const selectedConnectors = connectorsData.filter((c) => connectorNames.includes(c.name));
+
+    const secretFilenames = selectedConnectors.map((c) => c.secretFile);
+    const envVarsMap = await this.sops.decryptMultiple(secretFilenames);
+
+    envVarsMap.set("OPENCODE_API_KEY", config.opencodeGoApiKey);
+    envVarsMap.set("OPENCODE_API_URL", config.opencodeGoUrl);
+
+    for (const conn of selectedConnectors) {
+      if (conn.url) envVarsMap.set(`${conn.type.toUpperCase()}_URL`, conn.url);
+    }
+
+    return envVarsMap;
+  }
 
   async launch(options: {
     task: string;
@@ -48,20 +65,7 @@ export class AgentRunner {
       killSwitch: ks,
     };
 
-    const connectorsData = await this.loadConnectorsData();
-    const selectedConnectors = connectorsData.filter(c =>
-      options.connectors.includes(c.name)
-    );
-
-    const secretFilenames = selectedConnectors.map(c => c.secretFile);
-    const envVarsMap = await this.sops.decryptMultiple(secretFilenames);
-
-    envVarsMap.set("OPENCODE_API_KEY", config.opencodeGoApiKey);
-    envVarsMap.set("OPENCODE_API_URL", config.opencodeGoUrl);
-
-    for (const conn of selectedConnectors) {
-      if (conn.url) envVarsMap.set(`${conn.type.toUpperCase()}_URL`, conn.url);
-    }
+    const envVarsMap = await this.resolveAgentEnv(options.connectors);
 
     run.status = "running";
     await this.docker.ensureAgentImage(config.agentImage);
@@ -69,7 +73,7 @@ export class AgentRunner {
       task: options.task,
       envVars: Object.fromEntries(envVarsMap),
       image: config.agentImage,
-      sessionVolume: "agent-land-sessions",
+      sessionVolume: SESSION_VOLUME_NAME,
       agentRunId: run.id,
       model: run.model,
     });

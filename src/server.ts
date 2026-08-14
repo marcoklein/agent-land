@@ -10,6 +10,8 @@ import { indexRouter } from "./routes/index.js";
 import { agentsRouter } from "./routes/agents.js";
 import { connectorsRouter } from "./routes/connectors.js";
 import { SopsService } from "./services/sops.js";
+import { DockerService } from "./services/docker.js";
+import { startSshServer } from "./services/ssh-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = getConfig();
@@ -51,6 +53,12 @@ app.use("/", indexRouter());
 app.use("/agents", agentsRouter(sops));
 app.use("/connectors", connectorsRouter(sops));
 
+const docker = new DockerService();
+
 app.listen(config.port, () => {
   console.log(`Agent Land orchestrator running on http://localhost:${config.port}`);
+});
+
+startSshServer({ sops, docker, config }).catch((err) => {
+  console.error("SSH server failed to start:", err);
 });
