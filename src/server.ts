@@ -9,14 +9,32 @@ import { getConfig } from "./config.js";
 import { indexRouter } from "./routes/index.js";
 import { agentsRouter } from "./routes/agents.js";
 import { connectorsRouter } from "./routes/connectors.js";
-import { SopsService } from "./services/sops.js";
-import { DockerService } from "./services/docker.js";
-import { startSshServer } from "./services/ssh-server.js";
+import { SopsService } from "./infra/sops.js";
+import { DockerService } from "./infra/docker.js";
+import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
+import { JsonSessionRepository, JsonConnectorRepository } from "./infra/repositories.js";
+import { SessionService } from "./core/session-service.js";
+import { ConnectorService } from "./core/connector-service.js";
+import { sessionsApiRouter } from "./presentation/http/api-sessions.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = getConfig();
 
 const sops = new SopsService(config.secretsDir, config.ageKeyFile);
+const docker = new DockerService();
+const sessionRepository = new JsonSessionRepository(config.dataDir);
+const connectorRepository = new JsonConnectorRepository(config.dataDir);
+
+const connectorService = new ConnectorService(connectorRepository, sops);
+const harness = new PiRpcHarness(docker);
+const sessionService = new SessionService({
+  docker,
+  secrets: sops,
+  sessions: sessionRepository,
+  connectors: connectorRepository,
+  harness,
+  config,
+});
 
 const app = express();
 
@@ -49,16 +67,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/", indexRouter());
-app.use("/agents", agentsRouter(sops));
-app.use("/connectors", connectorsRouter(sops));
-
-const docker = new DockerService();
+app.use("/", indexRouter(sessionService, connectorService));
+app.use("/agents", agentsRouter(sessionService, connectorService));
+app.use("/connectors", connectorsRouter(connectorService));
+app.use("/api/sessions", sessionsApiRouter(sessionService));
 
 app.listen(config.port, () => {
   console.log(`Agent Land orchestrator running on http://localhost:${config.port}`);
-});
-
-startSshServer({ sops, docker, config }).catch((err) => {
-  console.error("SSH server failed to start:", err);
 });

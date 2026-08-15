@@ -6,6 +6,7 @@ const fixturesDir = path.resolve("./src/__tests__/fixtures");
 export default defineConfig({
   test: {
     globals: true,
+    exclude: ["**/node_modules/**", "**/.git/**", "**/dist/**"],
     env: {
       SECRETS_DIR: path.join(fixturesDir, "secrets"),
       AGE_KEY_FILE: path.join(fixturesDir, ".age-key"),

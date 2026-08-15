@@ -2,9 +2,10 @@ import { execFile } from "child_process";
 import { readdir, stat, unlink, readFile, writeFile } from "fs/promises";
 import path from "path";
 import os from "os";
-import { SecretInfo, DecryptedSecret } from "../types.js";
+import type { SecretsPort } from "../core/ports.js";
+import type { SecretInfo, DecryptedSecret } from "../core/types.js";
 
-export class SopsService {
+export class SopsService implements SecretsPort {
   constructor(
     private secretsDir: string,
     private ageKeyFile: string
@@ -68,7 +69,6 @@ export class SopsService {
   async saveEncrypted(name: string, plaintext: string): Promise<void> {
     const encrypted = await this.encrypt(name, plaintext);
     const filePath = path.join(this.secretsDir, `${name}.yaml`);
-    const { writeFile } = await import("fs/promises");
     await writeFile(filePath, encrypted);
   }
 

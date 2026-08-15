@@ -1,34 +1,36 @@
 <article>
   <header>
-    <h2>Agents</h2>
-    <small>Past agent runs and live streaming.</small>
+    <h2>Sessions</h2>
+    <small>Live agent sessions and history.</small>
   </header>
 
-  <a href="/agents/new" role="button">Launch Agent</a>
+  <a href="/agents/new" role="button">Launch Session</a>
 
-  <% if (runs.length === 0) { %>
-  <p><em>No agents have been run yet.</em></p>
+  <% if (sessions.length === 0) { %>
+  <p><em>No sessions yet.</em></p>
   <% } else { %>
   <table>
     <thead>
       <tr>
         <th>ID</th>
-        <th>Task</th>
+        <th>Model</th>
         <th>Connectors</th>
+        <th>Policy</th>
         <th>Status</th>
-        <th>Started</th>
+        <th>Created</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
-      <% runs.forEach(run => { %>
+      <% sessions.forEach(session => { %>
       <tr>
-        <td><code><%= run.id %></code></td>
-        <td><small><%= run.task.substring(0, 50) %><%= run.task.length > 50 ? '...' : '' %></small></td>
-        <td><small><%= run.connectors.join(", ") || "none" %></small></td>
-        <td><mark id="status-<%= run.id %>" class="<%= run.status === 'running' ? '' : run.status === 'completed' ? 'pico-color-jade-100' : run.status === 'killed' ? 'pico-color-yellow-100' : 'pico-color-red-100' %>"><%= run.status %></mark></td>
-        <td><small><%= new Date(run.startedAt).toLocaleString() %></small></td>
-        <td><a href="/agents/<%= run.id %>">View</a></td>
+        <td><code><%= session.id %></code></td>
+        <td><small><%= session.model %></small></td>
+        <td><small><%= session.connectors.join(", ") || "none" %></small></td>
+        <td><small><%= session.permissionPolicy %></small></td>
+        <td><mark id="status-<%= session.id %>" class="<%= session.status === 'running' ? '' : session.status === 'idle' ? 'pico-color-jade-100' : session.status === 'waiting_for_input' ? 'pico-color-yellow-100' : 'pico-color-red-100' %>"><%= session.status %></mark></td>
+        <td><small><%= new Date(session.createdAt).toLocaleString() %></small></td>
+        <td><a href="/agents/<%= session.id %>">View</a></td>
       </tr>
       <% }) %>
     </tbody>

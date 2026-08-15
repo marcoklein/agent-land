@@ -25,8 +25,7 @@ export async function getModels(): Promise<string[]> {
       cachedModels = body.data.map((m: { id: string }) => m.id);
       lastFetch = Date.now();
     }
-  } catch {
-  }
+  } catch {}
 
   return cachedModels;
 }

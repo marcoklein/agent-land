@@ -1,26 +1,34 @@
 import * as cheerio from "cheerio";
 import request from "supertest";
-import { createAgentTestApp, MockDockerService } from "./setup.js";
+import { createAgentTestApp, MockDockerPort, FakeHarness, FakeHandle } from "./setup.js";
 
 type Agent = ReturnType<typeof request.agent>;
 
 export class AgentsApi {
   agent: Agent;
-  mockDocker: MockDockerService;
+  mockDocker: MockDockerPort;
+  fakeHarness: FakeHarness;
 
   constructor() {
-    this.mockDocker = new MockDockerService();
-    const app = createAgentTestApp(this.mockDocker);
+    const { app, mockDocker, fakeHarness } = createAgentTestApp();
+    this.mockDocker = mockDocker;
+    this.fakeHarness = fakeHarness;
     this.agent = request.agent(app);
   }
 
-  sendEvent(event: Record<string, unknown>) {
-    this.mockDocker.logStream.write(JSON.stringify(event) + "\n");
+  handle(): FakeHandle {
+    const h = this.fakeHarness.handles[this.fakeHarness.handles.length - 1];
+    if (!h) throw new Error("No harness handle started");
+    return h;
   }
 
-  completeRun(exitCode = 0) {
-    this.mockDocker.logStream.end();
-    this.mockDocker.resolveExit(exitCode);
+  reset() {
+    this.mockDocker.reset();
+    this.fakeHarness.reset();
+  }
+
+  sendEvent(event: Record<string, unknown>) {
+    this.handle().emit(event as never);
   }
 
   async openList() {
@@ -32,41 +40,29 @@ export class AgentsApi {
   }
 
   async launch(params: {
-    task: string;
+    task?: string;
     connectors?: string | string[];
     model?: string;
-    timeout?: string;
-    maxTokens?: string;
-    maxCost?: string;
+    permissionPolicy?: string;
   }) {
-    const body: Record<string, string> = { task: params.task };
+    const body: Record<string, string> = {};
+    if (params.task !== undefined) body.task = params.task;
     if (params.connectors) {
-      if (Array.isArray(params.connectors)) {
-        body.connectors = params.connectors.join(",");
-      } else {
-        body.connectors = params.connectors;
-      }
+      body.connectors = Array.isArray(params.connectors)
+        ? params.connectors.join(",")
+        : params.connectors;
     }
     if (params.model) body.model = params.model;
-    if (params.timeout !== undefined) body.timeout = params.timeout;
-    if (params.maxTokens !== undefined) body.maxTokens = params.maxTokens;
-    if (params.maxCost !== undefined) body.maxCost = params.maxCost;
+    if (params.permissionPolicy) body.permissionPolicy = params.permissionPolicy;
 
     return this.agent.post("/agents/run").send(body);
   }
 
-  async launchAndFollow(params: { task: string; connectors?: string[]; model?: string; timeout?: string; maxTokens?: string; maxCost?: string }) {
-    const res = await this.launch(params);
-    const location = res.headers.location;
-    if (!location) throw new Error("No redirect location after launch");
-    return this.agent.get(location);
-  }
-
-  async getRun(id: string) {
+  async getSession(id: string) {
     return this.agent.get(`/agents/${id}`);
   }
 
-  async killRun(id: string) {
+  async killSession(id: string) {
     return this.agent.post(`/agents/${id}/kill`);
   }
 
@@ -74,44 +70,26 @@ export class AgentsApi {
     return this.agent.get(`/agents/${id}/status-badge`);
   }
 
-  getRunIdFromRedirect(res: request.Response): string {
+  getSessionIdFromRedirect(res: request.Response): string {
     const location = res.headers.location;
     if (!location) throw new Error("No redirect location");
     const match = location.match(/\/agents\/([^/]+)/);
-    if (!match) throw new Error(`Could not extract run ID from ${location}`);
+    if (!match) throw new Error(`Could not extract session ID from ${location}`);
     return match[1];
   }
 
-  parseRunDetail(res: request.Response) {
+  parseSessionDetail(res: request.Response) {
     const $ = cheerio.load(res.text);
     const pageText = $("article").text();
 
     const statusMark = $("span#status-badge mark");
     const status = statusMark.text().trim();
 
-    const taskText = $("details pre").text().trim();
-
-    const killButton = $("footer button").filter((_, el) => $(el).text().includes("Kill Agent"));
+    const killButton = $("footer a").filter((_, el) => $(el).text().includes("Kill Session"));
     const hasKillButton = killButton.length > 0;
 
     const showLogs = $("#log-container").html() || "";
 
-    return { pageText, status, taskText, hasKillButton, showLogs, $ };
-  }
-
-  parseRunList(res: request.Response) {
-    const $ = cheerio.load(res.text);
-    const rows: { id: string; status: string; statusClass: string }[] = [];
-    $("tbody tr").each((_, row) => {
-      const tds = $(row).find("td");
-      const id = $(tds[0]).find("code").text().trim();
-      const mark = $(tds[3]).find("mark");
-      rows.push({
-        id,
-        status: mark.text().trim(),
-        statusClass: mark.attr("class") || "",
-      });
-    });
-    return { rows, $ };
+    return { pageText, status, hasKillButton, showLogs, $ };
   }
 }

@@ -1,22 +1,42 @@
+import type { SessionEvent } from "../../core/events.js";
+
 const SIZE_CAP = 10_000;
 
-export function renderLogEntry(
-  event: Record<string, any>,
-  turnCount: number,
-  entryIndex?: number,
-  runId?: string
-): { html: string | null; turnCount: number } {
+export interface RenderOpts {
+  entryIndex?: number;
+  sessionId?: string;
+}
 
+export function renderSessionEvent(
+  event: SessionEvent,
+  turnCount: number,
+  opts?: RenderOpts
+): { html: string | null; turnCount: number } {
   switch (event.type) {
     case "turn_start":
       turnCount++;
       return { html: `<div class="log-turn">--- Turn ${turnCount} ---</div>`, turnCount };
 
-    case "agent_start":
-      return { html: `<div class="log-agent-start">Agent started</div>`, turnCount };
+    case "status":
+      if (event.status === "running") {
+        return { html: `<div class="log-agent-start">Agent running</div>`, turnCount };
+      }
+      if (event.status === "stopped") {
+        return { html: `<div class="log-agent-end">Agent stopped</div>`, turnCount };
+      }
+      return { html: null, turnCount };
+
+    case "agent_settled":
+      return { html: `<div class="log-agent-end">Agent settled</div>`, turnCount };
+
+    case "waiting_for_input":
+      return {
+        html: `<div class="log-tool log-tool-err">Waiting for input (${escapeHtml(event.method)}): ${escapeHtml(event.prompt ?? "")}</div>`,
+        turnCount,
+      };
 
     case "message_end": {
-      const msg = event.message;
+      const msg = event.message as any;
       if (!msg) return { html: null, turnCount };
       const text = extractText(msg.content);
       if (!text) return { html: null, turnCount };
@@ -32,7 +52,7 @@ export function renderLogEntry(
       return { html: null, turnCount };
     }
 
-    case "tool_execution_start": {
+    case "tool_start": {
       const argsStr = stringify(event.args);
       const name = escapeHtml(event.toolName);
       if (argsStr.length <= 120) {
@@ -52,7 +72,7 @@ export function renderLogEntry(
       };
     }
 
-    case "tool_execution_end": {
+    case "tool_end": {
       const resultStr = stringify(event.result);
       const sizeBytes = new TextEncoder().encode(resultStr).length;
       const name = escapeHtml(event.toolName);
@@ -79,14 +99,14 @@ export function renderLogEntry(
       return {
         html: `<div class="log-tool log-tool-ok">
   <div><span class="log-tool-name">${name}</span> completed (${formatSize(sizeBytes)})</div>
-  <details id="log-entry-${entryIndex}">
+  <details id="log-entry-${opts?.entryIndex}">
     <summary>Show output (truncated)</summary>
     <pre class="log-pre">${escapeHtml(resultStr.substring(0, SIZE_CAP))}</pre>
     <div class="log-truncated">
       Truncated &mdash; ${formatSize(sizeBytes)} total
       <button style="margin-left:8px"
-              hx-get="/agents/${runId}/log-entry/${entryIndex}"
-              hx-target="#log-entry-${entryIndex}"
+              hx-get="/agents/${opts?.sessionId}/event/${opts?.entryIndex}"
+              hx-target="#log-entry-${opts?.entryIndex}"
               hx-swap="outerHTML"
               class="outline small">Expand full</button>
     </div>
@@ -96,17 +116,18 @@ export function renderLogEntry(
       };
     }
 
-    case "agent_end":
-      return { html: renderAgentEnd(event), turnCount };
-
+    case "input_received":
+    case "message_delta":
+    case "tool_update":
+    case "turn_end":
     default:
       return { html: null, turnCount };
   }
 }
 
-export function renderLogEntryFull(event: Record<string, any>): string | null {
+export function renderSessionEventFull(event: SessionEvent): string | null {
   switch (event.type) {
-    case "tool_execution_end": {
+    case "tool_end": {
       const resultStr = stringify(event.result);
       const name = escapeHtml(event.toolName);
       const sizeBytes = new TextEncoder().encode(resultStr).length;
@@ -118,22 +139,12 @@ export function renderLogEntryFull(event: Record<string, any>): string | null {
 </div>`;
     }
     default:
-      const result = renderLogEntry(event, 0);
+      const result = renderSessionEvent(event, 0);
       return result.html;
   }
 }
 
-function renderAgentEnd(event: Record<string, any>): string {
-  const parts: string[] = [];
-  const r = event.result ?? event;
-  if (r?.exitCode !== undefined) parts.push(`exit ${r.exitCode}`);
-  if (r?.totalTokens) parts.push(`${r.totalTokens} tokens`);
-  if (r?.durationMs) parts.push(formatDuration(r.durationMs));
-  const suffix = parts.length ? `: ${parts.join(" | ")}` : "";
-  return `<div class="log-agent-end">Agent finished${suffix}</div>`;
-}
-
-function stringify(val: any): string {
+function stringify(val: unknown): string {
   if (val === undefined || val === null) return "";
   if (typeof val === "string") return val;
   try {
@@ -143,12 +154,12 @@ function stringify(val: any): string {
   }
 }
 
-function extractText(content: any): string {
+function extractText(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     return content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text)
+      .filter((b: any) => b?.type === "text")
+      .map((b: any) => b?.text ?? "")
       .join("");
   }
   return "";
@@ -170,12 +181,4 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDuration(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rs = s % 60;
-  return rs > 0 ? `${m}m ${rs}s` : `${m}m`;
 }

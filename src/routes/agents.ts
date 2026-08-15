@@ -1,60 +1,55 @@
 import { Router } from "express";
-import { readFile } from "fs/promises";
-import { createReadStream } from "fs";
-import { createInterface } from "readline";
-import { AgentRunner } from "../services/agent-runner.js";
-import { SopsService } from "../services/sops.js";
-import { DockerService } from "../services/docker.js";
-import { buildPrompt } from "../services/prompt.js";
-import { renderLogEntry, renderLogEntryFull } from "../services/log-renderer.js";
-import { getModels } from "../services/providers.js";
-import { getConfig } from "../config.js";
-import { Connector, LogEntry } from "../types.js";
-import path from "path";
+import type { SessionService } from "../core/session-service.js";
+import type { ConnectorService } from "../core/connector-service.js";
+import { buildPrompt } from "../core/prompt.js";
+import { getModels } from "../infra/providers.js";
+import { renderSessionEvent, renderSessionEventFull } from "../presentation/http/log-renderer.js";
+import type { SessionEvent } from "../core/events.js";
 
-const config = getConfig();
-
-export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
-  const docker = dockerSvc || new DockerService(
-    process.env.DOCKER_SOCKET || "/var/run/docker.sock"
-  );
-  const runner = new AgentRunner(sops, docker);
+export function agentsRouter(sessionService: SessionService, connectorService: ConnectorService) {
   const router = Router();
 
-  router.get("/", async (req, res) => {
-    const runs = await runner.listRuns();
-    res.render("layout", { view: "agents/list", currentPage: "agents", runs });
+  router.get("/", async (_req, res) => {
+    const sessions = await sessionService.listSessions();
+    res.render("layout", { view: "agents/list", currentPage: "agents", sessions });
   });
 
-  router.get("/new", async (req, res) => {
-    const connectors = await loadConnectors();
+  router.get("/new", async (_req, res) => {
+    const connectors = await connectorService.list();
     const models = await getModels().catch(() => [] as string[]);
     res.render("layout", { view: "agents/new", currentPage: "new-agent", connectors, models });
   });
 
   router.post("/run", async (req, res) => {
-    const { task, connectors, model, timeout, maxTokens, maxCost } = req.body;
+    const { connectors, model, permissionPolicy } = req.body;
+    const task: string = typeof req.body.task === "string" ? req.body.task : "";
     const connectorList: string[] = Array.isArray(connectors)
       ? connectors
-      : connectors ? [connectors] : [];
-
-    const killSwitch: Partial<import("../types.js").KillSwitch> = {};
-    if (timeout !== undefined && timeout !== "") killSwitch.timeoutSeconds = parseInt(timeout, 10) || null;
-    if (maxTokens !== undefined && maxTokens !== "") killSwitch.maxTokens = parseInt(maxTokens, 10) || null;
-    if (maxCost !== undefined && maxCost !== "") killSwitch.maxCost = parseFloat(maxCost) || null;
+      : connectors
+        ? [connectors]
+        : [];
 
     const isHtmx = !!req.headers["hx-request"];
 
     try {
-      const allConnectors = await loadConnectors();
-      const selected = allConnectors.filter(c => connectorList.includes(c.name));
-      const prompt = buildPrompt(task, selected);
-      const run = await runner.launch({ task: prompt, connectors: connectorList, model, killSwitch });
+      const allConnectors = await connectorService.list();
+      const selected = allConnectors.filter((c) => connectorList.includes(c.name));
+
+      const session = await sessionService.createSession({
+        connectors: connectorList,
+        permissionPolicy: permissionPolicy === "manual" ? "manual" : "auto",
+        model,
+      });
+
+      if (task.trim()) {
+        await sessionService.prompt(session.id, buildPrompt(task, selected));
+      }
+
       if (isHtmx) {
-        res.header("HX-Redirect", `/agents/${run.id}`);
+        res.header("HX-Redirect", `/agents/${session.id}`);
         res.status(204).end();
       } else {
-        res.redirect(`/agents/${run.id}`);
+        res.redirect(`/agents/${session.id}`);
       }
     } catch (err: any) {
       if (isHtmx) {
@@ -68,24 +63,18 @@ export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
   });
 
   router.get("/:id", async (req, res) => {
-    const run = await runner.getRun(req.params.id);
-    if (!run) {
-      req.flash("error", "Agent run not found.");
+    const session = await sessionService.getSession(req.params.id);
+    if (!session) {
+      req.flash("error", "Session not found.");
       return res.redirect("/agents");
     }
 
-    let turnCount = 0;
-    const renderedLogs: string[] = [];
-    for (let i = 0; i < run.logs.length; i++) {
-      const result = renderLogEntry(run.logs[i].data, turnCount, i, run.id);
-      turnCount = result.turnCount;
-      if (result.html) renderedLogs.push(result.html);
-    }
+    const renderedLogs = renderHistory(sessionService.getEvents(session.id));
 
     const viewData = {
-      run,
+      session,
       renderedLogs,
-      totalLogCount: run.logs.length,
+      totalEventCount: sessionService.getEvents(session.id).length,
     };
 
     if (req.headers["hx-request"]) {
@@ -99,7 +88,11 @@ export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
     });
   });
 
-  router.get("/:id/logs", async (req, res) => {
+  router.get("/:id/events", async (req, res) => {
+    const id = req.params.id;
+    const session = await sessionService.getSession(id);
+    if (!session) return res.status(404).send("Not found");
+
     const afterIndex = req.query.after ? parseInt(req.query.after as string, 10) : 0;
 
     res.writeHead(200, {
@@ -112,168 +105,121 @@ export function agentsRouter(sops: SopsService, dockerSvc?: DockerService) {
       res.write(`data: ${data.replace(/\n/g, "\ndata: ")}\n\n`);
     };
 
-    const runId = req.params.id;
-    const logPath = path.join(config.dataDir, "logs", `${runId}.jsonl`);
     let turnCount = 0;
-    let lastIndex = afterIndex;
-
-    const sendNewLogs = async (): Promise<boolean> => {
-      try {
-        const content = await readFile(logPath, "utf-8");
-        const lines = content.trim().split("\n").filter(Boolean);
-
-        if (lastIndex >= lines.length) {
-          const run = await runner.getRun(runId);
-          if (!run || run.status !== "running") {
-            res.write(`event: agent-done\ndata: {"status":"${run?.status ?? "unknown"}","exitCode":${run?.exitCode ?? -1}}\n\n`);
-            res.end();
-            return true;
-          }
-          return false;
-        }
-
-        for (let i = lastIndex; i < lines.length; i++) {
-          try {
-            const entry = JSON.parse(lines[i]);
-            const result = renderLogEntry(entry.data, turnCount, i, runId);
-            turnCount = result.turnCount;
-            if (result.html) {
-              sseWrite(result.html);
-            }
-          } catch {}
-        }
-        lastIndex = lines.length;
-
-        const run = await runner.getRun(runId);
-        if (!run || run.status !== "running") {
-          sseWrite(`<div class="run-completed">Agent ${run?.status ?? "unknown"} (exit code: ${run?.exitCode ?? -1})</div>`);
-          res.write(`event: agent-done\ndata: {"status":"${run?.status ?? "unknown"}","exitCode":${run?.exitCode ?? -1}}\n\n`);
-          res.end();
-          return true;
-        }
-        return false;
-      } catch {
-        return false;
-      }
+    const render = (event: SessionEvent, index: number) => {
+      const result = renderSessionEvent(event, turnCount, { entryIndex: index, sessionId: id });
+      turnCount = result.turnCount;
+      if (result.html) sseWrite(result.html);
     };
 
-    const done = await sendNewLogs();
-    if (done) return;
+    const history = sessionService.getEvents(id);
+    for (let i = afterIndex; i < history.length; i++) render(history[i], i);
 
-    const poll = setInterval(async () => {
-      try {
-        const finished = await sendNewLogs();
-        if (finished) clearInterval(poll);
-      } catch {
-        clearInterval(poll);
+    if (session.status === "stopped") {
+      res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
+      res.end();
+      return;
+    }
+
+    let cursor = history.length;
+    const unsubscribe = sessionService.streamEvents(id).subscribe((event) => {
+      if (res.writableEnded) {
+        unsubscribe();
+        return;
+      }
+      render(event, cursor++);
+      if (event.type === "status" && event.status === "stopped") {
+        res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
+        unsubscribe();
         res.end();
       }
-    }, 2000);
+    });
 
-    req.on("close", () => clearInterval(poll));
+    req.on("close", unsubscribe);
   });
 
-  router.get("/:id/log-entry/:index", async (req, res) => {
-    const entryIndex = parseInt(req.params.index, 10);
-    const runId = req.params.id;
-    const logPath = path.join(config.dataDir, "logs", `${runId}.jsonl`);
+  router.get("/:id/event/:index", async (req, res) => {
+    const id = req.params.id;
+    const session = await sessionService.getSession(id);
+    if (!session) return res.status(404).send("Session not found");
 
-    try {
-      const entry = await readLogEntry(logPath, entryIndex);
-      if (!entry) {
-        return res.status(404).send("Entry not found");
-      }
-      const html = renderLogEntryFull(entry.data);
-      res.send(html ?? "");
-    } catch {
-      res.status(500).send("Failed to read log entry");
-    }
+    const index = parseInt(req.params.index, 10);
+    const history = sessionService.getEvents(id);
+    const event = history[index];
+    if (!event) return res.status(404).send("Event not found");
+
+    res.send(renderSessionEventFull(event) ?? "");
   });
 
   router.post("/:id/kill", async (req, res) => {
-    const run = await runner.getRun(req.params.id);
+    const session = await sessionService.getSession(req.params.id);
     const isHtmx = !!req.headers["hx-request"];
 
-    if (!run) {
-      req.flash("error", "Agent run not found.");
+    if (!session) {
+      req.flash("error", "Session not found.");
       if (isHtmx) {
         res.header("HX-Redirect", "/agents");
         return res.status(204).end();
       }
       return res.redirect("/agents");
     }
-    if (run.status !== "running") {
-      req.flash("error", "Agent is not running.");
+    if (session.status === "stopped") {
+      req.flash("error", "Session is not running.");
       if (isHtmx) {
-        res.header("HX-Redirect", `/agents/${run.id}`);
+        res.header("HX-Redirect", `/agents/${session.id}`);
         return res.status(204).end();
       }
-      return res.redirect(`/agents/${run.id}`);
+      return res.redirect(`/agents/${session.id}`);
     }
-    await runner.kill(run, "manual kill by user");
+    try {
+      await sessionService.kill(session.id);
+    } catch (err: any) {
+      req.flash("error", `Kill failed: ${err.message}`);
+      if (isHtmx) {
+        res.header("HX-Redirect", `/agents/${session.id}`);
+        return res.status(204).end();
+      }
+      return res.redirect(`/agents/${session.id}`);
+    }
     if (isHtmx) {
-      res.header("HX-Redirect", `/agents/${run.id}`);
+      res.header("HX-Redirect", `/agents/${session.id}`);
       res.status(204).end();
     } else {
-      res.redirect(`/agents/${run.id}`);
+      res.redirect(`/agents/${session.id}`);
     }
-  });
-
-  router.get("/:id/stats", async (req, res) => {
-    const run = await runner.getRun(req.params.id);
-    if (!run) return res.send("");
-
-    const durationSec = ((run.finishedAt ? new Date(run.finishedAt).getTime() : Date.now()) - new Date(run.startedAt).getTime()) / 1000;
-    const durationHtml = `<br><strong>Duration:</strong> ${res.locals.formatDuration(durationSec)}`;
-
-    let tokensHtml = "";
-    if (run.totalTokens) {
-      tokensHtml = `<br><strong>Tokens:</strong> ${run.totalTokens.toLocaleString()}`;
-      if (run.killSwitch.maxTokens) tokensHtml += ` / ${run.killSwitch.maxTokens.toLocaleString()}`;
-    }
-
-    let costHtml = "";
-    if (run.totalCost) {
-      costHtml = `<br><strong>Cost:</strong> $${run.totalCost.toFixed(4)}`;
-      if (run.killSwitch.maxCost) costHtml += ` / $${run.killSwitch.maxCost}`;
-    }
-
-    res.send(`${durationHtml}${tokensHtml}${costHtml}`);
   });
 
   router.get("/:id/status-badge", async (req, res) => {
-    const run = await runner.getRun(req.params.id);
-    if (!run) return res.send(`<mark>not found</mark>`);
-    const cls = run.status === "running" ? "" : run.status === "completed" ? "pico-color-jade-100" : run.status === "killed" ? "pico-color-yellow-100" : "pico-color-red-100";
-    res.send(`<mark id="status-badge" class="${cls}">${run.status}</mark>`);
+    const session = await sessionService.getSession(req.params.id);
+    if (!session) return res.send(`<mark>not found</mark>`);
+    res.send(`<mark id="status-badge" class="${statusClass(session.status)}">${session.status}</mark>`);
   });
 
   return router;
 }
 
-async function loadConnectors(): Promise<Connector[]> {
-  try {
-    const content = await readFile(`${config.dataDir}/connectors.json`, "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return [];
+function renderHistory(events: SessionEvent[]): string[] {
+  const rendered: string[] = [];
+  let turnCount = 0;
+  for (let i = 0; i < events.length; i++) {
+    const result = renderSessionEvent(events[i], turnCount, { entryIndex: i });
+    turnCount = result.turnCount;
+    if (result.html) rendered.push(result.html);
   }
+  return rendered;
 }
 
-async function readLogEntry(filePath: string, index: number): Promise<LogEntry | null> {
-  const rl = createInterface({
-    input: createReadStream(filePath),
-  });
-  let i = 0;
-  for await (const line of rl) {
-    if (i === index) {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }
-    i++;
+function statusClass(status: string): string {
+  switch (status) {
+    case "running":
+      return "";
+    case "idle":
+      return "pico-color-jade-100";
+    case "waiting_for_input":
+      return "pico-color-yellow-100";
+    case "stopped":
+      return "pico-color-yellow-100";
+    default:
+      return "pico-color-red-100";
   }
-  return null;
 }

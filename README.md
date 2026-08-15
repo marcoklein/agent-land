@@ -1,6 +1,6 @@
 # Agent Land
 
-Minimal, self-hosted platform for running Dockerized AI coding agents. Choose connectors, write a task, and get live-streamed agent output with encrypted secret management via SOPS/Age.
+Minimal, self-hosted platform for running Dockerized AI coding agents as long-lived sessions. Choose connectors, send a prompt, and get live-streamed agent output with encrypted secret management via SOPS/Age.
 
 ## Quick Start
 
@@ -29,15 +29,16 @@ docker compose up --build -d
 
 1. **Secrets** — add encrypted API tokens (e.g. Jira PAT, GitHub token)
 2. **Connectors** — create named pointers to those secrets
-3. **Agents** — write a task, select connectors, launch
+3. **Sessions** — write a prompt, select connectors, launch
 
-Agent output streams in real-time via SSE. Each run writes logs to `data/logs/`.
+Agent output streams in real-time via SSE. Each session persists its record to `data/sessions/`.
 
 ## Features
 
 - **SOPS/Age secrets** — encrypted at rest, decrypted in-memory only at launch
 - **Live log streaming** via SSE — styled agent output in real-time
 - **Connector abstraction** — point at encrypted secrets, select at launch time
+- **RPC-driven sessions** — every session is a running pi agent (`--mode rpc`) with `auto`/`manual` permission policies
 - **Pre-baked agent tools** — git, curl, jq, gh ready in the container
 - **Agent skills** — each connector type teaches the agent how to use the API
 - **No database** — flat JSON files on mounted volumes
@@ -55,7 +56,22 @@ flowchart LR
     Docker --> Gmail
 ```
 
-The **orchestrator** is a Node.js/TypeScript Express server with HTMX + Pico CSS frontend. Agent **containers** run [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) headless with pre-baked tools (git, curl, jq, gh). Secrets are encrypted at rest with SOPS/Age and decrypted in-memory only when launching an agent.
+The **orchestrator** is a Node.js/TypeScript Express server with HTMX + Pico CSS frontend. Agent **containers** run [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) in `--mode rpc` with pre-baked tools (git, curl, jq, gh). Secrets are encrypted at rest with SOPS/Age and decrypted in-memory only when launching an agent.
+
+## Sessions API
+
+The website is backed by a JSON HTTP + SSE API mounted under `/api/sessions`:
+
+```
+POST   /api/sessions                create a session  { connectors?, permissionPolicy?, model? }
+GET    /api/sessions                list sessions
+GET    /api/sessions/:id            get a session
+POST   /api/sessions/:id/prompt     send a prompt  { message }
+POST   /api/sessions/:id/respond    answer a pending dialog  { requestId, value? | confirmed? | cancelled? }
+POST   /api/sessions/:id/abort      abort the current turn
+DELETE /api/sessions/:id            kill + remove the session container
+GET    /api/sessions/:id/events     SSE stream of session events
+```
 
 ## Docs
 

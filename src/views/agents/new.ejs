@@ -1,11 +1,11 @@
 <article>
-  <header><h2>Launch Agent</h2></header>
-  <p><small>Runs <code>pi --mode json</code> in a Docker container with the selected connectors' credentials. Connector info is prepended automatically — just write your task.</small></p>
+  <header><h2>Launch Session</h2></header>
+  <p><small>Starts a long-lived pi agent (<code>--mode rpc</code>) in a Docker container with the selected connectors' credentials. Connector info is prepended automatically — just write your first prompt.</small></p>
 
   <form method="POST" action="/agents/run">
-    <label for="task">Task / Prompt</label>
+    <label for="task">Initial Prompt</label>
     <textarea id="task" name="task" rows="4"
-              placeholder="Clone github.com/me/my-project, read Jira issue ABC-123, and fix the login rate limiting" required></textarea>
+              placeholder="Clone github.com/me/my-project, read Jira issue ABC-123, and fix the login rate limiting"></textarea>
 
     <fieldset>
       <legend>Connectors</legend>
@@ -27,26 +27,13 @@
       <% }) %>
     </select>
 
-    <details>
-      <summary>Kill Switch</summary>
-      <div class="kill-switch-grid">
-        <label>
-          Timeout (seconds)
-          <input type="number" name="timeout" value="3600" min="0" placeholder="3600">
-        </label>
-        <label>
-          Max Tokens
-          <input type="number" name="maxTokens" value="100000" min="0" placeholder="100000">
-        </label>
-        <label>
-          Max Cost ($)
-          <input type="number" name="maxCost" value="1" min="0" step="0.01" placeholder="1.00">
-        </label>
-      </div>
-      <small>Agent will be killed if it exceeds any of these limits. Leave empty to disable.</small>
-    </details>
+    <label for="permissionPolicy">Permission Policy</label>
+    <select id="permissionPolicy" name="permissionPolicy">
+      <option value="auto" selected>Auto (answer dialogs automatically)</option>
+      <option value="manual">Manual (pause for confirmation)</option>
+    </select>
 
-    <button type="submit">Launch Agent</button>
+    <button type="submit">Launch Session</button>
     <a href="/agents" role="button" class="outline">Cancel</a>
   </form>
 </article>
