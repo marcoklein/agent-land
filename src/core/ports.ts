@@ -6,16 +6,29 @@ export interface InteractiveExec {
   resize(h: number, w: number): Promise<void>;
 }
 
+export interface ExecResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
 export interface DockerPort {
   createInteractiveContainer(opts: {
     id: string;
     envVars: Record<string, string>;
     image: string;
     sessionVolume: string;
+    workspaceVolume: string;
   }): Promise<Docker.Container>;
   execInteractive(containerId: string, args: string[], tty: boolean): Promise<InteractiveExec>;
+  execCommand(containerId: string, args: string[]): Promise<ExecResult>;
   removeContainer(id: string): Promise<void>;
+  removeVolume(name: string): Promise<void>;
   ensureAgentImage(image: string): Promise<void>;
+}
+
+export interface WorkspaceProvisioner {
+  provision(session: AgentSession, containerId: string, env: Record<string, string>): Promise<void>;
 }
 
 export interface SecretsPort {

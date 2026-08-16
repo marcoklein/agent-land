@@ -10,6 +10,7 @@ import { SopsService } from "../../infra/sops.js";
 import { JsonConnectorRepository, JsonSessionRepository } from "../../infra/repositories.js";
 import { ConnectorService } from "../../core/connector-service.js";
 import { SessionService } from "../../core/session-service.js";
+import { GitCloneProvisioner } from "../../infra/git-clone-provisioner.js";
 import type { DockerPort } from "../../core/ports.js";
 import type { AgentHarness, AgentHandle, EventStream } from "../../core/harness.js";
 import type { SessionEvent } from "../../core/events.js";
@@ -69,12 +70,23 @@ export function createTestApp() {
 }
 
 export class MockDockerPort implements DockerPort {
-  created: { id: string; envVars: Record<string, string>; image: string }[] = [];
+  created: {
+    id: string;
+    envVars: Record<string, string>;
+    image: string;
+    workspaceVolume: string;
+  }[] = [];
   removed: string[] = [];
+  removedVolumes: string[] = [];
+  execs: { containerId: string; args: string[] }[] = [];
+  execCommandImpl?: (args: string[]) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
 
   reset() {
     this.created = [];
     this.removed = [];
+    this.removedVolumes = [];
+    this.execs = [];
+    this.execCommandImpl = undefined;
   }
 
   async createInteractiveContainer(opts: {
@@ -82,8 +94,14 @@ export class MockDockerPort implements DockerPort {
     envVars: Record<string, string>;
     image: string;
     sessionVolume: string;
+    workspaceVolume: string;
   }) {
-    this.created.push({ id: opts.id, envVars: opts.envVars, image: opts.image });
+    this.created.push({
+      id: opts.id,
+      envVars: opts.envVars,
+      image: opts.image,
+      workspaceVolume: opts.workspaceVolume,
+    });
     return { id: `mock-${opts.id}` } as any;
   }
 
@@ -91,8 +109,18 @@ export class MockDockerPort implements DockerPort {
     return { stream: new PassThrough(), resize: async () => {} };
   }
 
+  async execCommand(containerId: string, args: string[]) {
+    this.execs.push({ containerId, args });
+    if (this.execCommandImpl) return this.execCommandImpl(args);
+    return { exitCode: 0, stdout: "", stderr: "" };
+  }
+
   async removeContainer(id: string) {
     this.removed.push(id);
+  }
+
+  async removeVolume(name: string) {
+    this.removedVolumes.push(name);
   }
 
   async ensureAgentImage(_image: string) {}
@@ -168,12 +196,17 @@ export function createAgentTestApp(): AgentTestApp {
 
   const mockDocker = new MockDockerPort();
   const fakeHarness = new FakeHarness();
+  const provisioner = new GitCloneProvisioner(mockDocker, {
+    gitUserName: "Test Bot",
+    gitUserEmail: "bot@test.local",
+  });
   const sessionService = new SessionService({
     docker: mockDocker,
     secrets: sops,
     sessions: sessionRepository,
     connectors: connectorRepository,
     harness: fakeHarness,
+    provisioner,
     config: testConfig,
   });
 

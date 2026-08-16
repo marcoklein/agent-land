@@ -1,17 +1,22 @@
 import { Router } from "express";
 import { SessionService, SessionNotFoundError, SessionStoppedError } from "../../core/session-service.js";
-import type { PermissionPolicy } from "../../core/types.js";
+import type { PermissionPolicy, WorkspaceSpec } from "../../core/types.js";
 
 export function sessionsApiRouter(sessionService: SessionService) {
   const router = Router();
 
   router.post("/", async (req, res) => {
     try {
-      const { connectors, permissionPolicy, model } = req.body ?? {};
+      const { connectors, permissionPolicy, model, workspace } = req.body ?? {};
+      const parsedWorkspace = parseWorkspace(workspace);
+      if (parsedWorkspace === null) {
+        return res.status(400).json({ error: "workspace must be { repoUrl: string, ref?: string }" });
+      }
       const session = await sessionService.createSession({
         connectors: Array.isArray(connectors) ? connectors : undefined,
         permissionPolicy: (permissionPolicy as PermissionPolicy) ?? "auto",
         model: typeof model === "string" ? model : undefined,
+        workspace: parsedWorkspace,
       });
       res.status(201).json({ session });
     } catch (err) {
@@ -126,6 +131,16 @@ export function sessionsApiRouter(sessionService: SessionService) {
   });
 
   return router;
+}
+
+function parseWorkspace(raw: unknown): WorkspaceSpec | undefined | null {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "object") return null;
+  const { repoUrl, ref } = raw as Record<string, unknown>;
+  if (typeof repoUrl !== "string" || repoUrl.trim().length === 0) return null;
+  if (ref !== undefined && typeof ref !== "string") return null;
+  const trimmedRef = ref?.trim();
+  return { repoUrl: repoUrl.trim(), ref: trimmedRef ? trimmedRef : undefined };
 }
 
 function errorMessage(err: unknown): string {

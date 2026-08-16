@@ -10,6 +10,8 @@ export interface Config {
   opencodeGoApiKey: string;
   opencodeGoUrl: string;
   defaultModel: string;
+  gitUserName: string;
+  gitUserEmail: string;
 }
 
 export function getConfig(): Config {
@@ -23,5 +25,7 @@ export function getConfig(): Config {
     opencodeGoUrl: process.env.OPENCODE_API_URL || "https://opencode.ai/zen/go/v1",
     opencodeGoApiKey: process.env.OPENCODE_API_KEY || "",
     defaultModel: process.env.DEFAULT_MODEL || "deepseek-v4-pro",
+    gitUserName: process.env.GIT_USER_NAME || "",
+    gitUserEmail: process.env.GIT_USER_EMAIL || "",
   };
 }

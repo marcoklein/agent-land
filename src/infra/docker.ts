@@ -1,7 +1,8 @@
 import Docker from "dockerode";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import type { DockerPort, InteractiveExec } from "../core/ports.js";
+import { PassThrough } from "stream";
+import type { DockerPort, ExecResult, InteractiveExec } from "../core/ports.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -12,6 +13,7 @@ export interface InteractiveContainerOptions {
   envVars: Record<string, string>;
   image: string;
   sessionVolume: string;
+  workspaceVolume: string;
 }
 
 export class DockerService implements DockerPort {
@@ -38,6 +40,49 @@ export class DockerService implements DockerPort {
     await container.remove({ force: true }).catch(() => {});
   }
 
+  async removeVolume(name: string): Promise<void> {
+    const volume = this.docker.getVolume(name);
+    await volume.remove().catch(() => {});
+  }
+
+  async execCommand(containerId: string, args: string[]): Promise<ExecResult> {
+    const container = this.docker.getContainer(containerId);
+    const exec = await container.exec({
+      Cmd: args,
+      AttachStdout: true,
+      AttachStderr: true,
+      Tty: false,
+    });
+
+    const { stream, stdoutStream, stderrStream } = await new Promise<{
+      stream: NodeJS.ReadWriteStream;
+      stdoutStream: PassThrough;
+      stderrStream: PassThrough;
+    }>((resolve, reject) => {
+      exec.start({ hijack: true, stdin: false }, (err, s) => {
+        if (err) return reject(err);
+        const stdoutStream = new PassThrough();
+        const stderrStream = new PassThrough();
+        container.modem.demuxStream(s, stdoutStream, stderrStream);
+        resolve({ stream: s as NodeJS.ReadWriteStream, stdoutStream, stderrStream });
+      });
+    });
+
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+    stdoutStream.on("data", (c: Buffer) => stdoutChunks.push(c));
+    stderrStream.on("data", (c: Buffer) => stderrChunks.push(c));
+
+    await new Promise<void>((resolve) => stream.on("end", () => resolve()));
+
+    const info = await exec.inspect();
+    return {
+      exitCode: typeof info.ExitCode === "number" ? info.ExitCode : -1,
+      stdout: Buffer.concat(stdoutChunks).toString("utf-8"),
+      stderr: Buffer.concat(stderrChunks).toString("utf-8"),
+    };
+  }
+
   async createInteractiveContainer(options: InteractiveContainerOptions): Promise<Docker.Container> {
     const env = Object.entries(options.envVars).map(([k, v]) => `${k}=${v}`);
 
@@ -60,7 +105,10 @@ export class DockerService implements DockerPort {
       ],
       HostConfig: {
         AutoRemove: false,
-        Binds: [`${options.sessionVolume}:/sessions`],
+        Binds: [
+          `${options.sessionVolume}:/sessions`,
+          `${options.workspaceVolume}:/workspace`,
+        ],
         NetworkMode: "bridge",
       },
       WorkingDir: "/workspace",

@@ -2,6 +2,11 @@ export type PermissionPolicy = "auto" | "manual";
 
 export type SessionStatus = "running" | "waiting_for_input" | "idle" | "stopped";
 
+export interface WorkspaceSpec {
+  repoUrl: string;
+  ref?: string;
+}
+
 export interface AgentSession {
   id: string;
   status: SessionStatus;
@@ -12,6 +17,7 @@ export interface AgentSession {
   createdAt: string;
   updatedAt: string;
   containerId?: string;
+  workspace?: WorkspaceSpec;
   waitingFor?: {
     requestId: string;
     method: "confirm" | "input" | "select" | "editor";

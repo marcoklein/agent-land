@@ -20,6 +20,13 @@
       <% } %>
     </fieldset>
 
+    <label for="repoUrl">Repository URL <small>(optional — cloned into the session workspace)</small></label>
+    <input type="text" id="repoUrl" name="repoUrl"
+           placeholder="https://github.com/me/my-project">
+
+    <label for="ref">Branch / ref <small>(optional)</small></label>
+    <input type="text" id="ref" name="ref" placeholder="main">
+
     <label for="model">Model <% if (models.length > 0) { %><small>(<%= models.length %> available)</small><% } %></label>
     <select id="model" name="model">
       <% models.forEach(m => { %>

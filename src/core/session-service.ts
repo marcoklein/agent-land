@@ -1,8 +1,14 @@
 import { randomUUID } from "crypto";
-import type { AgentSession, PermissionPolicy, SessionStatus } from "./types.js";
+import type { AgentSession, PermissionPolicy, SessionStatus, WorkspaceSpec } from "./types.js";
 import type { SessionEvent } from "./events.js";
 import type { AgentHandle, AgentHarness, EventStream } from "./harness.js";
-import type { DockerPort, SecretsPort, SessionRepository, ConnectorRepository } from "./ports.js";
+import type {
+  DockerPort,
+  SecretsPort,
+  SessionRepository,
+  ConnectorRepository,
+  WorkspaceProvisioner,
+} from "./ports.js";
 import { SESSION_VOLUME_NAME } from "../infra/docker.js";
 import type { Config } from "../config.js";
 
@@ -20,6 +26,7 @@ interface SessionServiceDeps {
   sessions: SessionRepository;
   connectors: ConnectorRepository;
   harness: AgentHarness;
+  provisioner: WorkspaceProvisioner;
   config: Config;
 }
 
@@ -65,6 +72,7 @@ export class SessionService {
     connectors?: string[];
     permissionPolicy?: PermissionPolicy;
     model?: string;
+    workspace?: WorkspaceSpec;
   }): Promise<AgentSession> {
     const connectors = (options.connectors ?? []).filter(
       (c): c is string => typeof c === "string"
@@ -73,6 +81,8 @@ export class SessionService {
       options.permissionPolicy === "manual" ? "manual" : "auto";
     const model = options.model || this.deps.config.defaultModel;
     const id = randomUUID().slice(0, 8);
+    const workspace = options.workspace ?? undefined;
+    const workspaceVolume = `agent-land-ws-${id}`;
 
     const envVarsMap = await this.resolveAgentEnv(connectors);
     await this.deps.docker.ensureAgentImage(this.deps.config.agentImage);
@@ -87,6 +97,7 @@ export class SessionService {
       model,
       createdAt: now,
       updatedAt: now,
+      workspace,
     };
 
     let containerId: string | undefined;
@@ -96,11 +107,16 @@ export class SessionService {
         envVars: Object.fromEntries(envVarsMap),
         image: this.deps.config.agentImage,
         sessionVolume: SESSION_VOLUME_NAME,
+        workspaceVolume,
       });
       containerId = container.id;
       session.containerId = container.id;
 
       await this.deps.sessions.save(session);
+
+      if (workspace) {
+        await this.deps.provisioner.provision(session, container.id, Object.fromEntries(envVarsMap));
+      }
 
       const harness = await this.deps.harness.start(session);
       const handle: SessionHandle = {
@@ -117,6 +133,9 @@ export class SessionService {
     } catch (err) {
       if (containerId) {
         await this.deps.docker.removeContainer(containerId).catch(() => {});
+        if (workspace) {
+          await this.deps.docker.removeVolume(workspaceVolume).catch(() => {});
+        }
       }
       await this.deps.sessions.delete(id).catch(() => {});
       throw err;

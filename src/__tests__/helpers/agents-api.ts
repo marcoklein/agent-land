@@ -44,6 +44,8 @@ export class AgentsApi {
     connectors?: string | string[];
     model?: string;
     permissionPolicy?: string;
+    repoUrl?: string;
+    ref?: string;
   }) {
     const body: Record<string, string> = {};
     if (params.task !== undefined) body.task = params.task;
@@ -54,6 +56,8 @@ export class AgentsApi {
     }
     if (params.model) body.model = params.model;
     if (params.permissionPolicy) body.permissionPolicy = params.permissionPolicy;
+    if (params.repoUrl) body.repoUrl = params.repoUrl;
+    if (params.ref) body.ref = params.ref;
 
     return this.agent.post("/agents/run").send(body);
   }

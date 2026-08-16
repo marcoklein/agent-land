@@ -12,6 +12,7 @@ import { connectorsRouter } from "./routes/connectors.js";
 import { SopsService } from "./infra/sops.js";
 import { DockerService } from "./infra/docker.js";
 import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
+import { GitCloneProvisioner } from "./infra/git-clone-provisioner.js";
 import { JsonSessionRepository, JsonConnectorRepository } from "./infra/repositories.js";
 import { SessionService } from "./core/session-service.js";
 import { ConnectorService } from "./core/connector-service.js";
@@ -27,12 +28,17 @@ const connectorRepository = new JsonConnectorRepository(config.dataDir);
 
 const connectorService = new ConnectorService(connectorRepository, sops);
 const harness = new PiRpcHarness(docker);
+const provisioner = new GitCloneProvisioner(docker, {
+  gitUserName: config.gitUserName,
+  gitUserEmail: config.gitUserEmail,
+});
 const sessionService = new SessionService({
   docker,
   secrets: sops,
   sessions: sessionRepository,
   connectors: connectorRepository,
   harness,
+  provisioner,
   config,
 });
 
