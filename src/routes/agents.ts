@@ -77,12 +77,13 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
       return res.redirect("/agents");
     }
 
-    const renderedLogs = renderHistory(sessionService.getEvents(session.id));
+    const events = await sessionService.getEvents(session.id);
+    const renderedLogs = renderHistory(events);
 
     const viewData = {
       session,
       renderedLogs,
-      totalEventCount: sessionService.getEvents(session.id).length,
+      totalEventCount: events.length,
     };
 
     if (req.headers["hx-request"]) {
@@ -120,7 +121,7 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
       if (result.html) sseWrite(result.html);
     };
 
-    const history = sessionService.getEvents(id);
+    const history = await sessionService.getEvents(id);
     for (let i = afterIndex; i < history.length; i++) render(history[i], i);
 
     if (session.status === "stopped") {
@@ -152,7 +153,7 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
     if (!session) return res.status(404).send("Session not found");
 
     const index = parseInt(req.params.index, 10);
-    const history = sessionService.getEvents(id);
+    const history = await sessionService.getEvents(id);
     const event = history[index];
     if (!event) return res.status(404).send("Event not found");
 

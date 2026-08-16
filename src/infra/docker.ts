@@ -3,6 +3,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { PassThrough } from "stream";
 import type { DockerPort, ExecResult, InteractiveExec } from "../core/ports.js";
+import { agentContainerId } from "../core/harness.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -38,6 +39,15 @@ export class DockerService implements DockerPort {
   async removeContainer(id: string): Promise<void> {
     const container = this.docker.getContainer(id);
     await container.remove({ force: true }).catch(() => {});
+  }
+
+  async containerExists(id: string): Promise<boolean> {
+    try {
+      await this.docker.getContainer(id).inspect();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async removeVolume(name: string): Promise<void> {
@@ -87,7 +97,7 @@ export class DockerService implements DockerPort {
     const env = Object.entries(options.envVars).map(([k, v]) => `${k}=${v}`);
 
     const container = await this.docker.createContainer({
-      name: `agent-land-pi-${options.id}`,
+      name: agentContainerId(options.id),
       Image: options.image,
       Entrypoint: ["/bin/sleep"],
       Cmd: ["infinity"],

@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import { mkdir, rm, writeFile } from "fs/promises";
 import { PassThrough } from "stream";
 import { SopsService } from "../../infra/sops.js";
-import { JsonConnectorRepository, JsonSessionRepository } from "../../infra/repositories.js";
+import { JsonConnectorRepository, JsonSessionRepository, JsonSessionEventLog } from "../../infra/repositories.js";
 import { ConnectorService } from "../../core/connector-service.js";
 import { SessionService } from "../../core/session-service.js";
 import { GitCloneProvisioner } from "../../infra/git-clone-provisioner.js";
@@ -79,6 +79,7 @@ export class MockDockerPort implements DockerPort {
   removed: string[] = [];
   removedVolumes: string[] = [];
   execs: { containerId: string; args: string[] }[] = [];
+  containers = new Set<string>();
   execCommandImpl?: (args: string[]) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
 
   reset() {
@@ -86,6 +87,7 @@ export class MockDockerPort implements DockerPort {
     this.removed = [];
     this.removedVolumes = [];
     this.execs = [];
+    this.containers = new Set();
     this.execCommandImpl = undefined;
   }
 
@@ -102,6 +104,7 @@ export class MockDockerPort implements DockerPort {
       image: opts.image,
       workspaceVolume: opts.workspaceVolume,
     });
+    this.containers.add(`agent-land-pi-${opts.id}`);
     return { id: `mock-${opts.id}` } as any;
   }
 
@@ -124,6 +127,10 @@ export class MockDockerPort implements DockerPort {
   }
 
   async ensureAgentImage(_image: string) {}
+
+  async containerExists(id: string): Promise<boolean> {
+    return this.containers.has(id);
+  }
 }
 
 export class FakeHandle implements AgentHandle {
@@ -192,6 +199,7 @@ export function createAgentTestApp(): AgentTestApp {
   const sops = new SopsService(testConfig.secretsDir, testConfig.ageKeyFile);
   const sessionRepository = new JsonSessionRepository(testConfig.dataDir);
   const connectorRepository = new JsonConnectorRepository(testConfig.dataDir);
+  const eventLog = new JsonSessionEventLog(testConfig.dataDir);
   const connectorService = new ConnectorService(connectorRepository, sops);
 
   const mockDocker = new MockDockerPort();
@@ -207,6 +215,7 @@ export function createAgentTestApp(): AgentTestApp {
     connectors: connectorRepository,
     harness: fakeHarness,
     provisioner,
+    eventLog,
     config: testConfig,
   });
 

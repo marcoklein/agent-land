@@ -1,6 +1,6 @@
 import { Transform } from "stream";
 import type { AgentHarness, AgentHandle, EventStream } from "../core/harness.js";
-import { piRpcPreset } from "../core/harness.js";
+import { piRpcPreset, agentContainerId } from "../core/harness.js";
 import type { SessionEvent } from "../core/events.js";
 import type { AgentSession } from "../core/types.js";
 import type { DockerPort } from "../core/ports.js";
@@ -11,7 +11,7 @@ export class PiRpcHarness implements AgentHarness {
   constructor(private docker: DockerPort) {}
 
   async start(session: AgentSession): Promise<AgentHandle> {
-    const containerId = `agent-land-pi-${session.id}`;
+    const containerId = agentContainerId(session.id);
     const preset = piRpcPreset(session);
     const { stream } = await this.docker.execInteractive(containerId, preset.argv, preset.tty);
 

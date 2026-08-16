@@ -22,6 +22,10 @@ export interface AgentHandle {
 
 export type ProgramSpec = { argv: string[]; tty: boolean };
 
+export function agentContainerId(sessionId: string): string {
+  return `agent-land-pi-${sessionId}`;
+}
+
 export function piRpcPreset(session: AgentSession): ProgramSpec {
   return {
     argv: [

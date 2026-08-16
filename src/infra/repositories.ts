@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile, readdir, stat, unlink } from "fs/promises";
+import { mkdir, readFile, writeFile, readdir, stat, unlink, appendFile } from "fs/promises";
 import path from "path";
-import type { SessionRepository, ConnectorRepository } from "../core/ports.js";
+import type { SessionRepository, ConnectorRepository, SessionEventLog } from "../core/ports.js";
 import type { AgentSession, Connector } from "../core/types.js";
+import type { SessionEvent } from "../core/events.js";
 
 export class JsonSessionRepository implements SessionRepository {
   constructor(private dataDir: string) {}
@@ -49,6 +50,47 @@ export class JsonSessionRepository implements SessionRepository {
 
   async delete(id: string): Promise<void> {
     await unlink(path.join(this.dir(), `${id}.json`)).catch(() => {});
+  }
+}
+
+export class JsonSessionEventLog implements SessionEventLog {
+  private tails = new Map<string, string[]>();
+
+  constructor(private dataDir: string) {}
+
+  private filePath(id: string): string {
+    return path.join(this.dataDir, "sessions", `${id}.events.jsonl`);
+  }
+
+  async append(id: string, event: SessionEvent, cap: number): Promise<void> {
+    const filePath = this.filePath(id);
+    await mkdir(path.dirname(filePath), { recursive: true });
+    const line = JSON.stringify(event);
+
+    let tail = this.tails.get(id);
+    if (!tail) {
+      tail = await this.readLines(id);
+      this.tails.set(id, tail);
+    }
+    await appendFile(filePath, line + "\n", "utf-8");
+    tail.push(line);
+    if (tail.length > cap) {
+      tail = tail.slice(tail.length - cap);
+      await writeFile(filePath, tail.join("\n") + "\n", "utf-8");
+    }
+  }
+
+  async read(id: string): Promise<SessionEvent[]> {
+    return (await this.readLines(id)).map((line) => JSON.parse(line) as SessionEvent);
+  }
+
+  private async readLines(id: string): Promise<string[]> {
+    try {
+      const content = await readFile(this.filePath(id), "utf-8");
+      return content.split("\n").filter((line) => line.length > 0);
+    } catch {
+      return [];
+    }
   }
 }
 
