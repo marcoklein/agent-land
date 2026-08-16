@@ -16,8 +16,6 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 
 RUN npm install -g @earendil-works/pi-coding-agent@0.82.1
 
-WORKDIR /workspace
-
 COPY skills/ /tmp/pi-config/skills/
 
 COPY entrypoint.sh /entrypoint.sh
