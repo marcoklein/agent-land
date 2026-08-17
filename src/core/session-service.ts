@@ -264,12 +264,18 @@ export class SessionService {
 
   private waitForSettle(handle: SessionHandle): Promise<void> {
     return new Promise((resolve) => {
-      const timer = setTimeout(resolve, this.drainSettleTimeoutMs);
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        resolve();
+      };
+      const timer = setTimeout(finish, this.drainSettleTimeoutMs);
       const unsubscribe = handle.harness.events().subscribe((e) => {
         if (e.type === "agent_settled" || (e.type === "status" && e.status === "stopped")) {
-          clearTimeout(timer);
-          unsubscribe();
-          resolve();
+          finish();
         }
       });
     });
