@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -25,3 +26,17 @@ jobs:
         run: |
           git remote add dokku dokku@impromat.app:agent-land
           git push dokku main:master --force
+
+      - name: Verify deploy is serving
+        env:
+          HOSTED_BASIC_AUTH: ${{ secrets.HOSTED_BASIC_AUTH }}
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS -u "$HOSTED_BASIC_AUTH" https://agent-land.host.impromat.app/api/sessions | grep -q '"sessions"'; then
+              echo "deploy verified"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "health check failed after 60s"
+          exit 1
