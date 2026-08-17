@@ -2,32 +2,52 @@
 
 What happens when the orchestrator (the Dokku web container) is redeployed while agent sessions are still running, and how sessions recover their state.
 
+## Architecture overview
+
+The platform's working rule: **the host owns the session; the web process only attaches to it.** Everything that must survive a redeploy lives in Docker objects and files outside the web container; everything inside the web process is a disposable view that can be rebuilt.
+
+```mermaid
+flowchart LR
+    subgraph D["disposable: web process"]
+        W["handles · status · event fan-out"]
+    end
+    subgraph H["durable: host"]
+        C["agent container"]
+        V["volumes · event log"]
+    end
+    W -.->|"attach / detach"| C
+    C --> V
+```
+
+The one thing that *cannot* survive a redeploy is the exec stream between the harness and pi — it is owned by the dying web process:
+
+```mermaid
+flowchart LR
+    W["PiRpcHarness (web)"] -->|"docker exec<br/>hijacked stdio"| P["pi --mode rpc"]
+    subgraph C["agent-land-pi-&lt;id&gt;"]
+        P
+    end
+```
+
+Everything the design adds works around that single fact: save what pi knows (its own jsonl), persist what the web knows (the event log), stop pi cleanly, and re-establish the stream on the other side.
+
 ## The question, answered
 
-Three questions drive this design:
-
 - **Is the agent's Docker container killed on redeploy?** No. Agent containers are *sibling* containers created directly on the host Docker daemon through the mounted socket (`adrs/002`). Dokku only manages the app's own `agent-land.web.1` container. On deploy, the old web container receives SIGTERM after the new one is up — observed on the server as `agent-land.web.1.1786886446` `Exited (143)`. Agent containers (`agent-land-pi-<id>`, entrypoint `sleep infinity`) are never touched.
-- **Does the agent keep working?** No. The `pi --mode rpc` process lives inside the agent container but its stdin/stdout is a hijacked `docker exec` stream owned by the old web process (`PiRpcHarness.start`). When the web process dies, the socket closes, the exec stream gets EOF, and pi exits gracefully. Verified empirically: a leftover smoke-test container was still `running` with only `/bin/sleep infinity` — the pi exec was gone.
+- **Does the agent keep working?** No. The `pi --mode rpc` process lives inside the agent container but its stdin/stdout is a hijacked `docker exec` stream owned by the old web process (`PiRpcHarness.start`). When the web process dies, the socket closes, the exec stream gets EOF, and pi exits. Verified empirically: a leftover smoke-test container was still `running` with only `/bin/sleep infinity` — the pi exec was gone.
 - **Can we "save" state?** Yes — most state is *already* saved. What is lost is the live harness handle, the in-memory event history, and the SSE subscriptions. Because `SessionService.handles` is in-memory only, the new web process cannot prompt pre-redeploy sessions today (`SessionNotFoundError`: "Session is not running").
 
 ## What happens today
 
 ```mermaid
 sequenceDiagram
-    participant CI as GitHub Actions
     participant D as Dokku
-    participant W1 as web.1 (old)
-    participant W2 as web.1 (new)
-    participant H as Host Docker daemon
-    participant A as agent-land-pi-&lt;id&gt;
+    participant W as web (old)
+    participant A as agent container
 
-    CI->>D: git push dokku main:master
-    D->>W2: start new container (socket mounted)
-    Note over D: checks pass / retire old
-    D->>W1: SIGTERM (30s grace, then SIGKILL)
-    W1--xA: exec stream closes (EOF)
-    A->>A: pi exits gracefully
-    Note over A: container stays running (sleep infinity)
+    D->>W: SIGTERM on redeploy
+    W--xA: exec stream closes
+    A->>A: pi exits, container survives
 ```
 
 After redeploy, the state is inconsistent:
@@ -46,57 +66,56 @@ After redeploy, the state is inconsistent:
 | Workspace (`agent-land-ws-<id>` at `/workspace`) | Yes | Per-session named volume, kept on `kill()` by design |
 | `AgentSession` JSON record (`data/sessions/<id>.json`) | Yes | Dokku storage mount `/app/data` |
 | Harness handle (prompt/respond/abort) | No | `SessionService.handles` is in-memory |
-| Event history (SSE transcript) | No | In-memory ring buffer (`HISTORY_CAP`) |
+| Event history (SSE transcript) | No (until the event log) | In-memory ring buffer (`HISTORY_CAP`) |
 | Status accuracy | No | Stale; nothing emits events anymore |
 
-## Recovery design
+## How it works
 
-Three pieces, in order of value:
+Three mechanisms cooperate across a deploy. The guarantee: **stop and continue where you left off** — the in-flight turn is cut gracefully, everything else (files, workspace, conversation, pending state) survives.
 
-### 1. Re-attach on boot (core)
+### 1. Durable event log (always on)
 
-`SessionService` gains a recovery step that runs once at orchestrator startup. For every persisted session whose status is not `stopped`:
+Every event the agent emits (status, message deltas, tool calls…) is appended to `data/sessions/<id>.events.jsonl`, capped to `HISTORY_CAP`, appends serialized per session id so concurrent events can't interleave or be dropped by the trim rewrite. The transcript exists on disk independent of the web process, and is replayed on boot and on SSE reconnect.
 
-- **Container missing** → the session is orphaned (container was pruned or `kill()` was interrupted). Mark it `stopped` with a synthetic status event.
-- **Container present** → re-attach: run the same harness preset against the existing container. The preset already passes `--session-dir /sessions/<id> --session-id <id>`, and pi's `--session-id` is documented as "Use exact project session ID, creating it if missing" — so the same argv resumes the exact conversation, not a fresh one. Subscribe event fan-out, re-emit history, and set a truthful status.
+### 2. Drain on SIGTERM (deploy starts)
 
 ```mermaid
 sequenceDiagram
-    participant W as web.1 (new, boot)
-    participant R as SessionRecoveryService
-    participant D as Host Docker daemon
-    participant A as agent-land-pi-&lt;id&gt;
-    participant P as PiRpcHarness
+    participant W as web (old)
+    participant A as agent container
 
-    W->>R: recover() on startup
-    R->>D: list containers with label agent-land/session-id
-    loop each persisted session (status != stopped)
-        alt container present
-            R->>P: start(session) — same pi preset
-            P->>D: exec pi --mode rpc --session-dir /sessions/&lt;id&gt; --session-id &lt;id&gt;
-            D-->>P: duplex stream (session resumed)
-            R->>R: handles.set(id, handle) · emit synthetic status
-        else container missing
-            R->>R: mark session stopped (orphaned)
-        end
-    end
+    W->>A: abort + wait for settle (~4s cap)
+    A-->>W: agent_settled
+    W->>A: close exec stream
 ```
 
-Notes:
+For every live session:
 
-- An in-flight turn is cut when the stream dies; pi persists per turn, so after re-attach the user sees the last complete state and re-prompts. This is an accepted limitation, not something to engineer away.
-- `waiting_for_input` sessions: `waitingFor` survives in the JSON record. If pi re-emits the pending `extension_ui_request` after resume, the normal flow continues; otherwise the user re-prompts. Best effort.
-- The recovery step must be smoke-tested for the exact behavior of `--session-id` in rpc mode on the pinned image (`0.82.1`): resume (not fork/new) is the acceptance criterion.
+1. Send `abort` to the harness and wait for the agent to settle (bounded, ~4s cap) — pi stops its current work and persists its session file to the `/sessions` volume.
+2. Close the exec streams. A `draining` flag makes `SessionService` ignore the resulting close→`stopped` events, so they neither update the persisted session record nor pollute the history.
+3. Exit — well inside Dokku's 30s grace. The agent **container keeps running** on the host; it was never touched.
 
-### 2. Graceful drain on SIGTERM (hardening)
+### 3. Re-attach on boot (new web process starts)
 
-`server.ts` installs a SIGTERM handler that, for every live handle: sends `abort` (pi stops tool execution cleanly), then `stop()` (stream end). Dokku grants 30s (`ps:report` `stop timeout seconds: 30`), which is ample.
+```mermaid
+sequenceDiagram
+    participant W as web (new)
+    participant H as host daemon
+    participant A as agent container
 
-This does not *save* anything pi wouldn't already persist — it makes the cut cleaner and avoids pi being killed mid-tool-write (SIGKILL after grace) or mid-exec. It is hardening, not a prerequisite for recovery.
+    W->>H: containerExists(id)?
+    H-->>W: yes
+    W->>A: "exec pi --mode rpc --session-id <id>"
+    A-->>W: session resumed
+    W->>W: replay event log · status idle
+```
 
-### 3. Persist the event log (nice-to-have)
+`recover()` runs at startup. For each persisted session:
 
-Append events to `data/sessions/<id>.events.jsonl` (same cap as the in-memory ring buffer, trimmed on append). On boot and on SSE reconnect, replay from the file instead of empty history. Cheap, removes the "transcript vanished" symptom after redeploy. Not a prerequisite for recovery: pi's jsonl remains the source of truth.
+- **Container `agent-land-pi-<id>` exists** → re-attach: run the identical harness preset — `docker exec pi --mode rpc --session-dir /sessions/<id> --session-id <id>`. Pi finds its saved session and resumes the same conversation (`--session-id`: "Use exact project session ID, creating it if missing"). The event log is replayed into the in-memory history, status is set to `idle`, and a stale `waitingFor` is cleared (if a request is genuinely pending, pi re-emits it; otherwise the user re-prompts).
+- **Container missing** → the session is genuinely dead (container pruned, host cleaned, or `kill()` ran): mark it `stopped` with a synthetic status event.
+
+Container presence is the single re-attach criterion — deliberately *not* the persisted status, because any status written before the process died is a guess, while the container is ground truth.
 
 ## Status handling
 
@@ -104,6 +123,7 @@ No new status value: the existing states cover recovery.
 
 - Boot recovery with live container → `idle` (agent is settled; a new prompt drives it to `running`).
 - Orphaned container → `stopped`.
+- While draining, close events are ignored — the persisted status stays whatever it was before the drain, and the re-attach on the other side replaces it with the truth.
 - The synthetic `status` event on re-attach is enough for the UI to re-render the session card; a follow-up UI nicety is a small "reconnected after redeploy" badge (out of scope here).
 
 ## Smoke-test plan
@@ -119,6 +139,7 @@ The design is grounded in observed behavior, but two claims must be verified aga
 ## Explicitly out of scope
 
 - Moving the harness out of the web process (per-session daemons, tmux-style supervisors) so agents survive *independent* of the orchestrator — a bigger architectural change; recovery via re-attach reaches the same user-visible outcome.
+- Zero-cut deploys: an in-flight turn is interrupted gracefully by design; it is not completed across the deploy.
 - Checkpointing of in-flight tool executions — pi's own per-turn persistence is the checkpoint.
 - Full transcript fidelity across redeploys — the event log is best-effort; pi's session file is authoritative.
 - Auto-pruning of orphaned containers/volumes — surfaced as `stopped`, cleanup stays manual.
