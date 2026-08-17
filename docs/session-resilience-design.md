@@ -130,11 +130,11 @@ No new status value: the existing states cover recovery.
 
 The design is grounded in observed behavior, but two claims must be verified against the real harness before implementation ships:
 
-| # | Claim | Test |
-|---|-------|------|
-| 1 | `pi --mode rpc --session-id <id> --session-dir /sessions/<id>` on an existing session resumes it (same session id in events, prior conversation visible), not a new/forked session | Create session, prompt, kill only the web process (not the container), re-exec the same argv, assert resume |
-| 2 | On orchestrator death, the pi exec exits (EOF) and the container survives | Already observed on a leftover smoke container; re-verify after drain is implemented |
-| 3 | SIGTERM drain finishes within Dokku's 30s grace | Deploy while a session runs a long tool call; assert pi exited gracefully (jsonl complete) before SIGKILL |
+| # | Claim | Test | Result |
+|---|-------|------|--------|
+| 1 | `pi --mode rpc --session-id <id> --session-dir /sessions/<id>` on an existing session resumes it (same session id in events, prior conversation visible), not a new/forked session | Create session, prompt, kill only the web process (not the container), re-exec the same argv, assert resume | PASS (2026-08-17, isolated container: codeword remembered across exec death, single session file) |
+| 2 | On orchestrator death, the pi exec exits (EOF) and the container survives | Already observed on a leftover smoke container; re-verify after drain is implemented | PASS (observed both before and after drain) |
+| 3 | SIGTERM drain finishes within Dokku's 30s grace | Deploy while a session runs a long tool call; assert pi exited gracefully (jsonl complete) before SIGKILL | PASS (2026-08-17, local e2e: mid-turn SIGTERM → drained → restart → re-attached → codeword remembered) |
 
 ## Explicitly out of scope
 
