@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import * as cheerio from "cheerio";
+import request from "supertest";
 import { AgentsApi } from "./helpers/agents-api.js";
 import { setupDataDir, cleanupDataDir } from "./helpers/setup.js";
 
@@ -255,6 +256,139 @@ describe("Agents — Sessions", () => {
 
       const getRes = await api.agent.get(`/api/sessions/${id}`);
       expect(getRes.body.session.permissionPolicy).toBe("auto");
+    });
+
+    it("forwards prompt behavior when given", async () => {
+      const launchRes = await api.launch({ task: "steer me" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      const res = await api.agent
+        .post(`/api/sessions/${id}/prompt`)
+        .send({ message: "turn left", behavior: "steer" });
+      expect(res.status).toBe(202);
+
+      const handle = api.handle();
+      expect(handle.prompts[handle.prompts.length - 1]).toBe("turn left");
+      expect(handle.promptBehaviors[handle.promptBehaviors.length - 1]).toBe("steer");
+    });
+
+    it("omits behavior when not provided", async () => {
+      const launchRes = await api.launch({ task: "plain" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      await api.agent.post(`/api/sessions/${id}/prompt`).send({ message: "hello" });
+
+      const handle = api.handle();
+      expect(handle.promptBehaviors[handle.promptBehaviors.length - 1]).toBeUndefined();
+    });
+
+    it("rejects an invalid prompt behavior with 400", async () => {
+      const launchRes = await api.launch({ task: "bad behavior" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      const res = await api.agent
+        .post(`/api/sessions/${id}/prompt`)
+        .send({ message: "hi", behavior: "yell" });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("API — SSE event stream", () => {
+    function openSse(id: string) {
+      const chunks: string[] = [];
+      const req = request(api.app)
+        .get(`/api/sessions/${id}/events`)
+        .buffer(false)
+        .parse((res, cb) => {
+          res.on("data", (d: Buffer) => chunks.push(d.toString()));
+          res.on("end", () => cb(null, ""));
+        });
+
+      const opened = new Promise<{ headers: Record<string, string>; destroy: () => void }>(
+        (resolve, reject) => {
+          req.on("response", (res) => {
+            resolve({ headers: res.headers as Record<string, string>, destroy: () => res.destroy() });
+          });
+          req.on("error", reject);
+        }
+      );
+      req.end(() => {});
+
+      return {
+        opened,
+        lines: () => chunks.join("").split("\n"),
+        waitFor: async (predicate: (lines: string[]) => boolean, timeoutMs = 2000) => {
+          const start = Date.now();
+          while (Date.now() - start < timeoutMs) {
+            if (predicate(chunks.join("").split("\n"))) return;
+            await new Promise((r) => setTimeout(r, 10));
+          }
+          throw new Error("timed out waiting for SSE output");
+        },
+      };
+    }
+
+    it("disables edge proxy buffering", async () => {
+      const launchRes = await api.launch({ task: "no buffering" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      const stream = openSse(id);
+      const { headers, destroy } = await stream.opened;
+
+      expect(headers["x-accel-buffering"]).toBe("no");
+      expect(headers["content-type"]).toContain("text/event-stream");
+      destroy();
+    });
+
+    it("replays history and keeps heartbeating while idle", async () => {
+      const launchRes = await api.launch({ task: "heartbeat" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+      api.sendEvent({ type: "turn_start" });
+      api.sendEvent({
+        type: "message_end",
+        message: { role: "assistant", content: "replayed" },
+      });
+      api.sendEvent({ type: "agent_settled" });
+
+      const stream = openSse(id);
+      const { destroy } = await stream.opened;
+
+      await stream.waitFor((lines) => lines.some((l) => l.includes("replayed")));
+      await stream.waitFor((lines) => lines.some((l) => l === ": ping"));
+
+      destroy();
+    });
+
+    it("delivers live events exactly once after replay", async () => {
+      const launchRes = await api.launch({ task: "exactly once" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+      api.sendEvent({ type: "agent_settled" });
+
+      const stream = openSse(id);
+      const { destroy } = await stream.opened;
+
+      await stream.waitFor((lines) => lines.some((l) => l.includes("agent_settled")));
+
+      api.sendEvent({ type: "tool_start", toolCallId: "c1", toolName: "bash", args: {} });
+      await stream.waitFor((lines) => lines.filter((l) => l.includes('"toolName":"bash"')).length === 1);
+      await new Promise((r) => setTimeout(r, 50));
+
+      const occurrences = stream.lines().filter((l) => l.includes('"toolName":"bash"')).length;
+      expect(occurrences).toBe(1);
+
+      destroy();
+    });
+
+    it("ends with agent-done after the session is stopped", async () => {
+      const launchRes = await api.launch({ task: "kill stream" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+      await api.killSession(id);
+
+      const res = await request(api.app).get(`/api/sessions/${id}/events`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("agent-done");
+      expect(res.text).toContain('{"status":"stopped"}');
     });
   });
 });

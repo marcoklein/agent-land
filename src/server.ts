@@ -78,7 +78,7 @@ app.use((req, res, next) => {
 app.use("/", indexRouter(sessionService, connectorService));
 app.use("/agents", agentsRouter(sessionService, connectorService));
 app.use("/connectors", connectorsRouter(connectorService));
-app.use("/api/sessions", sessionsApiRouter(sessionService));
+app.use("/api/sessions", sessionsApiRouter(sessionService, config));
 
 await sessionService.recover().catch((err) => {
   console.error("Session recovery failed:", err);

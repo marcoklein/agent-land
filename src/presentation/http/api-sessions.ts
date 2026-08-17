@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { SessionService, SessionNotFoundError, SessionStoppedError } from "../../core/session-service.js";
+import type { Config } from "../../config.js";
 import type { PermissionPolicy, WorkspaceSpec } from "../../core/types.js";
+import type { SequencedEvent } from "../../core/events.js";
 
-export function sessionsApiRouter(sessionService: SessionService) {
+export function sessionsApiRouter(sessionService: SessionService, config: Config) {
   const router = Router();
 
   router.post("/", async (req, res) => {
@@ -36,12 +38,15 @@ export function sessionsApiRouter(sessionService: SessionService) {
   });
 
   router.post("/:id/prompt", async (req, res) => {
-    const { message } = req.body ?? {};
+    const { message, behavior } = req.body ?? {};
     if (typeof message !== "string" || message.length === 0) {
       return res.status(400).json({ error: "message is required" });
     }
+    if (behavior !== undefined && behavior !== "steer" && behavior !== "followUp") {
+      return res.status(400).json({ error: 'behavior must be "steer" or "followUp"' });
+    }
     try {
-      await sessionService.prompt(req.params.id, message);
+      await sessionService.prompt(req.params.id, message, behavior);
       res.status(202).json({ accepted: true });
     } catch (err) {
       const { status, error } = sessionErrorResponse(err);
@@ -99,35 +104,75 @@ export function sessionsApiRouter(sessionService: SessionService) {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     });
 
     const sseWrite = (data: string) => {
       res.write(`data: ${data.replace(/\n/g, "\ndata: ")}\n\n`);
     };
 
-    const history = await sessionService.getEvents(req.params.id);
-    for (const e of history) sseWrite(JSON.stringify(e));
-
-    if (session.status === "stopped") {
+    let ended = false;
+    const finish = (unsubscribe: () => void) => {
+      if (ended) return;
+      ended = true;
+      clearInterval(heartbeat);
+      unsubscribe();
       res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
       res.end();
+    };
+
+    const stoppedAtStart = session.status === "stopped";
+
+    const liveBuffer: SequencedEvent[] = [];
+    let replayLength = -1;
+    let unsubscribe = () => {};
+    if (!stoppedAtStart) {
+      unsubscribe = sessionService.streamEvents(req.params.id).subscribe((e) => {
+        if (res.writableEnded) {
+          unsubscribe();
+          return;
+        }
+        if (replayLength === -1) {
+          liveBuffer.push(e);
+          return;
+        }
+        if (e.seq < replayLength) return;
+        sseWrite(JSON.stringify(e.event));
+        if (e.event.type === "status" && e.event.status === "stopped") {
+          finish(unsubscribe);
+        }
+      });
+    }
+
+    const heartbeat = setInterval(() => {
+      if (!res.writableEnded) res.write(`: ping\n\n`);
+    }, config.sseHeartbeatMs);
+    heartbeat.unref?.();
+
+    const history = await sessionService.getEvents(req.params.id);
+    const snapshot = history.slice();
+    replayLength = snapshot.length;
+    for (const e of snapshot) sseWrite(JSON.stringify(e));
+
+    if (stoppedAtStart) {
+      finish(unsubscribe);
       return;
     }
 
-    const unsubscribe = sessionService.streamEvents(req.params.id).subscribe((e) => {
-      if (res.writableEnded) {
-        unsubscribe();
+    for (const e of liveBuffer) {
+      if (e.seq < replayLength) continue;
+      sseWrite(JSON.stringify(e.event));
+      if (e.event.type === "status" && e.event.status === "stopped") {
+        finish(unsubscribe);
         return;
       }
-      sseWrite(JSON.stringify(e));
-      if (e.type === "status" && e.status === "stopped") {
-        res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
-        unsubscribe();
-        res.end();
-      }
-    });
+    }
+    liveBuffer.length = 0;
 
-    req.on("close", unsubscribe);
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      unsubscribe();
+    });
   });
 
   return router;

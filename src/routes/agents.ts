@@ -131,7 +131,7 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
     }
 
     let cursor = history.length;
-    const unsubscribe = sessionService.streamEvents(id).subscribe((event) => {
+    const unsubscribe = sessionService.streamEvents(id).subscribe(({ event }) => {
       if (res.writableEnded) {
         unsubscribe();
         return;

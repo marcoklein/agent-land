@@ -139,6 +139,7 @@ export class MockDockerPort implements DockerPort {
 export class FakeHandle implements AgentHandle {
   private handlers = new Set<(e: SessionEvent) => void>();
   prompts: string[] = [];
+  promptBehaviors: (("steer" | "followUp") | undefined)[] = [];
   responded: { requestId: string; value: Record<string, unknown> }[] = [];
   aborted = false;
   stopped = false;
@@ -158,8 +159,9 @@ export class FakeHandle implements AgentHandle {
     for (const h of this.handlers) h(event);
   }
 
-  async prompt(message: string) {
+  async prompt(message: string, behavior?: "steer" | "followUp") {
     this.prompts.push(message);
+    this.promptBehaviors.push(behavior);
   }
 
   async respond(requestId: string, value: { value?: string; confirmed?: boolean; cancelled?: boolean }) {
@@ -227,7 +229,7 @@ export function createAgentTestApp(): AgentTestApp {
   );
 
   app.use("/agents", agentsRouter(sessionService, connectorService));
-  app.use("/api/sessions", sessionsApiRouter(sessionService));
+  app.use("/api/sessions", sessionsApiRouter(sessionService, testConfig));
 
   return { app, mockDocker, fakeHarness, sessionService };
 }

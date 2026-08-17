@@ -15,6 +15,7 @@ export default defineConfig({
       DATA_DIR: path.resolve("./src/__tests__/tmp-test-data"),
       SESSION_SECRET: "test-secret",
       OPENCODE_API_KEY: "test-key",
+      SSE_HEARTBEAT_MS: "50",
     },
   },
 });
