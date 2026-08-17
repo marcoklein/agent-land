@@ -4,10 +4,12 @@ import flash from "connect-flash";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
-import { mkdir, rm, writeFile } from "fs/promises";
+import { mkdir, rm, writeFile, readFile, stat } from "fs/promises";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import { PassThrough } from "stream";
 import { SopsService } from "../../infra/sops.js";
-import { JsonConnectorRepository, JsonSessionRepository } from "../../infra/repositories.js";
+import { JsonConnectorRepository, JsonSessionRepository, JsonSessionEventLog } from "../../infra/repositories.js";
 import { ConnectorService } from "../../core/connector-service.js";
 import { SessionService } from "../../core/session-service.js";
 import { GitCloneProvisioner } from "../../infra/git-clone-provisioner.js";
@@ -22,6 +24,7 @@ import { getConfig } from "../../config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const testConfig = getConfig();
+const execFileAsync = promisify(execFile);
 
 function baseApp() {
   const app = express();
@@ -79,6 +82,7 @@ export class MockDockerPort implements DockerPort {
   removed: string[] = [];
   removedVolumes: string[] = [];
   execs: { containerId: string; args: string[] }[] = [];
+  containers = new Set<string>();
   execCommandImpl?: (args: string[]) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
 
   reset() {
@@ -86,6 +90,7 @@ export class MockDockerPort implements DockerPort {
     this.removed = [];
     this.removedVolumes = [];
     this.execs = [];
+    this.containers = new Set();
     this.execCommandImpl = undefined;
   }
 
@@ -102,6 +107,7 @@ export class MockDockerPort implements DockerPort {
       image: opts.image,
       workspaceVolume: opts.workspaceVolume,
     });
+    this.containers.add(`agent-land-pi-${opts.id}`);
     return { id: `mock-${opts.id}` } as any;
   }
 
@@ -124,6 +130,10 @@ export class MockDockerPort implements DockerPort {
   }
 
   async ensureAgentImage(_image: string) {}
+
+  async containerExists(id: string): Promise<boolean> {
+    return this.containers.has(id);
+  }
 }
 
 export class FakeHandle implements AgentHandle {
@@ -162,6 +172,7 @@ export class FakeHandle implements AgentHandle {
 
   async stop() {
     this.stopped = true;
+    this.emit({ type: "status", status: "stopped" });
   }
 }
 
@@ -192,6 +203,7 @@ export function createAgentTestApp(): AgentTestApp {
   const sops = new SopsService(testConfig.secretsDir, testConfig.ageKeyFile);
   const sessionRepository = new JsonSessionRepository(testConfig.dataDir);
   const connectorRepository = new JsonConnectorRepository(testConfig.dataDir);
+  const eventLog = new JsonSessionEventLog(testConfig.dataDir);
   const connectorService = new ConnectorService(connectorRepository, sops);
 
   const mockDocker = new MockDockerPort();
@@ -200,15 +212,19 @@ export function createAgentTestApp(): AgentTestApp {
     gitUserName: "Test Bot",
     gitUserEmail: "bot@test.local",
   });
-  const sessionService = new SessionService({
-    docker: mockDocker,
-    secrets: sops,
-    sessions: sessionRepository,
-    connectors: connectorRepository,
-    harness: fakeHarness,
-    provisioner,
-    config: testConfig,
-  });
+  const sessionService = new SessionService(
+    {
+      docker: mockDocker,
+      secrets: sops,
+      sessions: sessionRepository,
+      connectors: connectorRepository,
+      harness: fakeHarness,
+      provisioner,
+      eventLog,
+      config: testConfig,
+    },
+    20
+  );
 
   app.use("/agents", agentsRouter(sessionService, connectorService));
   app.use("/api/sessions", sessionsApiRouter(sessionService));
@@ -217,8 +233,39 @@ export function createAgentTestApp(): AgentTestApp {
 }
 
 export async function setupDataDir() {
+  await ensureTestFixtures();
   await mkdir(testConfig.dataDir, { recursive: true });
   await emptyConnectors();
+}
+
+async function ensureTestFixtures(): Promise<void> {
+  const sopsYaml = path.join(testConfig.secretsDir, ".sops.yaml");
+  try {
+    await stat(sopsYaml);
+    await stat(testConfig.ageKeyFile);
+    return;
+  } catch {}
+
+  try {
+    await execFileAsync("age-keygen", ["-o", testConfig.ageKeyFile]);
+    await execFileAsync("sops", ["--version"]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Test fixtures are missing and cannot be generated: age-keygen and sops binaries are required (${message})`
+    );
+  }
+
+  const keyFile = await readFile(testConfig.ageKeyFile, "utf-8");
+  const publicKey = keyFile
+    .split("\n")
+    .find((line) => line.startsWith("# public key: "))
+    ?.slice("# public key: ".length)
+    .trim();
+  if (!publicKey) throw new Error("Could not read age public key from generated key file");
+
+  await mkdir(testConfig.secretsDir, { recursive: true });
+  await writeFile(sopsYaml, `creation_rules:\n  - age: ${publicKey}\n`);
 }
 
 export async function cleanupDataDir() {

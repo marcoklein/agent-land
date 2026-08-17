@@ -16,6 +16,13 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 
 RUN npm install -g @earendil-works/pi-coding-agent@0.82.1
 
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-${ARCH}.tar.gz" \
+    | tar -xz -C /usr/local/bin --strip-components=1 age/age age/age-keygen \
+    && curl -fsSL "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.${ARCH}" \
+    -o /usr/local/bin/sops \
+    && chmod +x /usr/local/bin/sops
+
 COPY skills/ /tmp/pi-config/skills/
 
 COPY entrypoint.sh /entrypoint.sh

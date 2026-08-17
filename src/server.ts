@@ -13,7 +13,7 @@ import { SopsService } from "./infra/sops.js";
 import { DockerService } from "./infra/docker.js";
 import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
 import { GitCloneProvisioner } from "./infra/git-clone-provisioner.js";
-import { JsonSessionRepository, JsonConnectorRepository } from "./infra/repositories.js";
+import { JsonSessionRepository, JsonConnectorRepository, JsonSessionEventLog } from "./infra/repositories.js";
 import { SessionService } from "./core/session-service.js";
 import { ConnectorService } from "./core/connector-service.js";
 import { sessionsApiRouter } from "./presentation/http/api-sessions.js";
@@ -25,6 +25,7 @@ const sops = new SopsService(config.secretsDir, config.ageKeyFile);
 const docker = new DockerService();
 const sessionRepository = new JsonSessionRepository(config.dataDir);
 const connectorRepository = new JsonConnectorRepository(config.dataDir);
+const eventLog = new JsonSessionEventLog(config.dataDir);
 
 const connectorService = new ConnectorService(connectorRepository, sops);
 const harness = new PiRpcHarness(docker);
@@ -39,6 +40,7 @@ const sessionService = new SessionService({
   connectors: connectorRepository,
   harness,
   provisioner,
+  eventLog,
   config,
 });
 
@@ -78,6 +80,20 @@ app.use("/agents", agentsRouter(sessionService, connectorService));
 app.use("/connectors", connectorsRouter(connectorService));
 app.use("/api/sessions", sessionsApiRouter(sessionService));
 
-app.listen(config.port, () => {
+await sessionService.recover().catch((err) => {
+  console.error("Session recovery failed:", err);
+});
+
+const server = app.listen(config.port, () => {
   console.log(`Agent Land orchestrator running on http://localhost:${config.port}`);
 });
+
+async function shutdown(signal: string): Promise<void> {
+  console.log(`${signal} received, draining agent sessions...`);
+  await sessionService.drainAll().catch(() => {});
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));

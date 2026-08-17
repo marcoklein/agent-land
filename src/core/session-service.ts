@@ -8,9 +8,11 @@ import type {
   SessionRepository,
   ConnectorRepository,
   WorkspaceProvisioner,
+  SessionEventLog,
 } from "./ports.js";
 import { SESSION_VOLUME_NAME } from "../infra/docker.js";
 import type { Config } from "../config.js";
+import { agentContainerId } from "./harness.js";
 
 interface SessionHandle {
   session: AgentSession;
@@ -18,6 +20,7 @@ interface SessionHandle {
   subscribers: Set<(e: SessionEvent) => void>;
   history: SessionEvent[];
   containerId: string;
+  draining?: boolean;
 }
 
 interface SessionServiceDeps {
@@ -27,6 +30,7 @@ interface SessionServiceDeps {
   connectors: ConnectorRepository;
   harness: AgentHarness;
   provisioner: WorkspaceProvisioner;
+  eventLog: SessionEventLog;
   config: Config;
 }
 
@@ -49,7 +53,7 @@ export class SessionStoppedError extends Error {
 export class SessionService {
   private handles = new Map<string, SessionHandle>();
 
-  constructor(private deps: SessionServiceDeps) {}
+  constructor(private deps: SessionServiceDeps, private drainSettleTimeoutMs = 4000) {}
 
   async resolveAgentEnv(connectorNames: string[]): Promise<Map<string, string>> {
     const connectorsData = await this.deps.connectors.list();
@@ -150,8 +154,10 @@ export class SessionService {
     return this.deps.sessions.get(id);
   }
 
-  getEvents(id: string): SessionEvent[] {
-    return this.handles.get(id)?.history ?? [];
+  async getEvents(id: string): Promise<SessionEvent[]> {
+    const handle = this.handles.get(id);
+    if (handle) return handle.history;
+    return this.deps.eventLog.read(id).catch(() => []);
   }
 
   streamEvents(id: string): EventStream {
@@ -208,6 +214,90 @@ export class SessionService {
     this.setStatus(handle, "stopped");
   }
 
+  async recover(): Promise<void> {
+    const sessions = await this.deps.sessions.list();
+    for (const session of sessions) {
+      if (this.handles.has(session.id)) continue;
+
+      const containerId = agentContainerId(session.id);
+      const exists = await this.deps.docker.containerExists(containerId).catch(() => false);
+
+      if (!exists) {
+        await this.markStopped(session);
+        continue;
+      }
+
+      try {
+        const history = await this.deps.eventLog.read(session.id);
+        const harness = await this.deps.harness.start(session);
+        const handle: SessionHandle = {
+          session,
+          harness,
+          subscribers: new Set(),
+          history: history.slice(-HISTORY_CAP),
+          containerId,
+        };
+        this.handles.set(session.id, handle);
+        harness.events().subscribe((e) => this.onEvent(handle, e));
+        await this.markReattached(handle);
+      } catch {
+        await this.markStopped(session);
+      }
+    }
+  }
+
+  async drainAll(): Promise<void> {
+    await Promise.all(
+      [...this.handles.values()].map(async (handle) => {
+        handle.draining = true;
+        const settled = this.waitForSettle(handle);
+        try {
+          await handle.harness.abort();
+        } catch {}
+        await settled;
+        try {
+          await handle.harness.stop();
+        } catch {}
+      })
+    );
+  }
+
+  private waitForSettle(handle: SessionHandle): Promise<void> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        resolve();
+      };
+      const timer = setTimeout(finish, this.drainSettleTimeoutMs);
+      const unsubscribe = handle.harness.events().subscribe((e) => {
+        if (e.type === "agent_settled" || (e.type === "status" && e.status === "stopped")) {
+          finish();
+        }
+      });
+    });
+  }
+
+  private async markReattached(handle: SessionHandle): Promise<void> {
+    handle.session.status = "idle";
+    handle.session.waitingFor = undefined;
+    handle.session.updatedAt = new Date().toISOString();
+    await this.persist(handle);
+    this.push(handle, { type: "status", status: "idle" });
+  }
+
+  private async markStopped(session: AgentSession): Promise<void> {
+    session.status = "stopped";
+    session.updatedAt = new Date().toISOString();
+    await this.deps.sessions.save(session).catch(() => {});
+    await this.deps.eventLog
+      .append(session.id, { type: "status", status: "stopped" }, HISTORY_CAP)
+      .catch(() => {});
+  }
+
   private requireLiveHandle(id: string): SessionHandle {
     const handle = this.handles.get(id);
     if (!handle) throw new SessionNotFoundError(id);
@@ -216,6 +306,7 @@ export class SessionService {
   }
 
   private onEvent(handle: SessionHandle, event: SessionEvent): void {
+    if (handle.draining) return;
     this.push(handle, event);
 
     switch (event.type) {
@@ -278,6 +369,7 @@ export class SessionService {
     if (handle.history.length > HISTORY_CAP) {
       handle.history.splice(0, handle.history.length - HISTORY_CAP);
     }
+    void this.deps.eventLog.append(handle.session.id, event, HISTORY_CAP).catch(() => {});
     for (const subscriber of handle.subscribers) {
       try {
         subscriber(event);

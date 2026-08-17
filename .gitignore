@@ -8,3 +8,4 @@ data/
 .age-key
 src/__tests__/fixtures/secrets/
 src/__tests__/tmp-test-data/
+src/__tests__/fixtures/.sops.yaml

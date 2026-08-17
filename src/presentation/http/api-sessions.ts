@@ -105,7 +105,7 @@ export function sessionsApiRouter(sessionService: SessionService) {
       res.write(`data: ${data.replace(/\n/g, "\ndata: ")}\n\n`);
     };
 
-    const history = sessionService.getEvents(req.params.id);
+    const history = await sessionService.getEvents(req.params.id);
     for (const e of history) sseWrite(JSON.stringify(e));
 
     if (session.status === "stopped") {
