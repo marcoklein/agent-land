@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import type { AgentSession, PermissionPolicy, SessionStatus, WorkspaceSpec } from "./types.js";
-import type { SessionEvent } from "./events.js";
+import type { SessionEvent, SequencedEvent, SequencedEventStream } from "./events.js";
 import type { AgentHandle, AgentHarness, EventStream } from "./harness.js";
 import type {
   DockerPort,
@@ -17,8 +17,9 @@ import { agentContainerId } from "./harness.js";
 interface SessionHandle {
   session: AgentSession;
   harness: AgentHandle;
-  subscribers: Set<(e: SessionEvent) => void>;
+  subscribers: Set<(e: SequencedEvent) => void>;
   history: SessionEvent[];
+  seqCounter: number;
   containerId: string;
   draining?: boolean;
 }
@@ -128,6 +129,7 @@ export class SessionService {
         harness,
         subscribers: new Set(),
         history: [],
+        seqCounter: 0,
         containerId: container.id,
       };
       this.handles.set(id, handle);
@@ -160,7 +162,7 @@ export class SessionService {
     return this.deps.eventLog.read(id).catch(() => []);
   }
 
-  streamEvents(id: string): EventStream {
+  streamEvents(id: string): SequencedEventStream {
     return {
       subscribe: (handler) => {
         const handle = this.handles.get(id);
@@ -235,6 +237,7 @@ export class SessionService {
           harness,
           subscribers: new Set(),
           history: history.slice(-HISTORY_CAP),
+          seqCounter: history.slice(-HISTORY_CAP).length,
           containerId,
         };
         this.handles.set(session.id, handle);
@@ -365,14 +368,16 @@ export class SessionService {
   }
 
   private push(handle: SessionHandle, event: SessionEvent): void {
+    const seq = handle.seqCounter++;
     handle.history.push(event);
     if (handle.history.length > HISTORY_CAP) {
       handle.history.splice(0, handle.history.length - HISTORY_CAP);
     }
     void this.deps.eventLog.append(handle.session.id, event, HISTORY_CAP).catch(() => {});
+    const sequenced: SequencedEvent = { seq, event };
     for (const subscriber of handle.subscribers) {
       try {
-        subscriber(event);
+        subscriber(sequenced);
       } catch {}
     }
   }

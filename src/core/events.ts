@@ -12,3 +12,9 @@ export type SessionEvent =
   | { type: "agent_settled" }
   | { type: "waiting_for_input"; requestId: string; method: string; prompt?: string; options?: string[] }
   | { type: "input_received"; requestId: string };
+
+export type SequencedEvent = { seq: number; event: SessionEvent };
+
+export type SequencedEventStream = {
+  subscribe(handler: (e: SequencedEvent) => void): () => void;
+};

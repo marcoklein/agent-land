@@ -12,6 +12,7 @@ export interface Config {
   defaultModel: string;
   gitUserName: string;
   gitUserEmail: string;
+  sseHeartbeatMs: number;
 }
 
 export function getConfig(): Config {
@@ -27,5 +28,6 @@ export function getConfig(): Config {
     defaultModel: process.env.DEFAULT_MODEL || "deepseek-v4-pro",
     gitUserName: process.env.GIT_USER_NAME || "",
     gitUserEmail: process.env.GIT_USER_EMAIL || "",
+    sseHeartbeatMs: parseInt(process.env.SSE_HEARTBEAT_MS || "30000"),
   };
 }

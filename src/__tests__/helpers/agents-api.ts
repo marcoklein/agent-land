@@ -1,16 +1,22 @@
 import * as cheerio from "cheerio";
 import request from "supertest";
+import type { Express } from "express";
 import { createAgentTestApp, MockDockerPort, FakeHarness, FakeHandle } from "./setup.js";
+import type { SessionService } from "../../core/session-service.js";
 
 type Agent = ReturnType<typeof request.agent>;
 
 export class AgentsApi {
   agent: Agent;
+  app: Express;
+  sessionService: SessionService;
   mockDocker: MockDockerPort;
   fakeHarness: FakeHarness;
 
   constructor() {
-    const { app, mockDocker, fakeHarness } = createAgentTestApp();
+    const { app, mockDocker, fakeHarness, sessionService } = createAgentTestApp();
+    this.app = app;
+    this.sessionService = sessionService;
     this.mockDocker = mockDocker;
     this.fakeHarness = fakeHarness;
     this.agent = request.agent(app);
