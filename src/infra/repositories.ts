@@ -55,6 +55,7 @@ export class JsonSessionRepository implements SessionRepository {
 
 export class JsonSessionEventLog implements SessionEventLog {
   private tails = new Map<string, string[]>();
+  private chains = new Map<string, Promise<void>>();
 
   constructor(private dataDir: string) {}
 
@@ -63,6 +64,13 @@ export class JsonSessionEventLog implements SessionEventLog {
   }
 
   async append(id: string, event: SessionEvent, cap: number): Promise<void> {
+    const prev = this.chains.get(id) ?? Promise.resolve();
+    const next = prev.then(() => this.appendLocked(id, event, cap));
+    this.chains.set(id, next.catch(() => {}));
+    await next;
+  }
+
+  private async appendLocked(id: string, event: SessionEvent, cap: number): Promise<void> {
     const filePath = this.filePath(id);
     await mkdir(path.dirname(filePath), { recursive: true });
     const line = JSON.stringify(event);
@@ -70,13 +78,15 @@ export class JsonSessionEventLog implements SessionEventLog {
     let tail = this.tails.get(id);
     if (!tail) {
       tail = await this.readLines(id);
-      this.tails.set(id, tail);
     }
     await appendFile(filePath, line + "\n", "utf-8");
     tail.push(line);
     if (tail.length > cap) {
       tail = tail.slice(tail.length - cap);
+      this.tails.set(id, tail);
       await writeFile(filePath, tail.join("\n") + "\n", "utf-8");
+    } else {
+      this.tails.set(id, tail);
     }
   }
 

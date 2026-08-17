@@ -20,6 +20,7 @@ interface SessionHandle {
   subscribers: Set<(e: SessionEvent) => void>;
   history: SessionEvent[];
   containerId: string;
+  draining?: boolean;
 }
 
 interface SessionServiceDeps {
@@ -52,7 +53,7 @@ export class SessionStoppedError extends Error {
 export class SessionService {
   private handles = new Map<string, SessionHandle>();
 
-  constructor(private deps: SessionServiceDeps) {}
+  constructor(private deps: SessionServiceDeps, private drainSettleTimeoutMs = 4000) {}
 
   async resolveAgentEnv(connectorNames: string[]): Promise<Map<string, string>> {
     const connectorsData = await this.deps.connectors.list();
@@ -216,7 +217,7 @@ export class SessionService {
   async recover(): Promise<void> {
     const sessions = await this.deps.sessions.list();
     for (const session of sessions) {
-      if (session.status === "stopped") continue;
+      if (this.handles.has(session.id)) continue;
 
       const containerId = agentContainerId(session.id);
       const exists = await this.deps.docker.containerExists(containerId).catch(() => false);
@@ -248,9 +249,12 @@ export class SessionService {
   async drainAll(): Promise<void> {
     await Promise.all(
       [...this.handles.values()].map(async (handle) => {
+        handle.draining = true;
+        const settled = this.waitForSettle(handle);
         try {
           await handle.harness.abort();
         } catch {}
+        await settled;
         try {
           await handle.harness.stop();
         } catch {}
@@ -258,8 +262,22 @@ export class SessionService {
     );
   }
 
+  private waitForSettle(handle: SessionHandle): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, this.drainSettleTimeoutMs);
+      const unsubscribe = handle.harness.events().subscribe((e) => {
+        if (e.type === "agent_settled" || (e.type === "status" && e.status === "stopped")) {
+          clearTimeout(timer);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+  }
+
   private async markReattached(handle: SessionHandle): Promise<void> {
     handle.session.status = "idle";
+    handle.session.waitingFor = undefined;
     handle.session.updatedAt = new Date().toISOString();
     await this.persist(handle);
     this.push(handle, { type: "status", status: "idle" });
@@ -282,6 +300,7 @@ export class SessionService {
   }
 
   private onEvent(handle: SessionHandle, event: SessionEvent): void {
+    if (handle.draining) return;
     this.push(handle, event);
 
     switch (event.type) {

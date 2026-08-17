@@ -80,12 +80,12 @@ app.use("/agents", agentsRouter(sessionService, connectorService));
 app.use("/connectors", connectorsRouter(connectorService));
 app.use("/api/sessions", sessionsApiRouter(sessionService));
 
-const server = app.listen(config.port, () => {
-  console.log(`Agent Land orchestrator running on http://localhost:${config.port}`);
+await sessionService.recover().catch((err) => {
+  console.error("Session recovery failed:", err);
 });
 
-void sessionService.recover().catch((err) => {
-  console.error("Session recovery failed:", err);
+const server = app.listen(config.port, () => {
+  console.log(`Agent Land orchestrator running on http://localhost:${config.port}`);
 });
 
 async function shutdown(signal: string): Promise<void> {

@@ -79,16 +79,31 @@ describe("Session recovery", () => {
     expect(events.at(-1)).toEqual({ type: "status", status: "stopped" });
   });
 
-  it("skips sessions that are already stopped", async () => {
+  it("re-attaches sessions whose persisted status says stopped but the container still exists", async () => {
     const session = makeSession({ status: "stopped" });
     await persistSession(session);
     ctx.mockDocker.containers.add(containerName(session.id));
 
     await ctx.sessionService.recover();
 
-    expect(ctx.fakeHarness.handles.length).toBe(0);
+    expect(ctx.fakeHarness.handles.length).toBe(1);
     const persisted = await readPersistedSession(session.id);
-    expect(persisted.status).toBe("stopped");
+    expect(persisted.status).toBe("idle");
+  });
+
+  it("clears a stale waitingFor when re-attaching a waiting session", async () => {
+    const session = makeSession({
+      status: "waiting_for_input",
+      waitingFor: { requestId: "req-1", method: "confirm" },
+    });
+    await persistSession(session);
+    ctx.mockDocker.containers.add(containerName(session.id));
+
+    await ctx.sessionService.recover();
+
+    const persisted = await readPersistedSession(session.id);
+    expect(persisted.waitingFor).toBeUndefined();
+    expect(persisted.status).toBe("idle");
   });
 
   it("replays the persisted event log into the recovered handle", async () => {
@@ -111,8 +126,8 @@ describe("Session recovery", () => {
     expect(events.at(-1)).toEqual({ type: "status", status: "idle" });
   });
 
-  it("aborts and stops every live harness on drain", async () => {
-    await ctx.sessionService.createSession({});
+  it("aborts and stops every live harness on drain without persisting stopped", async () => {
+    const first = await ctx.sessionService.createSession({});
     await ctx.sessionService.createSession({});
     expect(ctx.fakeHarness.handles.length).toBe(2);
 
@@ -122,6 +137,22 @@ describe("Session recovery", () => {
       expect(handle.aborted).toBe(true);
       expect(handle.stopped).toBe(true);
     }
+    expect((await readPersistedSession(first.id)).status).not.toBe("stopped");
+  });
+
+  it("re-attaches a drained session in a fresh service instance", async () => {
+    const session = await ctx.sessionService.createSession({});
+    await ctx.sessionService.drainAll();
+    expect(ctx.fakeHarness.handles.length).toBe(1);
+
+    const ctx2 = createAgentTestApp();
+    ctx2.mockDocker.containers.add(containerName(session.id));
+
+    await ctx2.sessionService.recover();
+
+    expect(ctx2.fakeHarness.handles.length).toBe(1);
+    const persisted = await readPersistedSession(session.id);
+    expect(persisted.status).toBe("idle");
   });
 });
 
@@ -148,6 +179,19 @@ describe("Session event log", () => {
   it("returns an empty list when no log exists", async () => {
     const log = new JsonSessionEventLog(getDataDir());
     expect(await log.read("missing")).toEqual([]);
+  });
+
+  it("keeps every event when appends race", async () => {
+    const log = new JsonSessionEventLog(getDataDir());
+    const events: SessionEvent[] = Array.from({ length: 50 }, (_, i) => ({
+      type: "message_delta",
+      text: `d${i}`,
+    }));
+
+    await Promise.all(events.map((e) => log.append("race", e, 100)));
+
+    const read = await log.read("race");
+    expect(read).toEqual(events);
   });
 });
 
