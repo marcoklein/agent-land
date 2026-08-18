@@ -67,6 +67,15 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
         .status(400)
         .json({ error: "Provide exactly one of value, confirmed, or cancelled" });
     }
+    if (value !== undefined && typeof value !== "string") {
+      return res.status(400).json({ error: "value must be a string" });
+    }
+    if (confirmed !== undefined && typeof confirmed !== "boolean") {
+      return res.status(400).json({ error: "confirmed must be a boolean" });
+    }
+    if (cancelled !== undefined && typeof cancelled !== "boolean") {
+      return res.status(400).json({ error: "cancelled must be a boolean" });
+    }
     try {
       await sessionService.respond(req.params.id, requestId, { value, confirmed, cancelled });
       res.json({ accepted: true });
@@ -96,7 +105,6 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
       await sessionService.remove(req.params.id);
       res.json({ deleted: true });
     } catch (err) {
-      console.error("DELETE debug:", err instanceof Error ? err.stack : err);
       const { status, error } = sessionErrorResponse(err);
       res.status(status).json({ error });
     }
@@ -164,6 +172,10 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
     heartbeat.unref?.();
 
     if (liveOnly) {
+      if (stoppedAtStart) {
+        finish(unsubscribe);
+        return;
+      }
       req.on("close", () => {
         clearInterval(heartbeat);
         unsubscribe();
@@ -171,10 +183,9 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
       return;
     }
 
-    const history = await sessionService.getEvents(req.params.id);
-    const snapshot = history.slice();
+    const snapshot = await sessionService.getSequencedEvents(req.params.id);
     replayLength = snapshot.length;
-    for (let i = 0; i < snapshot.length; i++) sseWrite(JSON.stringify({ ...snapshot[i], seq: i }));
+    for (const { seq, event } of snapshot) sseWrite(JSON.stringify({ ...event, seq }));
 
     if (stoppedAtStart) {
       finish(unsubscribe);

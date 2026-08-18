@@ -100,6 +100,10 @@ export async function watchSession(
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     try {
       for await (const ev of stream(url, { authHeader: client.authHeader, signal: ac.signal })) {
+        if (ev.event === "agent-done") {
+          out.write(`${sessionId}: stopped\n`);
+          return;
+        }
         if (ev.data === undefined) continue;
         let parsed;
         try {

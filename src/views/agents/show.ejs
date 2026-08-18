@@ -27,6 +27,16 @@
   <div class="log-tool log-tool-err">
     Waiting for input (<%= session.waitingFor.method %>)<% if (session.waitingFor.prompt) { %>: <%= session.waitingFor.prompt %><% } %>
   </div>
+  <form method="post" action="/agents/<%= session.id %>/respond" class="respond-form">
+    <input type="hidden" name="requestId" value="<%= session.waitingFor.requestId %>">
+    <% if (session.waitingFor.method === 'confirm') { %>
+    <button type="submit" name="action" value="confirm">Confirm</button>
+    <button type="submit" name="action" value="cancel" class="secondary">Cancel</button>
+    <% } else { %>
+    <input type="text" name="value" placeholder="Your answer" required>
+    <button type="submit">Send</button>
+    <% } %>
+  </form>
   <% } %>
 
   <h4>Logs</h4>

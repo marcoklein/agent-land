@@ -19,7 +19,7 @@ interface SessionHandle {
   harness: AgentHandle;
   unsubscribe: () => void;
   subscribers: Set<(e: SequencedEvent) => void>;
-  history: SessionEvent[];
+  history: SequencedEvent[];
   seqCounter: number;
   containerId: string;
   pendingPersists: Set<Promise<void>>;
@@ -42,7 +42,7 @@ const HISTORY_CAP = 10_000;
 
 export class SessionNotFoundError extends Error {
   constructor(id: string) {
-    super(`Session ${id} is not running`);
+    super(`Session ${id} not found`);
     this.name = "SessionNotFoundError";
   }
 }
@@ -166,8 +166,15 @@ export class SessionService {
 
   async getEvents(id: string): Promise<SessionEvent[]> {
     const handle = this.handles.get(id);
-    if (handle) return handle.history;
+    if (handle) return handle.history.map((h) => h.event);
     return this.deps.eventLog.read(id).catch(() => []);
+  }
+
+  async getSequencedEvents(id: string): Promise<SequencedEvent[]> {
+    const handle = this.handles.get(id);
+    if (handle) return handle.history.slice();
+    const events = await this.deps.eventLog.read(id).catch(() => [] as SessionEvent[]);
+    return events.map((event, seq) => ({ seq, event }));
   }
 
   streamEvents(id: string): SequencedEventStream {
@@ -210,7 +217,14 @@ export class SessionService {
 
   async kill(id: string): Promise<void> {
     const handle = this.handles.get(id);
-    if (!handle) throw new SessionNotFoundError(id);
+    if (!handle) {
+      const session = await this.deps.sessions.get(id);
+      if (!session) throw new SessionNotFoundError(id);
+      if (session.status !== "stopped") {
+        await this.markStopped(session);
+      }
+      return;
+    }
 
     try {
       await handle.harness.abort();
@@ -261,13 +275,14 @@ export class SessionService {
       try {
         const history = await this.deps.eventLog.read(session.id);
         const harness = await this.deps.harness.start(session);
+        const trimmed = history.slice(-HISTORY_CAP);
         const handle: SessionHandle = {
           session,
           harness,
           unsubscribe: () => {},
           subscribers: new Set(),
-          history: history.slice(-HISTORY_CAP),
-          seqCounter: history.slice(-HISTORY_CAP).length,
+          history: trimmed.map((event, seq) => ({ seq, event })),
+          seqCounter: trimmed.length,
           containerId,
           pendingPersists: new Set(),
           pendingAppends: new Set(),
@@ -402,7 +417,7 @@ export class SessionService {
 
   private push(handle: SessionHandle, event: SessionEvent): void {
     const seq = handle.seqCounter++;
-    handle.history.push(event);
+    handle.history.push({ seq, event });
     if (handle.history.length > HISTORY_CAP) {
       handle.history.splice(0, handle.history.length - HISTORY_CAP);
     }
