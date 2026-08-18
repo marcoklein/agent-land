@@ -320,10 +320,10 @@ describe("Agents — Sessions", () => {
   });
 
   describe("API — SSE event stream", () => {
-    function openSse(id: string) {
+    function openSse(id: string, query = "") {
       const chunks: string[] = [];
       const req = request(api.app)
-        .get(`/api/sessions/${id}/events`)
+        .get(`/api/sessions/${id}/events${query}`)
         .buffer(false)
         .parse((res, cb) => {
           res.on("data", (d: Buffer) => chunks.push(d.toString()));
@@ -363,6 +363,28 @@ describe("Agents — Sessions", () => {
 
       expect(headers["x-accel-buffering"]).toBe("no");
       expect(headers["content-type"]).toContain("text/event-stream");
+      destroy();
+    });
+
+    it("skips history replay with live=1", async () => {
+      const launchRes = await api.launch({ task: "live only" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+      api.sendEvent({ type: "turn_start" });
+      api.sendEvent({
+        type: "message_end",
+        message: { role: "assistant", content: "history event" },
+      });
+      api.sendEvent({ type: "agent_settled" });
+
+      const stream = openSse(id, "?live=1");
+      const { destroy } = await stream.opened;
+      await new Promise((r) => setTimeout(r, 100));
+
+      expect(stream.lines().some((l) => l.includes("history event"))).toBe(false);
+
+      api.sendEvent({ type: "tool_start", toolCallId: "c2", toolName: "bash", args: {} });
+      await stream.waitFor((lines) => lines.some((l) => l.includes('"toolName":"bash"')));
+
       destroy();
     });
 

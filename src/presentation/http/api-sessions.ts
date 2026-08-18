@@ -128,6 +128,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
     };
 
     const stoppedAtStart = session.status === "stopped";
+    const liveOnly = req.query.live === "1";
 
     const liveBuffer: SequencedEvent[] = [];
     let replayLength = -1;
@@ -136,6 +137,13 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
       unsubscribe = sessionService.streamEvents(req.params.id).subscribe((e) => {
         if (res.writableEnded) {
           unsubscribe();
+          return;
+        }
+        if (liveOnly) {
+          sseWrite(JSON.stringify({ ...e.event, seq: e.seq }));
+          if (e.event.type === "status" && e.event.status === "stopped") {
+            finish(unsubscribe);
+          }
           return;
         }
         if (replayLength === -1) {
@@ -154,6 +162,14 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
       if (!res.writableEnded) res.write(`: ping\n\n`);
     }, config.sseHeartbeatMs);
     heartbeat.unref?.();
+
+    if (liveOnly) {
+      req.on("close", () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+      });
+      return;
+    }
 
     const history = await sessionService.getEvents(req.params.id);
     const snapshot = history.slice();

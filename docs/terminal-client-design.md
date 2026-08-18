@@ -58,11 +58,22 @@ al connectors add --name <n> --type <type> --url <u> [--field KEY=VALUE ...] [--
 
 al connectors rm <name> [-y|--yes]
     delete a connector (prompts y/N)
+
+al run <message> [new-flags] [--rm] [--timeout <seconds>] [--verbose]
+    one-shot script mode: create → prompt → wait for agent_settled → print the final answer
+    exit code 0 on settle, 1 on stop/timeout; session is kept unless --rm
+
+al watch [<id> | --all]
+    attach read-only to live events (?live=1) and print "<id>: settled" notifications, stdout only
 ```
 
 `--manual` sets `permissionPolicy: "manual"` (dialogs only reach the client in manual sessions). Everything else stays in the web UI for v1 (see out of scope).
 
-Server API notes (ADR-014): `/api/connectors` and `/api/models` were added for machine parity with the web UI. `DELETE /api/sessions/:id` now kills a running session and purges its record and event log (stopped sessions are purged directly), so removed sessions disappear from `al ls`.
+Server API notes (ADR-014): `/api/connectors` and `/api/models` were added for machine parity with the web UI. `DELETE /api/sessions/:id` now kills a running session and purges its record and event log (stopped sessions are purged directly), so removed sessions disappear from `al ls`. The events route accepts `?live=1` to skip history replay — used by `al watch`.
+
+## Scripting commands
+
+`al run` composes the same primitives as the overlay (create → prompt → seq-deduped stream) but targets cron/CI: it exits with code 0 only after `agent_settled`, prints the final assistant message to stdout, and nothing else (unless `--verbose`). `--timeout` aborts the turn and exits 1; `--rm` deletes the session afterwards. Dialogs only occur under `--manual`; they are answered from stdin when a TTY is present and otherwise fail the run. `al watch` uses `?live=1` so attaching never replays history — it only reports settles/stops that happen while watching.
 
 ## Implementation notes
 
@@ -164,7 +175,6 @@ Local dev: `AGENT_LAND_URL=http://localhost:3000` and no auth vars (the dev serv
 
 ## Explicitly out of scope
 
-- One-shot `al run` (create → prompt → wait settled → print → delete) — planned as a separate step; `al log --follow` covers ad-hoc tailing.
 - Session management beyond `al rm` (`al status`, renaming) — web UI keeps the rest in v1.
 - tmux integration or any client-side persistence.
 - `editor`-method dialogs beyond plain input.
