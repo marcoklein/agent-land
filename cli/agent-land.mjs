@@ -15,8 +15,26 @@ Usage:
   al chat <session-id>
       attach to an existing session (history replays, then live events)
 
-  al ls
+  al ls [--json]
       list sessions with status, age, model, workspace and connectors
+
+  al rm <session-id> [-y|--yes]
+      delete a session (prompts y/N when it is still running)
+
+  al log <session-id> [--follow] [--json]
+      print the full event history; --follow keeps tailing, --json prints raw events
+
+  al models
+      list available models
+
+  al connectors ls
+      list connectors (name, type, url — never secrets)
+
+  al connectors add --name <n> --type <type> --url <u> [--field KEY=VALUE ...] [--content <yaml>]
+      create a connector; typed connectors take --field, custom types take --content
+
+  al connectors rm <name> [-y|--yes]
+      delete a connector (prompts y/N)
 
 Config (env):
   AGENT_LAND_URL             default https://agent-land.host.impromat.app
@@ -47,8 +65,17 @@ function parseArgs(argv) {
     else if (a === "--connectors") opts.connectors = (argv[++i] || "").split(",").filter(Boolean);
     else if (a === "--model") opts.model = argv[++i];
     else if (a === "--manual") opts.manual = true;
+    else if (a === "--yes" || a === "-y") opts.yes = true;
+    else if (a === "--json") opts.json = true;
+    else if (a === "--follow") opts.follow = true;
+    else if (a === "--name") opts.name = argv[++i];
+    else if (a === "--type") opts.type = argv[++i];
+    else if (a === "--url") opts.url = argv[++i];
+    else if (a === "--content") opts.content = argv[++i];
+    else if (a === "--field") (opts.fields ||= []).push(argv[++i]);
     else if (a === "--help" || a === "-h") process.stdout.write(USAGE) || process.exit(0);
-    else if (a === "new" || a === "chat" || a === "ls") cmd = a;
+    else if (cmd === null && (a === "new" || a === "chat" || a === "ls" || a === "rm" || a === "log" || a === "models" || a === "connectors"))
+      cmd = a;
     else positional.push(a);
   }
 
@@ -98,14 +125,145 @@ function sessionLine(s) {
   return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${s.model}${workspace}${connectors}`;
 }
 
-async function listSessions(client) {
+async function listSessions(client, { json } = {}) {
   const { sessions } = await client.listSessions();
   if (!sessions || sessions.length === 0) {
-    process.stdout.write("no sessions\n");
+    process.stdout.write(json ? "[]\n" : "no sessions\n");
     return;
   }
   const sorted = [...sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (json) {
+    process.stdout.write(JSON.stringify(sorted, null, 2) + "\n");
+    return;
+  }
   for (const s of sorted) process.stdout.write(sessionLine(s) + "\n");
+}
+
+function askYesNo(prompt) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(/^y/i.test(answer.trim()));
+    });
+  });
+}
+
+async function confirmOrFail(prompt, { yes, what }) {
+  if (yes) return;
+  if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+    fail(`refusing to ${what} non-interactively; pass --yes to confirm`);
+  }
+  const answer = await askYesNo(prompt);
+  if (!answer) {
+    process.stdout.write("aborted\n");
+    process.exit(0);
+  }
+}
+
+async function listConnectors(client) {
+  const { connectors } = await client.listConnectors();
+  if (!connectors || connectors.length === 0) {
+    process.stdout.write("no connectors\n");
+    return;
+  }
+  const nameWidth = Math.max(6, ...connectors.map((c) => c.name.length));
+  const typeWidth = Math.max(4, ...connectors.map((c) => c.type.length));
+  for (const c of connectors) {
+    process.stdout.write(
+      `${c.name.padEnd(nameWidth)}  ${c.type.padEnd(typeWidth)}  ${c.url}\n`
+    );
+  }
+}
+
+async function addConnector(client, opts) {
+  const { name, type, url, content } = opts;
+  if (!name || !type || !url) fail("connectors add requires --name, --type and --url");
+
+  const { fields } = await client.connectorFields(type);
+  const payload = { name, type, url };
+
+  if (fields) {
+    const provided = {};
+    for (const f of opts.fields || []) {
+      const eq = f.indexOf("=");
+      if (eq === -1) fail(`--field expects KEY=VALUE, got "${f}"`);
+      provided[f.slice(0, eq).trim()] = f.slice(eq + 1);
+    }
+    for (const def of fields) {
+      if (!provided[def.envVar]) fail(`missing --field ${def.envVar} (${def.label})`);
+    }
+    payload.fields = provided;
+  } else if (content) {
+    payload.content = content;
+  } else {
+    fail(`type "${type}" is custom: provide --content "<yaml>"`);
+  }
+
+  const { connector } = await client.createConnector(payload);
+  process.stdout.write(`created connector "${connector.name}" (${connector.type})\n`);
+}
+
+async function logSession(client, sessionId, { json, follow }) {
+  const renderer = createEventRenderer();
+  let maxSeq = -1;
+  let stop = false;
+  let ac = null;
+  let quietTimer = null;
+
+  const onSigint = () => {
+    stop = true;
+    if (ac) ac.abort();
+  };
+  process.on("SIGINT", onSigint);
+
+  const scheduleQuietStop = () => {
+    if (follow || stop) return;
+    if (quietTimer) clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      stop = true;
+      if (ac) ac.abort();
+    }, 500);
+  };
+
+  while (!stop) {
+    ac = new AbortController();
+    let done = false;
+    try {
+      for await (const ev of streamSse(client.eventsUrl(sessionId), {
+        authHeader: client.authHeader,
+        signal: ac.signal,
+      })) {
+        if (ev.event === "agent-done") {
+          done = true;
+          break;
+        }
+        if (ev.data === undefined) continue;
+        let parsed;
+        try {
+          parsed = JSON.parse(ev.data);
+        } catch {
+          continue;
+        }
+        if (typeof parsed.seq === "number") {
+          if (maxSeq >= 0 && parsed.seq <= maxSeq) continue;
+          maxSeq = Math.max(maxSeq, parsed.seq);
+        }
+        if (json) {
+          process.stdout.write(JSON.stringify(parsed) + "\n");
+        } else {
+          for (const line of renderer.render(parsed)) process.stdout.write(line.text + "\n");
+        }
+        scheduleQuietStop();
+      }
+    } catch {
+      if (stop) break;
+    }
+    if (done || !follow || stop) break;
+    await sleep(1000);
+  }
+  if (quietTimer) clearTimeout(quietTimer);
+  process.removeListener("SIGINT", onSigint);
 }
 
 async function chat(client, sessionId, { hintOnQuit } = {}) {
@@ -421,9 +579,72 @@ async function main() {
     await chat(client, sessionId, { hintOnQuit: true });
   } else if (cmd === "ls") {
     try {
-      await listSessions(client);
+      await listSessions(client, { json: opts.json });
     } catch (err) {
       fail(`list failed: ${err.message}`);
+    }
+  } else if (cmd === "rm") {
+    const sessionId = positional[0];
+    if (!sessionId) fail("rm requires a session id");
+    let session;
+    try {
+      ({ session } = await client.getSession(sessionId));
+    } catch (err) {
+      fail(`session ${sessionId}: ${err.message}`);
+    }
+    if (session.status !== "stopped") {
+      await confirmOrFail(`kill session ${sessionId} (${session.status})? [y/N] `, {
+        yes: opts.yes,
+        what: "delete a running session",
+      });
+    }
+    try {
+      await client.deleteSession(sessionId);
+      process.stdout.write(`deleted ${sessionId}\n`);
+    } catch (err) {
+      fail(`delete failed: ${err.message}`);
+    }
+  } else if (cmd === "log") {
+    const sessionId = positional[0];
+    if (!sessionId) fail("log requires a session id");
+    try {
+      await client.getSession(sessionId);
+    } catch (err) {
+      fail(`session ${sessionId}: ${err.message}`);
+    }
+    try {
+      await logSession(client, sessionId, { json: opts.json, follow: opts.follow });
+    } catch (err) {
+      fail(`log failed: ${err.message}`);
+    }
+  } else if (cmd === "models") {
+    try {
+      const { models } = await client.listModels();
+      for (const m of models) process.stdout.write(m + "\n");
+    } catch (err) {
+      fail(`models failed: ${err.message}`);
+    }
+  } else if (cmd === "connectors") {
+    const sub = positional[0] || "ls";
+    try {
+      if (sub === "ls") {
+        await listConnectors(client);
+      } else if (sub === "add") {
+        await addConnector(client, opts);
+      } else if (sub === "rm") {
+        const name = positional[1];
+        if (!name) fail("connectors rm requires a name");
+        await confirmOrFail(`delete connector "${name}"? [y/N] `, {
+          yes: opts.yes,
+          what: "delete a connector",
+        });
+        await client.deleteConnector(name);
+        process.stdout.write(`deleted connector "${name}"\n`);
+      } else {
+        fail(`connectors: unknown subcommand "${sub}"`);
+      }
+    } catch (err) {
+      fail(`connectors ${sub} failed: ${err.message}`);
     }
   }
 }

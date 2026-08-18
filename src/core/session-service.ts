@@ -17,10 +17,13 @@ import { agentContainerId } from "./harness.js";
 interface SessionHandle {
   session: AgentSession;
   harness: AgentHandle;
+  unsubscribe: () => void;
   subscribers: Set<(e: SequencedEvent) => void>;
   history: SessionEvent[];
   seqCounter: number;
   containerId: string;
+  pendingPersists: Set<Promise<void>>;
+  pendingAppends: Set<Promise<void>>;
   draining?: boolean;
 }
 
@@ -127,13 +130,16 @@ export class SessionService {
       const handle: SessionHandle = {
         session,
         harness,
+        unsubscribe: () => {},
         subscribers: new Set(),
         history: [],
         seqCounter: 0,
         containerId: container.id,
+        pendingPersists: new Set(),
+        pendingAppends: new Set(),
       };
+      handle.unsubscribe = harness.events().subscribe((e) => this.onEvent(handle, e));
       this.handles.set(id, handle);
-      harness.events().subscribe((e) => this.onEvent(handle, e));
 
       return session;
     } catch (err) {
@@ -153,6 +159,8 @@ export class SessionService {
   }
 
   async getSession(id: string): Promise<AgentSession | null> {
+    const handle = this.handles.get(id);
+    if (handle) return handle.session;
     return this.deps.sessions.get(id);
   }
 
@@ -179,6 +187,7 @@ export class SessionService {
     const handle = this.requireLiveHandle(id);
     await handle.harness.prompt(message, behavior);
     this.setStatus(handle, "running");
+    await drainWrites(handle);
   }
 
   async respond(
@@ -191,6 +200,7 @@ export class SessionService {
     handle.session.waitingFor = undefined;
     this.persist(handle);
     this.setStatus(handle, "running");
+    await drainWrites(handle);
   }
 
   async abort(id: string): Promise<void> {
@@ -214,6 +224,25 @@ export class SessionService {
 
     handle.subscribers.clear();
     this.setStatus(handle, "stopped");
+    await drainWrites(handle);
+  }
+
+  async remove(id: string): Promise<void> {
+    const session = await this.deps.sessions.get(id);
+    if (!session) throw new SessionNotFoundError(id);
+
+    const handle = this.handles.get(id);
+    if (handle && handle.session.status !== "stopped") {
+      throw new Error(`Session ${id} is still running; kill it first`);
+    }
+
+    if (handle) {
+      handle.unsubscribe();
+      await drainWrites(handle);
+    }
+    this.handles.delete(id);
+    await this.deps.sessions.delete(id);
+    await this.deps.eventLog.delete(id);
   }
 
   async recover(): Promise<void> {
@@ -235,13 +264,16 @@ export class SessionService {
         const handle: SessionHandle = {
           session,
           harness,
+          unsubscribe: () => {},
           subscribers: new Set(),
           history: history.slice(-HISTORY_CAP),
           seqCounter: history.slice(-HISTORY_CAP).length,
           containerId,
+          pendingPersists: new Set(),
+          pendingAppends: new Set(),
         };
+        handle.unsubscribe = harness.events().subscribe((e) => this.onEvent(handle, e));
         this.handles.set(session.id, handle);
-        harness.events().subscribe((e) => this.onEvent(handle, e));
         await this.markReattached(handle);
       } catch {
         await this.markStopped(session);
@@ -288,7 +320,8 @@ export class SessionService {
     handle.session.status = "idle";
     handle.session.waitingFor = undefined;
     handle.session.updatedAt = new Date().toISOString();
-    await this.persist(handle);
+    this.persist(handle);
+    await drainWrites(handle);
     this.push(handle, { type: "status", status: "idle" });
   }
 
@@ -373,7 +406,9 @@ export class SessionService {
     if (handle.history.length > HISTORY_CAP) {
       handle.history.splice(0, handle.history.length - HISTORY_CAP);
     }
-    void this.deps.eventLog.append(handle.session.id, event, HISTORY_CAP).catch(() => {});
+    trackWrite(handle.pendingAppends, () =>
+      this.deps.eventLog.append(handle.session.id, event, HISTORY_CAP)
+    );
     const sequenced: SequencedEvent = { seq, event };
     for (const subscriber of handle.subscribers) {
       try {
@@ -382,8 +417,23 @@ export class SessionService {
     }
   }
 
-  private async persist(handle: SessionHandle): Promise<void> {
-    await this.deps.sessions.save(handle.session).catch(() => {});
+  private persist(handle: SessionHandle): void {
+    trackWrite(handle.pendingPersists, () => this.deps.sessions.save(handle.session));
+  }
+}
+
+function trackWrite(pending: Set<Promise<void>>, write: () => Promise<unknown>): void {
+  const p = write().then(
+    () => undefined,
+    () => undefined
+  );
+  pending.add(p);
+  void p.finally(() => pending.delete(p));
+}
+
+async function drainWrites(handle: SessionHandle): Promise<void> {
+  while (handle.pendingPersists.size > 0 || handle.pendingAppends.size > 0) {
+    await Promise.all([...handle.pendingPersists, ...handle.pendingAppends]);
   }
 }
 

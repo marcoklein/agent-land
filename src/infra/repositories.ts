@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, readdir, stat, unlink, appendFile } from "fs/promises";
+import { mkdir, readFile, writeFile, readdir, stat, unlink, appendFile, rename } from "fs/promises";
 import path from "path";
 import type { SessionRepository, ConnectorRepository, SessionEventLog } from "../core/ports.js";
 import type { AgentSession, Connector } from "../core/types.js";
@@ -14,7 +14,10 @@ export class JsonSessionRepository implements SessionRepository {
   async save(session: AgentSession): Promise<void> {
     const dir = this.dir();
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, `${session.id}.json`), JSON.stringify(session, null, 2));
+    const filePath = path.join(dir, `${session.id}.json`);
+    const tmpPath = `${filePath}.tmp`;
+    await writeFile(tmpPath, JSON.stringify(session, null, 2));
+    await rename(tmpPath, filePath);
   }
 
   async get(id: string): Promise<AgentSession | null> {
@@ -94,6 +97,12 @@ export class JsonSessionEventLog implements SessionEventLog {
     return (await this.readLines(id)).map((line) => JSON.parse(line) as SessionEvent);
   }
 
+  async delete(id: string): Promise<void> {
+    this.tails.delete(id);
+    this.chains.delete(id);
+    await unlink(this.filePath(id)).catch(() => {});
+  }
+
   private async readLines(id: string): Promise<string[]> {
     try {
       const content = await readFile(this.filePath(id), "utf-8");
@@ -123,6 +132,8 @@ export class JsonConnectorRepository implements ConnectorRepository {
 
   async save(list: Connector[]): Promise<void> {
     await mkdir(this.dataDir, { recursive: true });
-    await writeFile(this.filePath(), JSON.stringify(list, null, 2));
+    const tmpPath = `${this.filePath()}.tmp`;
+    await writeFile(tmpPath, JSON.stringify(list, null, 2));
+    await rename(tmpPath, this.filePath());
   }
 }

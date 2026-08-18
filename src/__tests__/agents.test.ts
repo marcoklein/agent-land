@@ -241,6 +241,32 @@ describe("Agents — Sessions", () => {
       expect(res.status).toBe(404);
     });
 
+    it("deletes a running session and purges its record", async () => {
+      const launchRes = await api.launch({ task: "delete me" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      const res = await api.agent.delete(`/api/sessions/${id}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ deleted: true });
+      expect(api.mockDocker.removed.length).toBe(1);
+
+      const getRes = await api.agent.get(`/api/sessions/${id}`);
+      expect(getRes.status).toBe(404);
+    });
+
+    it("deletes a stopped session record", async () => {
+      const launchRes = await api.launch({ task: "delete me later" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+      await api.killSession(id);
+
+      const res = await api.agent.delete(`/api/sessions/${id}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ deleted: true });
+
+      const getRes = await api.agent.get(`/api/sessions/${id}`);
+      expect(getRes.status).toBe(404);
+    });
+
     it("rejects respond without exactly one payload field with 400", async () => {
       const launchRes = await api.launch({ task: "manual", permissionPolicy: "manual" });
       const id = api.getSessionIdFromRedirect(launchRes);

@@ -88,9 +88,15 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
 
   router.delete("/:id", async (req, res) => {
     try {
-      await sessionService.kill(req.params.id);
+      const session = await sessionService.getSession(req.params.id);
+      if (!session) return res.status(404).json({ error: "Session not found" });
+      if (session.status !== "stopped") {
+        await sessionService.kill(req.params.id);
+      }
+      await sessionService.remove(req.params.id);
       res.json({ deleted: true });
     } catch (err) {
+      console.error("DELETE debug:", err instanceof Error ? err.stack : err);
       const { status, error } = sessionErrorResponse(err);
       res.status(status).json({ error });
     }
