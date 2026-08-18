@@ -17,6 +17,8 @@ import { JsonSessionRepository, JsonConnectorRepository, JsonSessionEventLog } f
 import { SessionService } from "./core/session-service.js";
 import { ConnectorService } from "./core/connector-service.js";
 import { sessionsApiRouter } from "./presentation/http/api-sessions.js";
+import { connectorsApiRouter } from "./presentation/http/api-connectors.js";
+import { modelsApiRouter } from "./presentation/http/api-models.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = getConfig();
@@ -79,6 +81,8 @@ app.use("/", indexRouter(sessionService, connectorService));
 app.use("/agents", agentsRouter(sessionService, connectorService));
 app.use("/connectors", connectorsRouter(connectorService));
 app.use("/api/sessions", sessionsApiRouter(sessionService, config));
+app.use("/api/connectors", connectorsApiRouter(connectorService));
+app.use("/api/models", modelsApiRouter());
 
 await sessionService.recover().catch((err) => {
   console.error("Session recovery failed:", err);

@@ -29,10 +29,13 @@ flowchart LR
     subgraph Client
         B[Browser<br/>HTMX + SSE]
         C[curl / API client]
+        AL[al CLI<br/>REST + SSE]
     end
 
     subgraph Orchestrator [Node/Express server]
         P[presentation/http<br/>api-sessions REST+SSE]
+        PC[presentation/http<br/>api-connectors]
+        PM[presentation/http<br/>api-models]
         R[routes/*<br/>EJS pages]
         SS[core/SessionService<br/>state machine + policy]
         CS[core/ConnectorService]
@@ -40,6 +43,7 @@ flowchart LR
         D[infra/DockerService]
         SO[infra/SopsService]
         RP[infra/repositories<br/>JSON files]
+        PV[infra/providers<br/>model catalog]
     end
 
     subgraph Host
@@ -50,7 +54,12 @@ flowchart LR
 
     B --> R
     C --> P
+    AL --> P
+    AL --> PC
+    AL --> PM
     P --> SS
+    PC --> CS
+    PM --> PV
     R --> SS
     SS --> H
     SS --> CS
