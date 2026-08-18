@@ -15,6 +15,9 @@ Usage:
   al chat <session-id>
       attach to an existing session (history replays, then live events)
 
+  al ls
+      list sessions with status, age, model, workspace and connectors
+
 Config (env):
   AGENT_LAND_URL             default https://agent-land.host.impromat.app
   AGENT_LAND_AUTH_USER       basic auth user
@@ -45,7 +48,7 @@ function parseArgs(argv) {
     else if (a === "--model") opts.model = argv[++i];
     else if (a === "--manual") opts.manual = true;
     else if (a === "--help" || a === "-h") process.stdout.write(USAGE) || process.exit(0);
-    else if (a === "new" || a === "chat") cmd = a;
+    else if (a === "new" || a === "chat" || a === "ls") cmd = a;
     else positional.push(a);
   }
 
@@ -67,6 +70,43 @@ const red = (s) => `${c.red}${s}${c.reset}`;
 const yellow = (s) => `${c.yellow}${s}${c.reset}`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function formatAge(createdAt) {
+  const s = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h${m % 60}m`;
+  return `${Math.floor(h / 24)}d${h % 24}h`;
+}
+
+function statusColor(status) {
+  if (status === "idle") return green;
+  if (status === "running" || status === "waiting_for_input") return yellow;
+  return dim;
+}
+
+function sessionLine(s) {
+  const workspace = s.workspace
+    ? ` · ${s.workspace.repoUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "")}${
+        s.workspace.ref ? `@${s.workspace.ref}` : ""
+      }`
+    : "";
+  const connectors = s.connectors && s.connectors.length ? ` · ${s.connectors.join(",")}` : "";
+  const status = s.status.padEnd(8);
+  return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${s.model}${workspace}${connectors}`;
+}
+
+async function listSessions(client) {
+  const { sessions } = await client.listSessions();
+  if (!sessions || sessions.length === 0) {
+    process.stdout.write("no sessions\n");
+    return;
+  }
+  const sorted = [...sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  for (const s of sorted) process.stdout.write(sessionLine(s) + "\n");
+}
 
 async function chat(client, sessionId, { hintOnQuit } = {}) {
   const isTTY = Boolean(process.stdin.isTTY && process.stdout.isTTY);
@@ -379,6 +419,12 @@ async function main() {
       fail(`session ${sessionId}: ${err.message}`);
     }
     await chat(client, sessionId, { hintOnQuit: true });
+  } else if (cmd === "ls") {
+    try {
+      await listSessions(client);
+    } catch (err) {
+      fail(`list failed: ${err.message}`);
+    }
   }
 }
 
