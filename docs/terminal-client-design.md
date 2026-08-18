@@ -32,14 +32,21 @@ Because replay and live events come over the *same* stream, attach is one connec
 ## Command surface (v1)
 
 ```
-al new [--workspace <repoUrl>] [--ref <branch>] [--connectors github,jira,gmail] [--model <m>]
+al new [--workspace <repoUrl>] [--ref <branch>] [--connectors github,jira,gmail] [--model <m>] [--manual]
     create a session via POST /api/sessions, print its id, enter the overlay
 
 al chat <id>
     attach to an existing session: replay history, then live events
 ```
 
-Everything else stays in the web UI for v1 (see out of scope).
+`--manual` sets `permissionPolicy: "manual"` (dialogs only reach the client in manual sessions). Everything else stays in the web UI for v1 (see out of scope).
+
+## Implementation notes
+
+- Every event in the stream — replayed and live — carries a per-session `seq` (server stamps replayed events with their history index, live events with the internal counter). The client dedupes on reconnect: skip anything `seq <=` the last seen sequence, so a dropped stream resumes without re-printing history.
+- On reconnect the client re-opens the SSE stream with a 1s backoff; the replay/dedupe makes this seamless.
+- When stdin is not a TTY, the client degrades to plain line mode: events print as lines (streaming text flushed at message end), no raw mode, no alt screen — usable in pipes and scripts.
+- The overlay is zero-dependency Node (readline raw mode + ANSI). Streaming text is rewritten in place above the input line; blocks taller than the screen switch to append mode.
 
 ## Session flow
 

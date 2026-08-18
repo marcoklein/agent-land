@@ -356,6 +356,11 @@ describe("Agents — Sessions", () => {
       await stream.waitFor((lines) => lines.some((l) => l.includes("replayed")));
       await stream.waitFor((lines) => lines.some((l) => l === ": ping"));
 
+      const dataLine = stream.lines().find((l) => l.startsWith("data: ") && l.includes("replayed"));
+      const parsed = JSON.parse(dataLine!.slice(6));
+      expect(typeof parsed.seq).toBe("number");
+      expect(parsed.seq).toBeGreaterThanOrEqual(0);
+
       destroy();
     });
 
@@ -375,6 +380,10 @@ describe("Agents — Sessions", () => {
 
       const occurrences = stream.lines().filter((l) => l.includes('"toolName":"bash"')).length;
       expect(occurrences).toBe(1);
+
+      const liveLine = stream.lines().find((l) => l.includes('"toolName":"bash"'));
+      const liveParsed = JSON.parse(liveLine!.slice(liveLine!.indexOf("{")));
+      expect(typeof liveParsed.seq).toBe("number");
 
       destroy();
     });
