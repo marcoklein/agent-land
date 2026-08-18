@@ -16,7 +16,12 @@ export class PiRpcHarness implements AgentHarness {
     const { stream } = await this.docker.execInteractive(containerId, preset.argv, preset.tty);
 
     const handlers = new Set<(e: SessionEvent) => void>();
+    let buffer: SessionEvent[] | null = [];
     const emit = (e: SessionEvent) => {
+      if (buffer) {
+        buffer.push(e);
+        return;
+      }
       for (const h of handlers) h(e);
     };
 
@@ -41,14 +46,15 @@ export class PiRpcHarness implements AgentHarness {
     stream.pipe(parser);
 
     let closed = false;
-    stream.on("close", () => {
+    let emittedStopped = false;
+    const stop = () => {
+      if (emittedStopped) return;
+      emittedStopped = true;
       closed = true;
       emit({ type: "status", status: "stopped" });
-    });
-    stream.on("error", () => {
-      closed = true;
-      emit({ type: "status", status: "stopped" });
-    });
+    };
+    stream.on("close", stop);
+    stream.on("error", stop);
 
     const write = (obj: Record<string, unknown>) => {
       if (closed) throw new Error("harness stream is closed");
@@ -57,6 +63,11 @@ export class PiRpcHarness implements AgentHarness {
 
     const events = (): EventStream => ({
       subscribe: (handler) => {
+        if (buffer) {
+          const replay = buffer;
+          buffer = null;
+          for (const e of replay) handler(e);
+        }
         handlers.add(handler);
         return () => {
           handlers.delete(handler);

@@ -4,7 +4,7 @@ import type { ConnectorService } from "../core/connector-service.js";
 import { buildPrompt } from "../core/prompt.js";
 import { getModels } from "../infra/providers.js";
 import { renderSessionEvent, renderSessionEventFull } from "../presentation/http/log-renderer.js";
-import type { SessionEvent } from "../core/events.js";
+import type { SessionEvent, SequencedEvent } from "../core/events.js";
 
 export function agentsRouter(sessionService: SessionService, connectorService: ConnectorService) {
   const router = Router();
@@ -78,7 +78,7 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
     }
 
     const events = await sessionService.getEvents(session.id);
-    const renderedLogs = renderHistory(events);
+    const renderedLogs = renderHistory(events, session.id);
 
     const viewData = {
       session,
@@ -121,8 +121,38 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
       if (result.html) sseWrite(result.html);
     };
 
-    const history = await sessionService.getEvents(id);
-    for (let i = afterIndex; i < history.length; i++) render(history[i], i);
+    let replaying = true;
+    let lastSeq = -1;
+    let cursor = 0;
+    const liveBuffer: SequencedEvent[] = [];
+    let unsubscribe = () => {};
+
+    if (session.status !== "stopped") {
+      unsubscribe = sessionService.streamEvents(id).subscribe((e) => {
+        if (res.writableEnded) {
+          unsubscribe();
+          return;
+        }
+        if (replaying) {
+          liveBuffer.push(e);
+          return;
+        }
+        render(e.event, cursor++);
+        if (e.event.type === "status" && e.event.status === "stopped") {
+          res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
+          unsubscribe();
+          res.end();
+        }
+      });
+    }
+
+    const snapshot = await sessionService.getSequencedEvents(id);
+    replaying = false;
+    cursor = snapshot.length;
+    for (let i = afterIndex; i < snapshot.length; i++) {
+      render(snapshot[i].event, i);
+      lastSeq = snapshot[i].seq;
+    }
 
     if (session.status === "stopped") {
       res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
@@ -130,19 +160,11 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
       return;
     }
 
-    let cursor = history.length;
-    const unsubscribe = sessionService.streamEvents(id).subscribe(({ event }) => {
-      if (res.writableEnded) {
-        unsubscribe();
-        return;
-      }
-      render(event, cursor++);
-      if (event.type === "status" && event.status === "stopped") {
-        res.write(`event: agent-done\ndata: {"status":"stopped"}\n\n`);
-        unsubscribe();
-        res.end();
-      }
-    });
+    for (const e of liveBuffer) {
+      if (e.seq <= lastSeq) continue;
+      render(e.event, cursor++);
+    }
+    liveBuffer.length = 0;
 
     req.on("close", unsubscribe);
   });
@@ -198,6 +220,43 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
     }
   });
 
+  router.post("/:id/respond", async (req, res) => {
+    const session = await sessionService.getSession(req.params.id);
+    if (!session) {
+      req.flash("error", "Session not found.");
+      return res.redirect("/agents");
+    }
+    const { requestId, action, value } = req.body ?? {};
+    const isHtmx = !!req.headers["hx-request"];
+
+    if (typeof requestId !== "string" || !requestId) {
+      req.flash("error", "Missing request id.");
+      return res.redirect(`/agents/${session.id}`);
+    }
+
+    let respondValue: { value?: string; confirmed?: boolean; cancelled?: boolean };
+    if (action === "confirm") respondValue = { confirmed: true };
+    else if (action === "cancel") respondValue = { cancelled: true };
+    else respondValue = { value: typeof value === "string" ? value : "" };
+
+    try {
+      await sessionService.respond(session.id, requestId, respondValue);
+    } catch (err: any) {
+      req.flash("error", `Respond failed: ${err.message}`);
+      if (isHtmx) {
+        res.header("HX-Redirect", `/agents/${session.id}`);
+        return res.status(204).end();
+      }
+      return res.redirect(`/agents/${session.id}`);
+    }
+    if (isHtmx) {
+      res.header("HX-Redirect", `/agents/${session.id}`);
+      res.status(204).end();
+    } else {
+      res.redirect(`/agents/${session.id}`);
+    }
+  });
+
   router.get("/:id/status-badge", async (req, res) => {
     const session = await sessionService.getSession(req.params.id);
     if (!session) return res.send(`<mark>not found</mark>`);
@@ -207,11 +266,11 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
   return router;
 }
 
-function renderHistory(events: SessionEvent[]): string[] {
+function renderHistory(events: SessionEvent[], sessionId: string): string[] {
   const rendered: string[] = [];
   let turnCount = 0;
   for (let i = 0; i < events.length; i++) {
-    const result = renderSessionEvent(events[i], turnCount, { entryIndex: i });
+    const result = renderSessionEvent(events[i], turnCount, { entryIndex: i, sessionId });
     turnCount = result.turnCount;
     if (result.html) rendered.push(result.html);
   }

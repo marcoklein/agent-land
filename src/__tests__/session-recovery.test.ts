@@ -79,6 +79,20 @@ describe("Session recovery", () => {
     expect(events.at(-1)).toEqual({ type: "status", status: "stopped" });
   });
 
+  it("kill marks a persisted session stopped when no live handle exists", async () => {
+    const session = makeSession({ status: "running" });
+    await persistSession(session);
+
+    await expect(ctx.sessionService.kill(session.id)).resolves.toBeUndefined();
+
+    const persisted = await readPersistedSession(session.id);
+    expect(persisted.status).toBe("stopped");
+  });
+
+  it("kill throws for an unknown session id", async () => {
+    await expect(ctx.sessionService.kill("doesnotexist")).rejects.toThrow(/not found/);
+  });
+
   it("re-attaches sessions whose persisted status says stopped but the container still exists", async () => {
     const session = makeSession({ status: "stopped" });
     await persistSession(session);

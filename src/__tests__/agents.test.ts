@@ -128,6 +128,26 @@ describe("Agents — Sessions", () => {
       expect(parsed.status).toBe("idle");
     });
 
+    it("renders expand-full links with the real session id", async () => {
+      const launchRes = await api.launch({ task: "big result" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      api.sendEvent({
+        type: "tool_end",
+        toolCallId: "call_big",
+        toolName: "bash",
+        result: "x".repeat(11_000),
+        isError: false,
+      });
+
+      const detailRes = await api.getSession(id);
+      const html = detailRes.text;
+
+      expect(html).toContain("Expand full");
+      expect(html).toContain(`hx-get="/agents/${id}/event/`);
+      expect(html).not.toContain("/agents/undefined/");
+    });
+
     it("returns article-only when hx-request header is set", async () => {
       const launchRes = await api.launch({ task: "htmx card" });
       const id = api.getSessionIdFromRedirect(launchRes);
@@ -168,6 +188,23 @@ describe("Agents — Sessions", () => {
       detailRes = await api.getSession(id);
       parsed = api.parseSessionDetail(detailRes);
       expect(parsed.status).toBe("running");
+    });
+
+    it("renders a respond form for a waiting manual session", async () => {
+      const launchRes = await api.launch({ task: "manual form", permissionPolicy: "manual" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      api.sendEvent({
+        type: "waiting_for_input",
+        requestId: "req-1",
+        method: "confirm",
+        prompt: "Proceed?",
+      });
+
+      const detailRes = await api.getSession(id);
+      expect(detailRes.text).toContain(`action="/agents/${id}/respond"`);
+      expect(detailRes.text).toContain('value="req-1"');
+      expect(detailRes.text).toContain("Confirm");
     });
 
     it("auto-answers dialogs when policy is auto", async () => {
@@ -272,6 +309,26 @@ describe("Agents — Sessions", () => {
       const id = api.getSessionIdFromRedirect(launchRes);
 
       const res = await api.agent.post(`/api/sessions/${id}/respond`).send({ requestId: "r1" });
+      expect(res.status).toBe(400);
+    });
+
+    it("rejects respond with a non-string value", async () => {
+      const launchRes = await api.launch({ task: "manual", permissionPolicy: "manual" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      const res = await api.agent
+        .post(`/api/sessions/${id}/respond`)
+        .send({ requestId: "r1", value: 42 });
+      expect(res.status).toBe(400);
+    });
+
+    it("rejects respond with a non-boolean confirmed flag", async () => {
+      const launchRes = await api.launch({ task: "manual", permissionPolicy: "manual" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+
+      const res = await api.agent
+        .post(`/api/sessions/${id}/respond`)
+        .send({ requestId: "r1", confirmed: "true" });
       expect(res.status).toBe(400);
     });
 
@@ -442,6 +499,18 @@ describe("Agents — Sessions", () => {
       await api.killSession(id);
 
       const res = await request(api.app).get(`/api/sessions/${id}/events`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("agent-done");
+      expect(res.text).toContain('{"status":"stopped"}');
+    });
+
+    it("ends live=1 streams immediately when the session is already stopped", async () => {
+      const launchRes = await api.launch({ task: "kill live stream" });
+      const id = api.getSessionIdFromRedirect(launchRes);
+      await api.killSession(id);
+
+      const res = await request(api.app).get(`/api/sessions/${id}/events?live=1`);
 
       expect(res.status).toBe(200);
       expect(res.text).toContain("agent-done");
