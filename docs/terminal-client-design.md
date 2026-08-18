@@ -37,6 +37,9 @@ al new [--workspace <repoUrl>] [--ref <branch>] [--connectors github,jira,gmail]
 
 al chat <id>
     attach to an existing session: replay history, then live events
+
+al ls
+    list sessions with status, age, model, workspace and connectors
 ```
 
 `--manual` sets `permissionPolicy: "manual"` (dialogs only reach the client in manual sessions). Everything else stays in the web UI for v1 (see out of scope).
@@ -142,7 +145,7 @@ Local dev: `AGENT_LAND_URL=http://localhost:3000` and no auth vars (the dev serv
 ## Explicitly out of scope
 
 - One-shot `al run` (create → prompt → wait settled → print → delete); the curl pattern covers it until needed.
-- Session management commands (`al ls` / `al rm` / `al status`) — web UI keeps management in v1.
+- Session management beyond `al ls` (`al rm` / `al status`) — web UI keeps management in v1.
 - tmux integration or any client-side persistence.
 - `editor`-method dialogs beyond plain input.
 - Config files, token stores, Windows/terminfo quirks.
