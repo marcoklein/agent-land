@@ -20,6 +20,8 @@ import type { AgentSession } from "../../core/types.js";
 import { connectorsRouter } from "../../routes/connectors.js";
 import { agentsRouter } from "../../routes/agents.js";
 import { sessionsApiRouter } from "../../presentation/http/api-sessions.js";
+import { connectorsApiRouter } from "../../presentation/http/api-connectors.js";
+import { modelsApiRouter } from "../../presentation/http/api-models.js";
 import { getConfig } from "../../config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -230,6 +232,8 @@ export function createAgentTestApp(): AgentTestApp {
 
   app.use("/agents", agentsRouter(sessionService, connectorService));
   app.use("/api/sessions", sessionsApiRouter(sessionService, testConfig));
+  app.use("/api/connectors", connectorsApiRouter(connectorService));
+  app.use("/api/models", modelsApiRouter());
 
   return { app, mockDocker, fakeHarness, sessionService };
 }
