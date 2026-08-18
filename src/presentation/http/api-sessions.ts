@@ -137,7 +137,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
           return;
         }
         if (e.seq < replayLength) return;
-        sseWrite(JSON.stringify(e.event));
+        sseWrite(JSON.stringify({ ...e.event, seq: e.seq }));
         if (e.event.type === "status" && e.event.status === "stopped") {
           finish(unsubscribe);
         }
@@ -152,7 +152,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
     const history = await sessionService.getEvents(req.params.id);
     const snapshot = history.slice();
     replayLength = snapshot.length;
-    for (const e of snapshot) sseWrite(JSON.stringify(e));
+    for (let i = 0; i < snapshot.length; i++) sseWrite(JSON.stringify({ ...snapshot[i], seq: i }));
 
     if (stoppedAtStart) {
       finish(unsubscribe);
@@ -161,7 +161,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
 
     for (const e of liveBuffer) {
       if (e.seq < replayLength) continue;
-      sseWrite(JSON.stringify(e.event));
+      sseWrite(JSON.stringify({ ...e.event, seq: e.seq }));
       if (e.event.type === "status" && e.event.status === "stopped") {
         finish(unsubscribe);
         return;
