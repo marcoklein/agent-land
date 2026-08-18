@@ -9,6 +9,14 @@ const execFileAsync = promisify(execFile);
 
 export const SESSION_VOLUME_NAME = "agent-land-sessions";
 
+export const AGENT_CONTAINER_LIMITS = {
+  memoryBytes: 4 * 1024 ** 3,
+  nanoCpus: 2_000_000_000,
+  pidsLimit: 512,
+} as const;
+
+const EXEC_COMMAND_TIMEOUT_MS = 120_000;
+
 export interface InteractiveContainerOptions {
   id: string;
   envVars: Record<string, string>;
@@ -29,10 +37,17 @@ export class DockerService implements DockerPort {
   async ensureAgentImage(image: string): Promise<void> {
     try {
       await this.docker.getImage(image).inspect();
-    } catch {
-      await execFileAsync("docker", ["build", "/agent-image", "-t", image], {
-        timeout: 300_000,
-      });
+    } catch (err) {
+      const statusCode = (err as { statusCode?: number }).statusCode;
+      if (statusCode !== 404) throw err;
+      try {
+        await execFileAsync("docker", ["build", "/agent-image", "-t", image], {
+          timeout: 300_000,
+        });
+      } catch (buildErr) {
+        const message = buildErr instanceof Error ? buildErr.message : String(buildErr);
+        throw new Error(`Agent image build failed: ${message}`);
+      }
     }
   }
 
@@ -83,7 +98,24 @@ export class DockerService implements DockerPort {
     stdoutStream.on("data", (c: Buffer) => stdoutChunks.push(c));
     stderrStream.on("data", (c: Buffer) => stderrChunks.push(c));
 
-    await new Promise<void>((resolve) => stream.on("end", () => resolve()));
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(`exec timed out after ${EXEC_COMMAND_TIMEOUT_MS}ms: docker exec ${args[0]}`)),
+        EXEC_COMMAND_TIMEOUT_MS
+      );
+      const onEnd = () => {
+        clearTimeout(timer);
+        stream.off("error", onError);
+        resolve();
+      };
+      const onError = (err: Error) => {
+        clearTimeout(timer);
+        stream.off("end", onEnd);
+        reject(new Error(`docker exec stream error: ${err.message}`));
+      };
+      stream.on("end", onEnd);
+      stream.on("error", onError);
+    });
 
     const info = await exec.inspect();
     return {
@@ -120,11 +152,23 @@ export class DockerService implements DockerPort {
           `${options.workspaceVolume}:/workspace`,
         ],
         NetworkMode: "bridge",
+        Memory: AGENT_CONTAINER_LIMITS.memoryBytes,
+        MemorySwap: AGENT_CONTAINER_LIMITS.memoryBytes,
+        NanoCpus: AGENT_CONTAINER_LIMITS.nanoCpus,
+        PidsLimit: AGENT_CONTAINER_LIMITS.pidsLimit,
+        CapDrop: ["ALL"],
+        SecurityOpt: ["no-new-privileges"],
       },
       WorkingDir: "/workspace",
     });
 
-    await container.start();
+    try {
+      await container.start();
+    } catch (err) {
+      await container.remove({ force: true }).catch(() => {});
+      await this.docker.getVolume(options.workspaceVolume).remove().catch(() => {});
+      throw err;
+    }
     return container;
   }
 
