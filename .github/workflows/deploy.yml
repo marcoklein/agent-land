@@ -17,10 +17,12 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_DEPLOY_KEY }}
 
-      - name: Add server to known hosts
+      - name: Add server to known hosts (pinned key)
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H impromat.app >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/known_hosts <<'EOF'
+          impromat.app ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHZ724vLK/knBUwH7Ir59Oeqv/Ii88luGVZfSMCFdFev
+          EOF
 
       - name: Deploy to Dokku
         run: |
