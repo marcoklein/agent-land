@@ -5,6 +5,7 @@ import { loadConfig } from "./lib/config.mjs";
 import { streamSse } from "./lib/sse.mjs";
 import { createEventRenderer, wrapText } from "./lib/render.mjs";
 import { createApiClient } from "./lib/api.mjs";
+import { runSession, watchSession } from "./lib/ops.mjs";
 
 const USAGE = `al — terminal chat client for agent-land
 
@@ -35,6 +36,13 @@ Usage:
 
   al connectors rm <name> [-y|--yes]
       delete a connector (prompts y/N)
+
+  al run <message> [new-flags] [--rm] [--timeout <seconds>] [--verbose]
+      one-shot: create, prompt, wait for settle, print the final answer
+      exits 0 on settle, 1 on stop/timeout; session is kept unless --rm
+
+  al watch [<session-id> | --all]
+      tail live events and print "<id>: settled" notifications (stdout only)
 
 Config (env):
   AGENT_LAND_URL             default https://agent-land.host.impromat.app
@@ -68,13 +76,17 @@ function parseArgs(argv) {
     else if (a === "--yes" || a === "-y") opts.yes = true;
     else if (a === "--json") opts.json = true;
     else if (a === "--follow") opts.follow = true;
+    else if (a === "--rm") opts.rm = true;
+    else if (a === "--verbose") opts.verbose = true;
+    else if (a === "--all") opts.all = true;
+    else if (a === "--timeout") opts.timeout = parseInt(argv[++i], 10);
     else if (a === "--name") opts.name = argv[++i];
     else if (a === "--type") opts.type = argv[++i];
     else if (a === "--url") opts.url = argv[++i];
     else if (a === "--content") opts.content = argv[++i];
     else if (a === "--field") (opts.fields ||= []).push(argv[++i]);
     else if (a === "--help" || a === "-h") process.stdout.write(USAGE) || process.exit(0);
-    else if (cmd === null && (a === "new" || a === "chat" || a === "ls" || a === "rm" || a === "log" || a === "models" || a === "connectors"))
+    else if (cmd === null && (a === "new" || a === "chat" || a === "ls" || a === "rm" || a === "log" || a === "models" || a === "connectors" || a === "run" || a === "watch"))
       cmd = a;
     else positional.push(a);
   }
@@ -147,6 +159,35 @@ function askYesNo(prompt) {
       resolve(/^y/i.test(answer.trim()));
     });
   });
+}
+
+function askLine(prompt) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
+
+async function answerDialog(dialog) {
+  if (dialog.method === "confirm") {
+    const answer = await askYesNo(`${dialog.prompt ? dialog.prompt + " " : ""}[y/N] `);
+    return { confirmed: answer };
+  }
+  if (dialog.method === "select" && Array.isArray(dialog.options)) {
+    for (let i = 0; i < dialog.options.length; i++) {
+      process.stdout.write(` ${i + 1}) ${dialog.options[i]}\n`);
+    }
+    const answer = await askLine("select> ");
+    const n = parseInt(answer, 10);
+    return {
+      value: !Number.isNaN(n) && dialog.options[n - 1] ? dialog.options[n - 1] : answer,
+    };
+  }
+  const answer = await askLine(`${dialog.method}> `);
+  return { value: answer };
 }
 
 async function confirmOrFail(prompt, { yes, what }) {
@@ -553,15 +594,16 @@ async function main() {
   const config = loadConfig();
   const client = createApiClient(config);
 
+  const payload = {
+    ...(opts.connectors.length > 0 ? { connectors: opts.connectors } : {}),
+    ...(opts.manual ? { permissionPolicy: "manual" } : {}),
+    ...(opts.model ? { model: opts.model } : {}),
+    ...(opts.workspace
+      ? { workspace: { repoUrl: opts.workspace, ...(opts.ref ? { ref: opts.ref } : {}) } }
+      : {}),
+  };
+
   if (cmd === "new") {
-    const payload = {
-      ...(opts.connectors.length > 0 ? { connectors: opts.connectors } : {}),
-      ...(opts.manual ? { permissionPolicy: "manual" } : {}),
-      ...(opts.model ? { model: opts.model } : {}),
-      ...(opts.workspace
-        ? { workspace: { repoUrl: opts.workspace, ...(opts.ref ? { ref: opts.ref } : {}) } }
-        : {}),
-    };
     try {
       const { session } = await client.createSession(payload);
       await chat(client, session.id, { hintOnQuit: true });
@@ -645,6 +687,59 @@ async function main() {
       }
     } catch (err) {
       fail(`connectors ${sub} failed: ${err.message}`);
+    }
+  } else if (cmd === "run") {
+    const message = positional[0];
+    if (!message) fail("run requires a message");
+    let session;
+    try {
+      ({ session } = await client.createSession(payload));
+      await client.prompt(session.id, message);
+    } catch (err) {
+      fail(`run failed: ${err.message}`);
+    }
+    const onDialog =
+      process.stdin.isTTY && process.stdout.isTTY
+        ? async (dialog) => answerDialog(dialog)
+        : null;
+    const result = await runSession(client, session.id, {
+      verbose: opts.verbose,
+      timeoutMs: Number.isFinite(opts.timeout) && opts.timeout > 0 ? opts.timeout * 1000 : 0,
+      onDialog,
+    });
+    if (result.settled) {
+      if (result.finalMessage) process.stdout.write(result.finalMessage + "\n");
+    } else if (result.timedOut) {
+      try {
+        await client.abort(session.id);
+      } catch {}
+    }
+    if (opts.rm) {
+      try {
+        await client.deleteSession(session.id);
+      } catch {}
+    } else if (result.stopped || result.timedOut) {
+      process.stderr.write(dim(`session ${session.id} kept — al chat ${session.id}\n`));
+    }
+    process.exit(result.settled ? 0 : 1);
+  } else if (cmd === "watch") {
+    let ids = [];
+    if (opts.all) {
+      const { sessions } = await client.listSessions();
+      ids = sessions.filter((s) => s.status !== "stopped").map((s) => s.id);
+      if (ids.length === 0) {
+        process.stdout.write("no active sessions\n");
+        process.exit(0);
+      }
+    } else {
+      if (!positional[0]) fail("watch requires a session id or --all");
+      ids = [positional[0]];
+    }
+    process.once("SIGINT", () => process.exit(0));
+    try {
+      await Promise.all(ids.map((id) => watchSession(client, id)));
+    } catch (err) {
+      fail(`watch failed: ${err.message}`);
     }
   }
 }
