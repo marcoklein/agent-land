@@ -53,6 +53,7 @@ export interface SessionRepository {
 export interface SessionEventLog {
   append(id: string, event: SessionEvent, cap: number): Promise<void>;
   read(id: string): Promise<SessionEvent[]>;
+  delete(id: string): Promise<void>;
 }
 
 export interface ConnectorRepository {

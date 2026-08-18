@@ -67,4 +67,51 @@ describe("createApiClient", () => {
     const client = createApiClient({ url: baseUrl });
     await expect(client.deleteSession("x")).rejects.toThrow("Session is stopped");
   });
+
+  it("lists models", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.listModels();
+    const r = requests.at(-1);
+    expect(r.method).toBe("GET");
+    expect(r.url).toBe("/api/models");
+  });
+
+  it("lists connectors", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.listConnectors();
+    const r = requests.at(-1);
+    expect(r.method).toBe("GET");
+    expect(r.url).toBe("/api/connectors");
+  });
+
+  it("fetches connector field definitions URL-encoded", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.connectorFields("my type");
+    expect(requests.at(-1).url).toBe("/api/connectors/fields?type=my%20type");
+  });
+
+  it("creates a connector with the given payload", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.createConnector({
+      name: "GitHub",
+      type: "github",
+      url: "https://api.github.com",
+      fields: { GITHUB_TOKEN: "ghp_x" },
+    });
+    const r = requests.at(-1);
+    expect(r.method).toBe("POST");
+    expect(r.url).toBe("/api/connectors");
+    expect(r.body).toEqual({
+      name: "GitHub",
+      type: "github",
+      url: "https://api.github.com",
+      fields: { GITHUB_TOKEN: "ghp_x" },
+    });
+  });
+
+  it("deletes a connector URL-encoded", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await expect(client.deleteConnector("my connector")).rejects.toThrow();
+    expect(requests.at(-1).url).toBe("/api/connectors/my%20connector");
+  });
 });

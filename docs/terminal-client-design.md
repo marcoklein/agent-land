@@ -38,11 +38,31 @@ al new [--workspace <repoUrl>] [--ref <branch>] [--connectors github,jira,gmail]
 al chat <id>
     attach to an existing session: replay history, then live events
 
-al ls
+al ls [--json]
     list sessions with status, age, model, workspace and connectors
+
+al rm <id> [-y|--yes]
+    delete a session via DELETE /api/sessions/:id (prompts y/N while it is still running)
+
+al log <id> [--follow] [--json]
+    print the full event history; --follow tails, --json prints raw events (quiet-window exit for idle sessions)
+
+al models
+    list available models (GET /api/models)
+
+al connectors ls
+    list connectors — name, type, url; never secrets
+
+al connectors add --name <n> --type <type> --url <u> [--field KEY=VALUE ...] [--content <yaml>]
+    create a connector; typed connectors take --field, custom types take --content
+
+al connectors rm <name> [-y|--yes]
+    delete a connector (prompts y/N)
 ```
 
 `--manual` sets `permissionPolicy: "manual"` (dialogs only reach the client in manual sessions). Everything else stays in the web UI for v1 (see out of scope).
+
+Server API notes (ADR-014): `/api/connectors` and `/api/models` were added for machine parity with the web UI. `DELETE /api/sessions/:id` now kills a running session and purges its record and event log (stopped sessions are purged directly), so removed sessions disappear from `al ls`.
 
 ## Implementation notes
 
@@ -144,8 +164,8 @@ Local dev: `AGENT_LAND_URL=http://localhost:3000` and no auth vars (the dev serv
 
 ## Explicitly out of scope
 
-- One-shot `al run` (create → prompt → wait settled → print → delete); the curl pattern covers it until needed.
-- Session management beyond `al ls` (`al rm` / `al status`) — web UI keeps management in v1.
+- One-shot `al run` (create → prompt → wait settled → print → delete) — planned as a separate step; `al log --follow` covers ad-hoc tailing.
+- Session management beyond `al rm` (`al status`, renaming) — web UI keeps the rest in v1.
 - tmux integration or any client-side persistence.
 - `editor`-method dialogs beyond plain input.
 - Config files, token stores, Windows/terminfo quirks.
