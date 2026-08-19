@@ -4,6 +4,15 @@ const GITHUB_DEVICE_CODE_URL = "https://github.com/login/device/code";
 const GITHUB_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const COPILOT_TOKEN_URL = "https://api.github.com/copilot_internal/v2/token";
 
+const COPILOT_API_VERSION = "2026-06-01";
+
+export const COPILOT_HEADERS: Record<string, string> = {
+  "User-Agent": "GitHubCopilotChat/0.35.0",
+  "Editor-Version": "vscode/1.107.0",
+  "Editor-Plugin-Version": "copilot-chat/0.35.0",
+  "Copilot-Integration-Id": "vscode-chat",
+};
+
 export interface DeviceFlowStart {
   deviceCode: string;
   userCode: string;
@@ -86,10 +95,7 @@ export async function exchangeCopilotToken(githubToken: string): Promise<Copilot
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${githubToken}`,
-      "User-Agent": "GitHubCopilotChat/0.35.0",
-      "Editor-Version": "vscode/1.107.0",
-      "Editor-Plugin-Version": "copilot-chat/0.35.0",
-      "Copilot-Integration-Id": "vscode-chat",
+      ...COPILOT_HEADERS,
     },
   });
   const body = await parseJson(res);
@@ -119,3 +125,49 @@ async function parseJson(res: Response): Promise<Record<string, unknown>> {
     return {};
   }
 }
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
+}
+
+/**
+ * Derive the Copilot model API base URL from the token's `proxy-ep` field.
+ * Token format: tid=...;exp=...;proxy-ep=proxy.business.githubcopilot.com;...
+ * `proxy.` is rewritten to `api.` (individual/business).
+ */
+export function copilotApiBaseUrl(token: string): string {
+  const match = token.match(/proxy-ep=([^;]+)/);
+  if (match) {
+    return `https://${match[1].replace(/^proxy\./, "api.")}`;
+  }
+  return "https://api.individual.githubcopilot.com";
+}
+
+/**
+ * Parse the Copilot `/models` response, keeping only models the user can pick
+ * (model_picker_enabled, not disabled by policy, supports tool calls).
+ */
+export function parseCopilotModelList(body: unknown): string[] {
+  const data = asRecord(body)?.data;
+  if (!Array.isArray(data)) return [];
+
+  const ids: string[] = [];
+  for (const rawItem of data) {
+    const item = asRecord(rawItem);
+    if (!item) continue;
+    const id = item.id;
+    if (typeof id !== "string" || id.length === 0) continue;
+
+    const policy = asRecord(item.policy);
+    const capabilities = asRecord(item.capabilities);
+    const supports = asRecord(capabilities?.supports);
+    if (item.model_picker_enabled !== true) continue;
+    if (policy?.state === "disabled") continue;
+    if (supports?.tool_calls === false) continue;
+
+    ids.push(id);
+  }
+  return ids;
+}
+
+export { COPILOT_API_VERSION };
