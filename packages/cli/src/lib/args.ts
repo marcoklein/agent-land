@@ -1,4 +1,4 @@
-const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "models", "connectors", "run", "watch"]);
+const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "models", "connectors", "providers", "run", "watch"]);
 
 interface FlagSpec {
   key: string;
@@ -11,6 +11,7 @@ const FLAGS: Record<string, FlagSpec> = {
   "--ref": { key: "ref", type: "value" },
   "--connectors": { key: "connectors", type: "value" },
   "--model": { key: "model", type: "value" },
+  "--provider": { key: "provider", type: "value" },
   "--manual": { key: "manual", type: "boolean" },
   "--yes": { key: "yes", type: "boolean" },
   "-y": { key: "yes", type: "boolean" },
@@ -28,14 +29,15 @@ const FLAGS: Record<string, FlagSpec> = {
 };
 
 const COMMAND_FLAGS: Record<string, string[]> = {
-  new: ["--workspace", "--ref", "--connectors", "--model", "--manual"],
+  new: ["--workspace", "--ref", "--connectors", "--model", "--provider", "--manual"],
   chat: [],
   ls: ["--json"],
   rm: ["--yes", "-y"],
   log: ["--follow", "--json"],
-  models: [],
+  models: ["--provider"],
   connectors: ["--yes", "-y", "--name", "--type", "--url", "--field", "--content"],
-  run: ["--workspace", "--ref", "--connectors", "--model", "--manual", "--rm", "--timeout", "--verbose"],
+  providers: ["--json"],
+  run: ["--workspace", "--ref", "--connectors", "--model", "--provider", "--manual", "--rm", "--timeout", "--verbose"],
   watch: ["--all"],
 };
 

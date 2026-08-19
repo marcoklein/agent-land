@@ -13,6 +13,7 @@
     <thead>
       <tr>
         <th>ID</th>
+        <th>Provider</th>
         <th>Model</th>
         <th>Connectors</th>
         <th>Policy</th>
@@ -25,6 +26,7 @@
       <% sessions.forEach(session => { %>
       <tr>
         <td><code><%= session.id %></code></td>
+        <td><small><%= session.provider || 'opencode-go' %></small></td>
         <td><small><%= session.model %></small></td>
         <td><small><%= session.connectors.join(", ") || "none" %></small></td>
         <td><small><%= session.permissionPolicy %></small></td>

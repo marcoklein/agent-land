@@ -5,6 +5,7 @@
     <hgroup>
       <h2>Session <code><%= session.id %></code></h2>
       <p>
+        <strong>Provider:</strong> <%= session.provider || 'opencode-go' %><br>
         <strong>Model:</strong> <%= session.model %><br>
         <strong>Policy:</strong> <%= session.permissionPolicy %><br>
         <strong>Connectors:</strong> <%= session.connectors.join(", ") || "none" %><br>

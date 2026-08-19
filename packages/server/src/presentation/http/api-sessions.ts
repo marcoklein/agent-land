@@ -10,7 +10,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
 
   router.post("/", async (req, res) => {
     try {
-      const { connectors, permissionPolicy, model, workspace } = req.body ?? {};
+      const { connectors, permissionPolicy, model, workspace, provider } = req.body ?? {};
       const parsedWorkspace = parseWorkspace(workspace);
       if (parsedWorkspace === null) {
         return res.status(400).json({ error: "workspace must be { repoUrl: string, ref?: string }" });
@@ -19,6 +19,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
         connectors: Array.isArray(connectors) ? connectors : undefined,
         permissionPolicy: (permissionPolicy as PermissionPolicy) ?? "auto",
         model: typeof model === "string" ? model : undefined,
+        provider: typeof provider === "string" ? provider : undefined,
         workspace: parsedWorkspace,
       });
       res.status(201).json({ session });

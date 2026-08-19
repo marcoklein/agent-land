@@ -9,15 +9,26 @@ import { getConfig } from "./config.js";
 import { indexRouter } from "./routes/index.js";
 import { agentsRouter } from "./routes/agents.js";
 import { connectorsRouter } from "./routes/connectors.js";
+import { providersRouter } from "./routes/providers.js";
+import { copilotRouter } from "./routes/copilot.js";
 import { SopsService } from "./infra/sops.js";
 import { DockerService } from "./infra/docker.js";
 import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
 import { GitCloneProvisioner } from "./infra/git-clone-provisioner.js";
-import { JsonSessionRepository, JsonConnectorRepository, JsonSessionEventLog } from "./infra/repositories.js";
+import { PiConfigProvisioner } from "./infra/pi-config-provisioner.js";
+import {
+  JsonSessionRepository,
+  JsonConnectorRepository,
+  JsonSessionEventLog,
+  JsonProviderRepository,
+} from "./infra/repositories.js";
 import { SessionService } from "./core/session-service.js";
 import { ConnectorService } from "./core/connector-service.js";
+import { ProviderService } from "./core/provider-service.js";
+import { ModelCatalog } from "./infra/model-catalog.js";
 import { sessionsApiRouter } from "./presentation/http/api-sessions.js";
 import { connectorsApiRouter } from "./presentation/http/api-connectors.js";
+import { providersApiRouter } from "./presentation/http/api-providers.js";
 import { modelsApiRouter } from "./presentation/http/api-models.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,23 +38,29 @@ const sops = new SopsService(config.secretsDir, config.ageKeyFile);
 const docker = new DockerService();
 const sessionRepository = new JsonSessionRepository(config.dataDir);
 const connectorRepository = new JsonConnectorRepository(config.dataDir);
+const providerRepository = new JsonProviderRepository(config.dataDir);
 const eventLog = new JsonSessionEventLog(config.dataDir);
 
 const connectorService = new ConnectorService(connectorRepository, sops);
+const providerService = new ProviderService(providerRepository, sops);
+const modelCatalog = new ModelCatalog(providerService, sops);
 const harness = new PiRpcHarness(docker);
 const provisioner = new GitCloneProvisioner(docker, {
   gitUserName: config.gitUserName,
   gitUserEmail: config.gitUserEmail,
 });
+const piConfigProvisioner = new PiConfigProvisioner(docker, providerRepository, sops);
 const sessionService = new SessionService({
   docker,
   secrets: sops,
   sessions: sessionRepository,
   connectors: connectorRepository,
+  providers: providerRepository,
   harness,
   provisioner,
   eventLog,
   config,
+  piConfigProvisioner,
 });
 
 const app = express();
@@ -78,11 +95,14 @@ app.use((req, res, next) => {
 });
 
 app.use("/", indexRouter(sessionService, connectorService));
-app.use("/agents", agentsRouter(sessionService, connectorService));
+app.use("/agents", agentsRouter(sessionService, connectorService, providerService, modelCatalog));
 app.use("/connectors", connectorsRouter(connectorService));
+app.use("/providers/copilot", copilotRouter(providerService));
+app.use("/providers", providersRouter(providerService));
 app.use("/api/sessions", sessionsApiRouter(sessionService, config));
 app.use("/api/connectors", connectorsApiRouter(connectorService));
-app.use("/api/models", modelsApiRouter());
+app.use("/api/providers", providersApiRouter(providerService));
+app.use("/api/models", modelsApiRouter(modelCatalog));
 
 await sessionService.recover().catch((err) => {
   console.error("Session recovery failed:", err);

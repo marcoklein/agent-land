@@ -1,0 +1,50 @@
+<article>
+  <header>
+    <h2>Providers</h2>
+    <small>LLM providers projected into pi. Credentials live in SOPS-encrypted secrets.</small>
+  </header>
+
+  <a href="/providers/new" role="button">Add Provider</a>
+  <a href="/providers/copilot/new" role="button" class="outline">Connect GitHub Copilot</a>
+
+  <% if (providers.length === 0) { %>
+  <p><em>No providers configured. The default <code>opencode-go</code> provider is bootstrapped from the server's <code>OPENCODE_API_KEY</code>.</em></p>
+  <% } else { %>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Kind</th>
+        <th>API</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% providers.forEach(p => { %>
+      <tr>
+        <td><strong><%= p.id %></strong><% if (p.label && p.label !== p.id) { %> <small><%= p.label %></small><% } %></td>
+        <td><mark><%= p.kind %></mark></td>
+        <td><small><%= p.api || (p.kind === 'builtin' ? 'built-in' : '') %></small></td>
+        <td><mark class="<%= p.enabled ? 'pico-color-jade-100' : 'pico-color-red-100' %>"><%= p.enabled ? 'enabled' : 'disabled' %></mark></td>
+        <td>
+          <form method="POST" action="/providers/<%= p.id %>/toggle" style="display:inline"
+                hx-post="/providers/<%= p.id %>/toggle"
+                hx-target="body"
+                hx-swap="innerHTML">
+            <button type="submit" class="outline secondary" style="padding:2px 8px;font-size:0.8rem"><%= p.enabled ? 'Disable' : 'Enable' %></button>
+          </form>
+          <form method="POST" action="/providers/<%= p.id %>/delete" style="display:inline"
+                hx-post="/providers/<%= p.id %>/delete"
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                hx-confirm="Delete provider '<%= p.id %>'?">
+            <button type="submit" class="outline secondary" style="padding:2px 8px;font-size:0.8rem">Delete</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+</article>

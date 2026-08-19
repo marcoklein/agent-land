@@ -26,15 +26,16 @@ Model discovery in agent-land spans three layers:
 
 Pi is a black box. It receives `--provider <id>` and `--model <id>` as CLI args and handles routing internally.
 
-- Pi has **no** `--list-models` flag or model discovery command
-- Pi has built-in knowledge of provider endpoints
-- Pi accepts any `--model` value — runtime error if the model doesn't exist at the provider
-- For **custom providers**, pi reads `models.json` from `/pi-agent-config/models.json`
+- Pi has a `--list-models` flag (since 0.82.1), but it emits a human-facing table and only lists providers with configured auth — not used for discovery.
+- Pi has built-in knowledge of provider endpoints.
+- Pi accepts any `--model` value — runtime error if the model doesn't exist at the provider.
+- For **custom providers**, pi reads `models.json` from `/tmp/pi-config/models.json` (the `PI_CODING_AGENT_DIR`, which agent-land sets).
+- For **OAuth providers**, pi reads `auth.json` from the same directory.
 - Installed in `agent-image/Dockerfile`[^pi-dockerfile]: `npm install -g @earendil-works/pi-coding-agent@0.82.1`
 
 # How agent-land discovers models
 
-Since pi doesn't expose model listing, agent-land calls provider HTTP APIs directly.
+Since pi's model listing isn't machine-readable, agent-land calls provider HTTP APIs directly through `ModelCatalog` (`packages/server/src/infra/model-catalog.ts`), keyed by provider id. Static model lists from provider records are a first-class discovery mode, not just a fallback (e.g. QwenCloud, which has no public `/models` endpoint).
 
 ## Supported API types
 
@@ -45,11 +46,12 @@ Since pi doesn't expose model listing, agent-land calls provider HTTP APIs direc
 | `anthropic-messages` | `GET {baseUrl}/v1/models?limit=1000` | `x-api-key` | `data[].id` |
 | `opencode` | `GET https://opencode.ai/zen/v1/models` | none (public) | `data[].id` |
 | `opencode-go` | `GET https://opencode.ai/zen/go/v1/models` | none (public) | `data[].id` |
+| `github-copilot` | `GET {apiBase}/models` | Bearer (copilot token) | `data[].id` |
 | others | — | — | returns `[]` |
 
 See [OpenCode API](opencode-api.md) for details on the opencode endpoint.[^opencode-api]
 
-Timeout: 5 seconds per call. All populate `ProviderModelConfig[]` with `{ id }` only.
+Timeout: 5 seconds per call, cached 1h per provider with in-flight dedupe. Discovery falls back to the provider's static `models` array, then to an empty list.
 
 ## Secret decryption
 
@@ -85,12 +87,15 @@ A standard HTML `<select>` element with `<option>` elements rendered server-side
 
 | File | Role |
 |------|------|
-| `packages/server/src/infra/providers.ts` | `getModels()` — fetches from OpenCode Go `/go/v1/models`, caches in memory (1h TTL, in-flight dedupe) |
-| `packages/server/src/presentation/http/api-models.ts` | `GET /api/models` — machine-readable model list |
-| `packages/server/src/routes/agents.ts` | `GET /new` — calls `getModels()`, passes `models` array to template |
-| `packages/server/src/views/agents/new.ejs` | Model `<select>` with server-rendered `<option>` elements |
-| `packages/server/src/infra/docker.ts` | `--provider opencode-go` + `--model <id>` passed to pi CLI |
-| `packages/server/src/core/session-service.ts` | Injects `OPENCODE_API_KEY`/`OPENCODE_API_URL` into container env |
+| `packages/server/src/infra/model-catalog.ts` | `ModelCatalog` — per-provider discovery (HTTP `/models`, static lists, OAuth), cached 1h with in-flight dedupe |
+| `packages/server/src/core/provider-service.ts` | `ProviderService` — provider records + secret lifecycle |
+| `packages/server/src/core/provider-catalog.ts` | Well-known built-in/OAuth provider metadata |
+| `packages/server/src/infra/pi-config-provisioner.ts` | Renders `models.json`/`auth.json` into the container's `/tmp/pi-config` |
+| `packages/server/src/presentation/http/api-models.ts` | `GET /api/models?provider=<id>` |
+| `packages/server/src/presentation/http/api-providers.ts` | `GET/POST/DELETE /api/providers` |
+| `packages/server/src/routes/agents.ts` | `GET /new` + `GET /model-options` render the launch form's provider/model selects |
+| `packages/server/src/views/agents/new.ejs` | Provider/model `<select>` with HTMX-driven model re-render |
+| `packages/server/src/core/session-service.ts` | `resolveAgentEnv` decrypts the provider secret into container env |
 | `agent-image/Dockerfile` | Pi installation, version pin
 
 [^opencode-api]: OpenCode API reference

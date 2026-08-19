@@ -1,12 +1,19 @@
 import { Router } from "express";
 import type { SessionService } from "../core/session-service.js";
 import type { ConnectorService } from "../core/connector-service.js";
+import type { ProviderService } from "../core/provider-service.js";
+import type { ModelCatalog } from "../infra/model-catalog.js";
+import { DEFAULT_PROVIDER_ID } from "../core/types.js";
 import { buildPrompt } from "../core/prompt.js";
-import { getModels } from "../infra/providers.js";
-import { renderSessionEvent, renderSessionEventFull } from "../presentation/http/log-renderer.js";
+import { renderSessionEvent, renderSessionEventFull, escapeHtml } from "../presentation/http/log-renderer.js";
 import type { SessionEvent, SequencedEvent } from "../core/events.js";
 
-export function agentsRouter(sessionService: SessionService, connectorService: ConnectorService) {
+export function agentsRouter(
+  sessionService: SessionService,
+  connectorService: ConnectorService,
+  providerService: ProviderService,
+  modelCatalog: ModelCatalog
+) {
   const router = Router();
 
   router.get("/", async (_req, res) => {
@@ -16,12 +23,40 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
 
   router.get("/new", async (_req, res) => {
     const connectors = await connectorService.list();
-    const models = await getModels().catch(() => [] as string[]);
-    res.render("layout", { view: "agents/new", currentPage: "new-agent", connectors, models });
+    const providers = await providerService.listEnabled().catch(() => []);
+
+    const selected =
+      providers.find((p) => p.id === DEFAULT_PROVIDER_ID) ?? providers[0] ?? null;
+    const selectedProviderId = selected?.id ?? DEFAULT_PROVIDER_ID;
+    const models = await modelCatalog.getModels(selectedProviderId).catch(() => [] as string[]);
+
+    res.render("layout", {
+      view: "agents/new",
+      currentPage: "new-agent",
+      connectors,
+      providers,
+      models,
+      selectedProviderId,
+    });
+  });
+
+  router.get("/model-options", async (req, res) => {
+    const providerId =
+      typeof req.query.provider === "string" && req.query.provider.trim().length > 0
+        ? req.query.provider.trim()
+        : DEFAULT_PROVIDER_ID;
+    const models = await modelCatalog.getModels(providerId).catch(() => [] as string[]);
+
+    const options = models
+      .map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`)
+      .join("\n");
+    res.send(
+      `<select id="model" name="model">\n${options}</select>`
+    );
   });
 
   router.post("/run", async (req, res) => {
-    const { connectors, model, permissionPolicy, repoUrl, ref } = req.body;
+    const { connectors, model, permissionPolicy, repoUrl, ref, provider } = req.body;
     const task: string = typeof req.body.task === "string" ? req.body.task : "";
     const connectorList: string[] = Array.isArray(connectors)
       ? connectors
@@ -46,6 +81,7 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
         connectors: connectorList,
         permissionPolicy: permissionPolicy === "manual" ? "manual" : "auto",
         model,
+        provider: typeof provider === "string" && provider.trim() ? provider : undefined,
         workspace,
       });
 

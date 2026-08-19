@@ -50,6 +50,9 @@ importers:
       express-session:
         specifier: ^1.18.1
         version: 1.19.0
+      tar-stream:
+        specifier: ^2.2.0
+        version: 2.2.0
       uuid:
         specifier: ^10.0.0
         version: 10.0.0
@@ -81,6 +84,9 @@ importers:
       '@types/supertest':
         specifier: ^7.2.1
         version: 7.2.1
+      '@types/tar-stream':
+        specifier: ^2.2.3
+        version: 2.2.3
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -490,6 +496,9 @@ packages:
 
   '@types/supertest@7.2.1':
     resolution: {integrity: sha512-4CbBvoYVLHL7+yhbYrZET0vsvuyXTC05aRe7dNQkwMzm56auceoy6Yu3K50uZmwfHna1os3CMSgM/3QVkUtPTw==}
+
+  '@types/tar-stream@2.2.3':
+    resolution: {integrity: sha512-if3mugZfjVkXOMZdFjIHySxY13r6GXPpyOlsDmLffvyI7tLz9wXE8BFjNivXsvUeyJ1KNlOpfLnag+ISmxgxPw==}
 
   '@types/uuid@10.0.0':
     resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
@@ -1719,6 +1728,10 @@ snapshots:
     dependencies:
       '@types/methods': 1.1.4
       '@types/superagent': 8.1.11
+
+  '@types/tar-stream@2.2.3':
+    dependencies:
+      '@types/node': 26.2.0
 
   '@types/uuid@10.0.0': {}
 

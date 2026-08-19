@@ -40,6 +40,7 @@ export interface SessionSummary {
   status: string;
   createdAt: string;
   model: string;
+  provider?: string;
   workspace?: { repoUrl: string; ref?: string };
   connectors?: string[];
 }
@@ -48,6 +49,15 @@ export interface ConnectorSummary {
   name: string;
   type: string;
   url: string;
+}
+
+export interface ProviderSummary {
+  id: string;
+  kind: string;
+  label?: string;
+  api?: string;
+  enabled: boolean;
+  defaultModel?: string;
 }
 
 export interface ConnectorFieldDef {

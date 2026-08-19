@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile, readdir, stat, unlink, appendFile, rename } from "fs/promises";
 import path from "path";
-import type { SessionRepository, ConnectorRepository, SessionEventLog } from "../core/ports.js";
-import type { AgentSession, Connector } from "../core/types.js";
+import type { SessionRepository, ConnectorRepository, SessionEventLog, ProviderRepository } from "../core/ports.js";
+import type { AgentSession, Connector, ProviderConfig } from "../core/types.js";
 import type { SessionEvent } from "../core/events.js";
 
 export class JsonSessionRepository implements SessionRepository {
@@ -131,6 +131,37 @@ export class JsonConnectorRepository implements ConnectorRepository {
   }
 
   async save(list: Connector[]): Promise<void> {
+    await mkdir(this.dataDir, { recursive: true });
+    const tmpPath = `${this.filePath()}.tmp`;
+    await writeFile(tmpPath, JSON.stringify(list, null, 2));
+    await rename(tmpPath, this.filePath());
+  }
+}
+
+export class JsonProviderRepository implements ProviderRepository {
+  constructor(private dataDir: string) {}
+
+  private filePath(): string {
+    return path.join(this.dataDir, "providers.json");
+  }
+
+  async list(): Promise<ProviderConfig[]> {
+    try {
+      await stat(this.filePath());
+      const content = await readFile(this.filePath(), "utf-8");
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async get(id: string): Promise<ProviderConfig | null> {
+    const all = await this.list();
+    return all.find((p) => p.id === id) ?? null;
+  }
+
+  async save(list: ProviderConfig[]): Promise<void> {
     await mkdir(this.dataDir, { recursive: true });
     const tmpPath = `${this.filePath()}.tmp`;
     await writeFile(tmpPath, JSON.stringify(list, null, 2));

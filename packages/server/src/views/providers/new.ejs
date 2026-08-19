@@ -1,0 +1,38 @@
+<article>
+  <header><h2>Add Provider</h2></header>
+  <p><small>Define an LLM provider. Built-ins use pi's native env-var auth; custom providers are projected into <code>models.json</code>; OAuth providers into <code>auth.json</code>.</small></p>
+
+  <form method="POST" action="/providers">
+    <label for="kind">Kind</label>
+    <select id="kind" name="kind" required
+            hx-get="/providers/fields"
+            hx-target="#provider-fields"
+            hx-trigger="change, load"
+            hx-include="this"
+            hx-swap="innerHTML">
+      <option value="builtin">Built-in (API key)</option>
+      <option value="custom">Custom endpoint</option>
+      <option value="oauth">OAuth subscription</option>
+    </select>
+
+    <div id="provider-fields">
+      <label for="id">Provider</label>
+      <select id="id" name="id" required
+              hx-get="/providers/secret-fields"
+              hx-target="#secret-fields"
+              hx-trigger="change, load"
+              hx-include="this"
+              hx-swap="innerHTML">
+        <option value="mistral">Mistral</option>
+      </select>
+      <div id="secret-fields">
+        <label for="MISTRAL_API_KEY">MISTRAL_API_KEY</label>
+        <input type="password" id="MISTRAL_API_KEY" name="MISTRAL_API_KEY" placeholder="MISTRAL_API_KEY" required>
+      </div>
+      <small>Credentials are encrypted at rest with SOPS/Age and decrypted only at agent launch time.</small>
+    </div>
+
+    <button type="submit">Create Provider</button>
+    <a href="/providers" role="button" class="outline">Cancel</a>
+  </form>
+</article>

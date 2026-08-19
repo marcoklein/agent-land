@@ -49,7 +49,9 @@ export function createApiClient({ url, authHeader }: Config) {
       request("POST", `/api/sessions/${id}/respond`, { requestId, ...value }),
     abort: (id: string) => request("POST", `/api/sessions/${id}/abort`, {}),
     deleteSession: (id: string) => request("DELETE", `/api/sessions/${id}`),
-    listModels: () => request("GET", "/api/models"),
+    listModels: (provider?: string) =>
+      request("GET", `/api/models${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`),
+    listProviders: () => request("GET", "/api/providers"),
     listConnectors: () => request("GET", "/api/connectors"),
     connectorFields: (type: string) =>
       request("GET", `/api/connectors/fields?type=${encodeURIComponent(type)}`),

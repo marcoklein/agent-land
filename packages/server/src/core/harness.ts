@@ -1,4 +1,5 @@
 import type { AgentSession } from "./types.js";
+import { DEFAULT_PROVIDER_ID } from "./types.js";
 import type { SessionEvent } from "./events.js";
 
 export type EventStream = {
@@ -33,7 +34,7 @@ export function piRpcPreset(session: AgentSession): ProgramSpec {
       "--mode",
       "rpc",
       "--provider",
-      "opencode-go",
+      session.provider ?? DEFAULT_PROVIDER_ID,
       "--model",
       session.model,
       "--session-dir",

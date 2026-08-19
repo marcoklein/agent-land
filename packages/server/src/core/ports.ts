@@ -1,5 +1,5 @@
 import type Docker from "dockerode";
-import type { AgentSession, Connector, DecryptedSecret, SecretInfo } from "./types.js";
+import type { AgentSession, Connector, DecryptedSecret, ProviderConfig, SecretInfo } from "./types.js";
 import type { SessionEvent } from "./events.js";
 
 export interface InteractiveExec {
@@ -27,6 +27,7 @@ export interface DockerPort {
   removeVolume(name: string): Promise<void>;
   ensureAgentImage(image: string): Promise<void>;
   containerExists(id: string): Promise<boolean>;
+  writeFile(containerId: string, destPath: string, content: string, mode?: number): Promise<void>;
 }
 
 export interface WorkspaceProvisioner {
@@ -59,4 +60,10 @@ export interface SessionEventLog {
 export interface ConnectorRepository {
   list(): Promise<Connector[]>;
   save(list: Connector[]): Promise<void>;
+}
+
+export interface ProviderRepository {
+  list(): Promise<ProviderConfig[]>;
+  get(id: string): Promise<ProviderConfig | null>;
+  save(list: ProviderConfig[]): Promise<void>;
 }
