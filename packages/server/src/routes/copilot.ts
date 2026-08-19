@@ -1,12 +1,8 @@
 import { Router } from "express";
 import type { ProviderService } from "../core/provider-service.js";
 import { escapeHtml } from "../presentation/http/log-renderer.js";
-import {
-  startDeviceFlow,
-  pollDeviceToken,
-  exchangeCopilotToken,
-  buildCopilotSecretYaml,
-} from "../infra/copilot-auth.js";
+import { startDeviceFlow, pollDeviceToken } from "../infra/copilot-auth.js";
+import { createCopilotProvider } from "../infra/copilot-provider.js";
 
 export function copilotRouter(providerService: ProviderService) {
   const router = Router();
@@ -44,19 +40,7 @@ export function copilotRouter(providerService: ProviderService) {
     try {
       const result = await pollDeviceToken(deviceCode);
       if (result.status === "authorized") {
-        const copilot = await exchangeCopilotToken(result.accessToken);
-        const yaml = buildCopilotSecretYaml(copilot, result.accessToken);
-
-        const existing = await providerService.get("github-copilot");
-        if (existing) {
-          await providerService.delete("github-copilot");
-        }
-        await providerService.create({
-          id: "github-copilot",
-          kind: "oauth",
-          defaultModel: "claude-haiku-4.5",
-          secretContent: yaml,
-        });
+        await createCopilotProvider(providerService, result.accessToken);
         clearSession(req, "copilotDeviceCode");
         res.header("HX-Redirect", "/providers");
         return res.status(204).end();

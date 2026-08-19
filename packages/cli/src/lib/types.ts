@@ -6,6 +6,8 @@ export interface MessageBlock {
 export interface Message {
   role?: string;
   content?: MessageBlock[];
+  stopReason?: string;
+  errorMessage?: string;
 }
 
 export interface AgentEvent {
@@ -77,6 +79,7 @@ export interface RunResult {
   stopped: boolean;
   timedOut: boolean;
   finalMessage: string;
+  error?: string;
 }
 
 export interface Config {

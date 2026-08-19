@@ -43,6 +43,9 @@ Usage:
   al providers rm <id> [-y|--yes]
       delete a provider (prompts y/N)
 
+  al providers login
+      start the GitHub Copilot device flow, then poll until authorized
+
   al connectors ls
       list connectors (name, type, url — never secrets)
 
@@ -285,6 +288,61 @@ async function addProvider(client: ApiClient, opts: ParsedArgs["opts"]): Promise
 
   const { provider } = await client.createProvider(payload);
   process.stdout.write(`created provider "${provider.id}" (${provider.kind})\n`);
+}
+
+async function resolveProviderForModel(
+  client: ApiClient,
+  model: string | undefined
+): Promise<string | undefined> {
+  if (!model) return undefined;
+
+  const { models } = (await client.listModels()) as { models: string[] };
+  if (models.includes(model)) return undefined;
+
+  const { providers } = (await client.listProviders()) as { providers?: ProviderSummary[] };
+  for (const p of providers ?? []) {
+    if (!p.enabled || p.id === "opencode-go") continue;
+    const { models: pm } = (await client.listModels(p.id)) as { models: string[] };
+    if (pm.includes(model)) return p.id;
+  }
+  return undefined;
+}
+
+async function loginProvider(client: ApiClient): Promise<void> {
+  const flow = await client.startCopilotLogin();
+  const intervalSec = typeof flow.interval === "number" ? flow.interval : 5;
+  const expiresInSec = typeof flow.expiresIn === "number" ? flow.expiresIn : 900;
+
+  process.stdout.write(
+    `\n1. Open ${flow.verificationUri}\n` +
+      `2. Enter code: ${flow.userCode}\n\n` +
+      `Waiting for authorization (Ctrl-C to cancel)...\n`
+  );
+
+  const deadline = Date.now() + expiresInSec * 1000;
+  let delayMs = Math.max(5000, intervalSec * 1000);
+
+  while (Date.now() < deadline) {
+    await sleep(delayMs);
+    let result: any;
+    try {
+      result = await client.pollCopilotLogin(flow.deviceCode);
+    } catch (err) {
+      fail(`copilot login failed: ${(err as Error).message}`);
+    }
+    if (result.status === "authorized") {
+      process.stdout.write(
+        `\ncreated provider "${result.provider.id}" (${result.provider.kind})\n`
+      );
+      return;
+    }
+    if (result.status === "expired") fail("authorization expired");
+    if (result.status === "denied") fail("authorization denied");
+    if (result.status === "failed") fail(`device flow failed: ${result.message}`);
+    if (result.status === "slow_down") delayMs += 5000;
+  }
+
+  fail("device flow timed out");
 }
 
 async function logSession(
@@ -658,6 +716,18 @@ async function main() {
       : {}),
   };
 
+  if ((cmd === "new" || cmd === "run") && opts.model && !opts.provider) {
+    try {
+      const resolved = await resolveProviderForModel(client, opts.model);
+      if (resolved) {
+        payload.provider = resolved;
+        process.stderr.write(dim(`using provider "${resolved}" (model ${opts.model})\n`));
+      }
+    } catch {
+      // fall back to the default provider
+    }
+  }
+
   if (cmd === "new") {
     try {
       const { session } = await client.createSession(payload);
@@ -728,6 +798,8 @@ async function main() {
         await listProviders(client, { json: opts.json });
       } else if (sub === "add") {
         await addProvider(client, opts);
+      } else if (sub === "login") {
+        await loginProvider(client);
       } else if (sub === "rm") {
         const id = positional[1];
         if (!id) fail("providers rm requires an id");
@@ -789,7 +861,9 @@ async function main() {
     } catch (err) {
       fail(`run failed: ${(err as Error).message}`);
     }
-    if (result.settled) {
+    if (result.error) {
+      process.stderr.write(`agent error: ${result.error}\n`);
+    } else if (result.settled) {
       if (result.finalMessage) process.stdout.write(result.finalMessage + "\n");
     } else if (result.timedOut) {
       try {
@@ -808,7 +882,7 @@ async function main() {
       const note = !onDialog ? " (agent may be waiting for input)" : "";
       process.stderr.write(dim(`session ${session.id} kept${note} — al chat ${session.id}\n`));
     }
-    process.exit(result.settled ? 0 : 1);
+    process.exit(result.error || !result.settled ? 1 : 0);
   } else if (cmd === "watch") {
     process.once("SIGINT", () => process.exit(0));
     if (!opts.all && !positional[0]) fail("watch requires a session id or --all");

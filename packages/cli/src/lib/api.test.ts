@@ -118,6 +118,17 @@ describe("createApiClient", () => {
     expect(requests.at(-1)!.url).toBe("/api/providers/my%20provider");
   });
 
+  it("starts and polls a copilot login", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.startCopilotLogin();
+    expect(requests.at(-1)!.method).toBe("POST");
+    expect(requests.at(-1)!.url).toBe("/api/providers/copilot/start");
+
+    await client.pollCopilotLogin("dc123");
+    expect(requests.at(-1)!.url).toBe("/api/providers/copilot/poll");
+    expect(requests.at(-1)!.body).toEqual({ deviceCode: "dc123" });
+  });
+
   it("lists connectors", async () => {
     const client = createApiClient({ url: baseUrl });
     await client.listConnectors();
