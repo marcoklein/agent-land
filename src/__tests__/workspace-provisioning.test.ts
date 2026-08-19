@@ -37,7 +37,7 @@ describe("Workspace provisioning", () => {
         ["git", "config", "--global", "user.name", "Test Bot"],
         ["git", "config", "--global", "user.email", "bot@test.local"],
         ["git", "clone", "--", repoUrl, "/workspace"],
-        ["git", "-C", "/workspace", "checkout", ref],
+        ["git", "-C", "/workspace", "checkout", "--", ref],
       ]);
       expect(commands.some((c) => c[0] === "gh")).toBe(false);
 

@@ -31,14 +31,14 @@ export class GitCloneProvisioner implements WorkspaceProvisioner {
     }
     await this.run(containerId, ["git", "clone", "--", workspace.repoUrl, "/workspace"]);
     if (workspace.ref) {
-      await this.run(containerId, ["git", "-C", "/workspace", "checkout", workspace.ref]);
+      await this.run(containerId, ["git", "-C", "/workspace", "checkout", "--", workspace.ref]);
     }
   }
 
   private async run(containerId: string, args: string[]): Promise<void> {
     const result = await this.docker.execCommand(containerId, args);
     if (result.exitCode !== 0) {
-      const detail = (result.stderr || result.stdout).trim();
+      const detail = scrubCredentials(result.stderr || result.stdout).trim();
       throw new Error(
         `Provisioning failed: \`${args.join(" ")}\` exited with ${result.exitCode}${
           detail ? `: ${detail}` : ""
@@ -46,4 +46,8 @@ export class GitCloneProvisioner implements WorkspaceProvisioner {
       );
     }
   }
+}
+
+function scrubCredentials(output: string): string {
+  return output.replace(/(https?:\/\/)[^/@\s]+@/gi, "$1***@");
 }

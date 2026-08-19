@@ -102,7 +102,9 @@ export function agentsRouter(sessionService: SessionService, connectorService: C
     const session = await sessionService.getSession(id);
     if (!session) return res.status(404).send("Not found");
 
-    const afterIndex = req.query.after ? parseInt(req.query.after as string, 10) : 0;
+    const afterRaw = req.query.after;
+    const afterIndex =
+      typeof afterRaw === "string" && Number.isFinite(Number(afterRaw)) ? Number(afterRaw) : 0;
 
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -286,7 +288,7 @@ function statusClass(status: string): string {
     case "waiting_for_input":
       return "pico-color-yellow-100";
     case "stopped":
-      return "pico-color-yellow-100";
+      return "pico-color-red-100";
     default:
       return "pico-color-red-100";
   }

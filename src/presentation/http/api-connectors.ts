@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { ConnectorService } from "../../core/connector-service.js";
 import { getConnectorFields, DuplicateConnectorError } from "../../core/connector-service.js";
+import { errorMessage } from "./errors.js";
 
 export function connectorsApiRouter(connectorService: ConnectorService) {
   const router = Router();
@@ -65,8 +66,4 @@ export function connectorsApiRouter(connectorService: ConnectorService) {
   });
 
   return router;
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }

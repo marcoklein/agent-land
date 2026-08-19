@@ -13,13 +13,17 @@ describe("wrapText", () => {
   it("preserves empty lines", () => {
     expect(wrapText("a\n\nb", 20)).toEqual(["a", "", "b"]);
   });
+
+  it("hard-breaks words longer than the width", () => {
+    expect(wrapText("abcdefghij", 4)).toEqual(["abcd", "efgh", "ij"]);
+  });
 });
 
 describe("messageText", () => {
-  it("joins text blocks", () => {
+  it("joins text blocks with newlines", () => {
     expect(
       messageText({ content: [{ type: "text", text: "one" }, { type: "text", text: "two" }] })
-    ).toBe("onetwo");
+    ).toBe("one\ntwo");
   });
 
   it("returns empty for non-messages", () => {
