@@ -17,6 +17,7 @@ export type PollResult =
   | { status: "slow_down" }
   | { status: "expired" }
   | { status: "denied" }
+  | { status: "failed"; message: string }
   | { status: "authorized"; accessToken: string };
 
 export interface CopilotToken {
@@ -65,11 +66,12 @@ export async function pollDeviceToken(
       case "slow_down":
         return { status: "slow_down" };
       case "expired_token":
+      case "token_expired":
         return { status: "expired" };
       case "access_denied":
         return { status: "denied" };
       default:
-        return { status: "pending" };
+        return { status: "failed", message: error };
     }
   }
   if (typeof body.access_token !== "string" || body.access_token.length === 0) {
