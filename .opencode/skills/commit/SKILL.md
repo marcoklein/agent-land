@@ -45,5 +45,5 @@ chore: add ca-certificates to agent image
 - Never include secrets, tokens, or API keys in commit messages
 - Never commit `.env`, `.age-key`, or `secrets/*.yaml` (gitignored)
 - Review `git diff --staged` before committing
-- Run `npm run typecheck` before committing if code changed
+- Run `pnpm typecheck` before committing if code changed
 - Use `git add <specific files>` — never `git add -A` blindly

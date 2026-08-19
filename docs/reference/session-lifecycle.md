@@ -6,13 +6,13 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
 sources:
   - id: session-service
-    resource: src/core/session-service.ts
+    resource: packages/server/src/core/session-service.ts
     title: SessionService state machine + event log
   - id: events
-    resource: src/core/events.ts
+    resource: packages/server/src/core/events.ts
     title: SessionEvent types + sequence stamping
   - id: recovery-test
-    resource: src/__tests__/session-recovery.test.ts
+    resource: packages/server/src/__tests__/session-recovery.test.ts
     title: Session recovery tests
 ---
 
@@ -45,6 +45,6 @@ Three mechanisms cooperate: **durable event log → drain on SIGTERM → re-atta
 
 Container presence is the single re-attach criterion — **not** the persisted status. Any status written before the process died is a guess; the container is ground truth.
 
-[^session-service]: `src/core/session-service.ts`
-[^events]: `src/core/events.ts`
-[^recovery-test]: `src/__tests__/session-recovery.test.ts`
+[^session-service]: `packages/server/src/core/session-service.ts`
+[^events]: `packages/server/src/core/events.ts`
+[^recovery-test]: `packages/server/src/__tests__/session-recovery.test.ts`

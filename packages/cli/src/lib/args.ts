@@ -1,6 +1,12 @@
 const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "models", "connectors", "run", "watch"]);
 
-const FLAGS = {
+interface FlagSpec {
+  key: string;
+  type: "value" | "boolean";
+  multiple?: boolean;
+}
+
+const FLAGS: Record<string, FlagSpec> = {
   "--workspace": { key: "workspace", type: "value" },
   "--ref": { key: "ref", type: "value" },
   "--connectors": { key: "connectors", type: "value" },
@@ -21,7 +27,7 @@ const FLAGS = {
   "--field": { key: "field", type: "value", multiple: true },
 };
 
-const COMMAND_FLAGS = {
+const COMMAND_FLAGS: Record<string, string[]> = {
   new: ["--workspace", "--ref", "--connectors", "--model", "--manual"],
   chat: [],
   ls: ["--json"],
@@ -33,15 +39,26 @@ const COMMAND_FLAGS = {
   watch: ["--all"],
 };
 
+export interface ParsedArgs {
+  cmd: string | null;
+  opts: {
+    connectors: string[];
+    fields: string[];
+    [key: string]: any;
+  };
+  positional: string[];
+  help: boolean;
+}
+
 export class UsageError extends Error {
-  constructor(message) {
+  constructor(message: string) {
     super(message);
     this.name = "UsageError";
   }
 }
 
-export function parseArgs(argv) {
-  let cmd = null;
+export function parseArgs(argv: string[]): ParsedArgs {
+  let cmd: string | null = null;
   for (const a of argv) {
     if (COMMANDS.has(a)) {
       cmd = a;
@@ -49,8 +66,8 @@ export function parseArgs(argv) {
     }
   }
 
-  const opts = { connectors: [], fields: [] };
-  const positional = [];
+  const opts: ParsedArgs["opts"] = { connectors: [], fields: [] };
+  const positional: string[] = [];
   let help = false;
 
   if (!cmd) {

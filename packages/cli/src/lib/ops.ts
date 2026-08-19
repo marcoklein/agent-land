@@ -1,11 +1,12 @@
-import { streamSse } from "./sse.mjs";
-import { createEventRenderer, messageText } from "./render.mjs";
+import { streamSse } from "./sse.js";
+import { createEventRenderer, messageText } from "./render.js";
+import type { AgentEvent, RunResult, SseEvent } from "./types.js";
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function createSeqFilter() {
   const seen = { maxSeq: -1 };
-  return (parsed) => {
+  return (parsed: AgentEvent): boolean => {
     if (typeof parsed.seq === "number") {
       if (seen.maxSeq >= 0 && parsed.seq <= seen.maxSeq) return true;
       seen.maxSeq = Math.max(seen.maxSeq, parsed.seq);
@@ -14,11 +15,32 @@ export function createSeqFilter() {
   };
 }
 
+type StreamFn = (
+  url: string,
+  opts: { authHeader?: string; signal?: AbortSignal }
+) => AsyncGenerator<SseEvent>;
+
+interface SessionClient {
+  eventsUrl: (id: string) => string;
+  authHeader?: string;
+  respond: (id: string, requestId: string, value: Record<string, unknown>) => Promise<unknown>;
+}
+
+type DialogHandler = (dialog: AgentEvent) => Promise<Record<string, unknown> | null>;
+
+interface RunSessionOptions {
+  verbose?: boolean;
+  timeoutMs?: number;
+  out?: { write: (text: string) => void };
+  onDialog?: DialogHandler | null;
+  stream?: StreamFn;
+}
+
 export async function runSession(
-  client,
-  sessionId,
-  { verbose = false, timeoutMs = 0, out = process.stdout, onDialog = null, stream = streamSse } = {}
-) {
+  client: SessionClient,
+  sessionId: string,
+  { verbose = false, timeoutMs = 0, out = process.stdout, onDialog = null, stream = streamSse }: RunSessionOptions = {}
+): Promise<RunResult> {
   const renderer = createEventRenderer();
   const dedupe = createSeqFilter();
   let finalMessage = "";
@@ -40,7 +62,7 @@ export async function runSession(
           break;
         }
         if (ev.data === undefined) continue;
-        let parsed;
+        let parsed: AgentEvent;
         try {
           parsed = JSON.parse(ev.data);
         } catch {
@@ -71,9 +93,9 @@ export async function runSession(
             break;
           }
           try {
-            await client.respond(sessionId, parsed.requestId, value);
+            await client.respond(sessionId, parsed.requestId!, value);
           } catch (err) {
-            throw new Error(`respond failed: ${err.message}`);
+            throw new Error(`respond failed: ${(err as Error).message}`);
           }
         }
         if (verbose) {
@@ -83,7 +105,7 @@ export async function runSession(
         }
       }
     } catch (err) {
-      if (err && err.name === "AbortError") {
+      if (err && (err as Error).name === "AbortError") {
         timedOut = true;
       } else {
         throw err;
@@ -101,23 +123,30 @@ export async function runSession(
   return { settled, stopped, timedOut, finalMessage };
 }
 
+interface WatchSessionOptions {
+  out?: { write: (text: string) => void };
+  live?: boolean;
+  stream?: StreamFn;
+  signal?: AbortSignal | null;
+}
+
 export async function watchSession(
-  client,
-  sessionId,
-  { out = process.stdout, live = true, stream = streamSse, signal = null } = {}
-) {
+  client: SessionClient,
+  sessionId: string,
+  { out = process.stdout, live = true, stream = streamSse, signal = null }: WatchSessionOptions = {}
+): Promise<void> {
   const url = client.eventsUrl(sessionId) + (live ? "?live=1" : "");
   const dedupe = createSeqFilter();
 
   while (true) {
     try {
-      for await (const ev of stream(url, { authHeader: client.authHeader, signal })) {
+      for await (const ev of stream(url, { authHeader: client.authHeader, signal: signal ?? undefined })) {
         if (ev.event === "agent-done") {
           out.write(`${sessionId}: stopped\n`);
           return;
         }
         if (ev.data === undefined) continue;
-        let parsed;
+        let parsed: AgentEvent;
         try {
           parsed = JSON.parse(ev.data);
         } catch {
@@ -134,7 +163,8 @@ export async function watchSession(
       }
     } catch (err) {
       if (signal && signal.aborted) return;
-      if (err && typeof err.status === "number" && err.status >= 400 && err.status < 500) {
+      const e = err as Error & { status?: number };
+      if (e && typeof e.status === "number" && e.status >= 400 && e.status < 500) {
         throw err;
       }
     }

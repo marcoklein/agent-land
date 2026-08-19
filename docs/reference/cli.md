@@ -6,27 +6,34 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
 sources:
   - id: cli
-    resource: cli/agent-land.mjs
+    resource: packages/cli/src/agent-land.ts
     title: `al` entrypoint + usage text
   - id: config
-    resource: cli/lib/config.mjs
+    resource: packages/cli/src/lib/config.ts
     title: Config loading (env vars)
 ---
 
 # What it is
 
-`al` is a zero-dependency Node client (`cli/agent-land.mjs`, Node 20+ stdlib only) that drives the platform API. It is a pure projector/controller — no agent logic, no model calls, no local state. The session lives on the server; the client connects, renders, sends input, and quits. Re-attach from any machine with `al chat <id>`.
+`al` is a zero-runtime-dependency Node client (`@agent-land/cli`, TypeScript, Node 20+ stdlib only) that drives the platform API. It is a pure projector/controller — no agent logic, no model calls, no local state. The session lives on the server; the client connects, renders, sends input, and quits. Re-attach from any machine with `al chat <id>`.
 
 # Install
 
-The file is a single executable script with a `#!/usr/bin/env node` shebang. Symlink it into a directory on your `PATH`:[^cli]
+Build the client and link it into pnpm's global `bin`:[^cli]
 
 ```bash
-chmod +x cli/agent-land.mjs
-ln -s "$PWD/cli/agent-land.mjs" ~/.local/bin/al
+pnpm --filter @agent-land/cli build
+pnpm --filter @agent-land/cli link --global
 ```
 
-The symlink points at the real file, so `git pull` updates `al` immediately. Alternatively add a `bin` entry to `package.json` and `npm install -g` it.
+`al` is then on your `PATH`. A workspace `pnpm install` also exposes it at `node_modules/.bin/al` for repo-local use (`pnpm al -- <args>`). The `bin` entry points at the compiled `dist/agent-land.js`, so re-run `build` after editing the source.
+
+Alternatively, symlink the compiled entrypoint directly:
+
+```bash
+pnpm --filter @agent-land/cli build
+ln -s "$PWD/packages/cli/dist/agent-land.js" ~/.local/bin/al
+```
 
 # Configure
 
@@ -66,5 +73,5 @@ al watch [<session-id> | --all] tail live events, print "<id>: settled" (stdout 
 - `ctrl-c` once — abort the current turn; again — detach
 - `/help` — show the hint
 
-[^cli]: `cli/agent-land.mjs`, `USAGE`
-[^config]: `cli/lib/config.mjs`
+[^cli]: `packages/cli/src/agent-land.ts`, `USAGE`
+[^config]: `packages/cli/src/lib/config.ts`

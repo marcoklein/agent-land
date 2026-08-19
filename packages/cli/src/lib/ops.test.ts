@@ -1,13 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { runSession, watchSession, createSeqFilter } from "./ops.mjs";
+import { runSession, watchSession, createSeqFilter } from "./ops.js";
+import type { SseEvent } from "./types.js";
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-function eventLine(ev) {
-  return { event: null, data: JSON.stringify(ev) };
+function eventLine(ev: Record<string, unknown>): SseEvent {
+  return { event: undefined, data: JSON.stringify(ev) };
 }
 
-function fakeStream(lines, { onAbort } = {}) {
+type StreamFn = (
+  url: string,
+  opts: { authHeader?: string; signal?: AbortSignal }
+) => AsyncGenerator<SseEvent>;
+
+function fakeStream(lines: SseEvent[], { onAbort }: { onAbort?: () => void } = {}): StreamFn {
   return async function* (url, { signal }) {
     for (const line of lines) {
       if (signal && signal.aborted) {
@@ -21,10 +27,10 @@ function fakeStream(lines, { onAbort } = {}) {
 }
 
 function makeClient() {
-  const urls = [];
+  const urls: string[] = [];
   return {
     client: {
-      eventsUrl: (id) => {
+      eventsUrl: (id: string) => {
         const url = `https://example.test/api/sessions/${id}/events`;
         urls.push(url);
         return url;
@@ -104,8 +110,8 @@ describe("runSession", () => {
 
   it("times out when the stream never settles", async () => {
     const { client } = makeClient();
-    const never = async function* (_url, { signal }) {
-      while (!signal.aborted) {
+    const never: StreamFn = async function* (_url, { signal }) {
+      while (!signal?.aborted) {
         yield { event: "comment", data: "" };
         await sleep(5);
       }
@@ -181,8 +187,8 @@ describe("runSession", () => {
 
   it("honors the timeout across reconnects with a single controller", async () => {
     const { client } = makeClient();
-    const neverSettling = async function* (_url, { signal }) {
-      while (!signal.aborted) {
+    const neverSettling: StreamFn = async function* (_url, { signal }) {
+      while (!signal?.aborted) {
         yield { event: "comment", data: "" };
         await sleep(5);
       }
@@ -202,10 +208,10 @@ describe("runSession", () => {
 describe("createSeqFilter", () => {
   it("drops duplicate and out-of-order sequences", () => {
     const filter = createSeqFilter();
-    expect(filter({ seq: 1 })).toBe(false);
-    expect(filter({ seq: 1 })).toBe(true);
-    expect(filter({ seq: 0 })).toBe(true);
-    expect(filter({ seq: 2 })).toBe(false);
+    expect(filter({ type: "a", seq: 1 })).toBe(false);
+    expect(filter({ type: "a", seq: 1 })).toBe(true);
+    expect(filter({ type: "a", seq: 0 })).toBe(true);
+    expect(filter({ type: "a", seq: 2 })).toBe(false);
   });
 
   it("passes events without a sequence number", () => {
@@ -223,11 +229,11 @@ describe("watchSession", () => {
       eventLine({ type: "agent_settled", seq: 7 }),
       eventLine({ type: "status", status: "stopped", seq: 8 }),
     ];
-    const printed = [];
-    const out = { write: (t) => printed.push(t) };
-    const seenUrls = [];
+    const printed: string[] = [];
+    const out = { write: (t: string) => printed.push(t) };
+    const seenUrls: string[] = [];
     const base = fakeStream(lines);
-    const stream = async function* (url, opts) {
+    const stream: StreamFn = async function* (url, opts) {
       seenUrls.push(url);
       yield* base(url, opts);
     };
@@ -244,8 +250,8 @@ describe("watchSession", () => {
       eventLine({ type: "turn_start", seq: 0 }),
       eventLine({ type: "status", status: "stopped", seq: 1 }),
     ];
-    const printed = [];
-    const out = { write: (t) => printed.push(t) };
+    const printed: string[] = [];
+    const out = { write: (t: string) => printed.push(t) };
 
     await watchSession(client, "s1", { out, live: false, stream: fakeStream(lines) });
 
@@ -256,7 +262,6 @@ describe("watchSession", () => {
     const { client } = makeClient();
     const stream = async function* () {
       throw Object.assign(new Error("SSE request failed: HTTP 404"), { status: 404 });
-      yield undefined;
     };
 
     await expect(watchSession(client, "s1", { out: { write: () => {} }, stream })).rejects.toThrow(
@@ -266,9 +271,9 @@ describe("watchSession", () => {
 
   it("reports stopped when the stream ends with agent-done", async () => {
     const { client } = makeClient();
-    const printed = [];
-    const out = { write: (t) => printed.push(t) };
-    const stream = async function* () {
+    const printed: string[] = [];
+    const out = { write: (t: string) => printed.push(t) };
+    const stream: StreamFn = async function* () {
       yield { event: "agent-done", data: '{"status":"stopped"}' };
     };
 

@@ -6,10 +6,10 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
 sources:
   - id: api-sessions
-    resource: src/presentation/http/api-sessions.ts
+    resource: packages/server/src/presentation/http/api-sessions.ts
     title: SSE route implementation
   - id: cli-ops
-    resource: cli/lib/ops.mjs
+    resource: packages/cli/src/lib/ops.ts
     title: CLI SSE consumer (replay + dedupe)
 ---
 
@@ -39,5 +39,5 @@ Fix: **subscribe first, then replay**, and stamp every event (replayed and live)
 - `?live=1` — skips history replay (used by `al watch`).
 - Replay is gapless because both phases share the same per-session `seq` counter.
 
-[^api-sessions]: `src/presentation/http/api-sessions.ts`
-[^cli-ops]: `cli/lib/ops.mjs`
+[^api-sessions]: `packages/server/src/presentation/http/api-sessions.ts`
+[^cli-ops]: `packages/cli/src/lib/ops.ts`

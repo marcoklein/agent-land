@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { wrapText, messageText, createEventRenderer } from "./render.mjs";
+import { wrapText, messageText, createEventRenderer } from "./render.js";
 
 describe("wrapText", () => {
   it("wraps long lines at the width", () => {

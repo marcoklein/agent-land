@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseDialogAnswer } from "./dialogs.mjs";
+import { parseDialogAnswer } from "./dialogs.js";
 
 describe("parseDialogAnswer", () => {
   it("maps confirm to a boolean", () => {

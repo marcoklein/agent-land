@@ -85,12 +85,12 @@ A standard HTML `<select>` element with `<option>` elements rendered server-side
 
 | File | Role |
 |------|------|
-| `src/infra/providers.ts` | `getModels()` — fetches from OpenCode Go `/go/v1/models`, caches in memory (1h TTL, in-flight dedupe) |
-| `src/presentation/http/api-models.ts` | `GET /api/models` — machine-readable model list |
-| `src/routes/agents.ts` | `GET /new` — calls `getModels()`, passes `models` array to template |
-| `src/views/agents/new.ejs` | Model `<select>` with server-rendered `<option>` elements |
-| `src/infra/docker.ts` | `--provider opencode-go` + `--model <id>` passed to pi CLI |
-| `src/core/session-service.ts` | Injects `OPENCODE_API_KEY`/`OPENCODE_API_URL` into container env |
+| `packages/server/src/infra/providers.ts` | `getModels()` — fetches from OpenCode Go `/go/v1/models`, caches in memory (1h TTL, in-flight dedupe) |
+| `packages/server/src/presentation/http/api-models.ts` | `GET /api/models` — machine-readable model list |
+| `packages/server/src/routes/agents.ts` | `GET /new` — calls `getModels()`, passes `models` array to template |
+| `packages/server/src/views/agents/new.ejs` | Model `<select>` with server-rendered `<option>` elements |
+| `packages/server/src/infra/docker.ts` | `--provider opencode-go` + `--model <id>` passed to pi CLI |
+| `packages/server/src/core/session-service.ts` | Injects `OPENCODE_API_KEY`/`OPENCODE_API_URL` into container env |
 | `agent-image/Dockerfile` | Pi installation, version pin
 
 [^opencode-api]: OpenCode API reference

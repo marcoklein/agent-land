@@ -252,6 +252,8 @@ async function ensureTestFixtures(): Promise<void> {
     return;
   } catch {}
 
+  await mkdir(testConfig.secretsDir, { recursive: true });
+
   try {
     await execFileAsync("age-keygen", ["-o", testConfig.ageKeyFile]);
     await execFileAsync("sops", ["--version"]);
@@ -270,7 +272,6 @@ async function ensureTestFixtures(): Promise<void> {
     .trim();
   if (!publicKey) throw new Error("Could not read age public key from generated key file");
 
-  await mkdir(testConfig.secretsDir, { recursive: true });
   await writeFile(sopsYaml, `creation_rules:\n  - age: ${publicKey}\n`);
 }
 

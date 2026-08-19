@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import process from "node:process";
 import readline from "node:readline";
-import { loadConfig } from "./lib/config.mjs";
-import { streamSse } from "./lib/sse.mjs";
-import { createEventRenderer, wrapText } from "./lib/render.mjs";
-import { createApiClient } from "./lib/api.mjs";
-import { runSession, watchSession, createSeqFilter } from "./lib/ops.mjs";
-import { parseArgs, UsageError } from "./lib/args.mjs";
-import { parseDialogAnswer } from "./lib/dialogs.mjs";
+import { loadConfig } from "./lib/config.js";
+import { streamSse } from "./lib/sse.js";
+import { createEventRenderer, wrapText } from "./lib/render.js";
+import { createApiClient, type ApiClient } from "./lib/api.js";
+import { runSession, watchSession, createSeqFilter } from "./lib/ops.js";
+import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
+import { parseDialogAnswer } from "./lib/dialogs.js";
+import type { AgentEvent, ConnectorSummary, RenderLine, SessionSummary } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
 
@@ -58,7 +59,7 @@ In chat:
   /help          show this hint
 `;
 
-function fail(message) {
+function fail(message: string): never {
   process.stderr.write(`al: ${message}\n`);
   process.exit(1);
 }
@@ -71,15 +72,16 @@ const c = {
   red: "\x1b[31m",
   yellow: "\x1b[33m",
 };
-const dim = (s) => `${c.dim}${s}${c.reset}`;
-const cyan = (s) => `${c.cyan}${s}${c.reset}`;
-const green = (s) => `${c.green}${s}${c.reset}`;
-const red = (s) => `${c.red}${s}${c.reset}`;
-const yellow = (s) => `${c.yellow}${s}${c.reset}`;
+const color = (code: string) => (s: string) => `${code}${s}${c.reset}`;
+const dim = color(c.dim);
+const cyan = color(c.cyan);
+const green = color(c.green);
+const red = color(c.red);
+const yellow = color(c.yellow);
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-function formatAge(createdAt) {
+function formatAge(createdAt: string): string {
   const s = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 1000));
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
@@ -89,13 +91,13 @@ function formatAge(createdAt) {
   return `${Math.floor(h / 24)}d${h % 24}h`;
 }
 
-function statusColor(status) {
+function statusColor(status: string): (s: string) => string {
   if (status === "idle") return green;
   if (status === "running" || status === "waiting_for_input") return yellow;
   return dim;
 }
 
-function sessionLine(s) {
+function sessionLine(s: SessionSummary): string {
   const workspace = s.workspace
     ? ` · ${s.workspace.repoUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "")}${
         s.workspace.ref ? `@${s.workspace.ref}` : ""
@@ -106,7 +108,7 @@ function sessionLine(s) {
   return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${s.model}${workspace}${connectors}`;
 }
 
-async function listSessions(client, { json } = {}) {
+async function listSessions(client: ApiClient, { json }: { json?: boolean } = {}): Promise<void> {
   const { sessions } = await client.listSessions();
   if (!sessions || sessions.length === 0) {
     process.stdout.write(json ? "[]\n" : "no sessions\n");
@@ -120,7 +122,7 @@ async function listSessions(client, { json } = {}) {
   for (const s of sorted) process.stdout.write(sessionLine(s) + "\n");
 }
 
-function askYesNo(prompt) {
+function askYesNo(prompt: string): Promise<boolean> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     rl.question(prompt, (answer) => {
@@ -130,7 +132,7 @@ function askYesNo(prompt) {
   });
 }
 
-function askLine(prompt) {
+function askLine(prompt: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     rl.question(prompt, (answer) => {
@@ -140,7 +142,7 @@ function askLine(prompt) {
   });
 }
 
-async function answerDialog(dialog) {
+async function answerDialog(dialog: AgentEvent): Promise<Record<string, unknown>> {
   if (dialog.method === "confirm") {
     const answer = await askYesNo(`${dialog.prompt ? dialog.prompt + " " : ""}[y/N] `);
     return { confirmed: answer };
@@ -156,7 +158,10 @@ async function answerDialog(dialog) {
   return { value: answer };
 }
 
-async function confirmOrFail(prompt, { yes, what }) {
+async function confirmOrFail(
+  prompt: string,
+  { yes, what }: { yes?: boolean; what: string }
+): Promise<void> {
   if (yes) return;
   if (!(process.stdin.isTTY && process.stdout.isTTY)) {
     fail(`refusing to ${what} non-interactively; pass --yes to confirm`);
@@ -168,30 +173,28 @@ async function confirmOrFail(prompt, { yes, what }) {
   }
 }
 
-async function listConnectors(client) {
-  const { connectors } = await client.listConnectors();
+async function listConnectors(client: ApiClient): Promise<void> {
+  const { connectors } = (await client.listConnectors()) as { connectors?: ConnectorSummary[] };
   if (!connectors || connectors.length === 0) {
     process.stdout.write("no connectors\n");
     return;
   }
-  const nameWidth = Math.max(6, ...connectors.map((c) => c.name.length));
-  const typeWidth = Math.max(4, ...connectors.map((c) => c.type.length));
-  for (const c of connectors) {
-    process.stdout.write(
-      `${c.name.padEnd(nameWidth)}  ${c.type.padEnd(typeWidth)}  ${c.url}\n`
-    );
+  const nameWidth = Math.max(6, ...connectors.map((x) => x.name.length));
+  const typeWidth = Math.max(4, ...connectors.map((x) => x.type.length));
+  for (const x of connectors) {
+    process.stdout.write(`${x.name.padEnd(nameWidth)}  ${x.type.padEnd(typeWidth)}  ${x.url}\n`);
   }
 }
 
-async function addConnector(client, opts) {
+async function addConnector(client: ApiClient, opts: ParsedArgs["opts"]): Promise<void> {
   const { name, type, url, content } = opts;
   if (!name || !type || !url) fail("connectors add requires --name, --type and --url");
 
   const { fields } = await client.connectorFields(type);
-  const payload = { name, type, url };
+  const payload: Record<string, unknown> = { name, type, url };
 
   if (fields) {
-    const provided = {};
+    const provided: Record<string, string> = {};
     for (const f of opts.fields || []) {
       const eq = f.indexOf("=");
       if (eq === -1) fail(`--field expects KEY=VALUE, got "${f}"`);
@@ -211,12 +214,16 @@ async function addConnector(client, opts) {
   process.stdout.write(`created connector "${connector.name}" (${connector.type})\n`);
 }
 
-async function logSession(client, sessionId, { json, follow }) {
+async function logSession(
+  client: ApiClient,
+  sessionId: string,
+  { json, follow }: { json?: boolean; follow?: boolean }
+): Promise<void> {
   const renderer = createEventRenderer();
   const dedupe = createSeqFilter();
   let stop = false;
-  let ac = null;
-  let quietTimer = null;
+  let ac: AbortController | null = null;
+  let quietTimer: NodeJS.Timeout | null = null;
 
   const onSigint = () => {
     stop = true;
@@ -246,7 +253,7 @@ async function logSession(client, sessionId, { json, follow }) {
           break;
         }
         if (ev.data === undefined) continue;
-        let parsed;
+        let parsed: AgentEvent;
         try {
           parsed = JSON.parse(ev.data);
         } catch {
@@ -270,18 +277,26 @@ async function logSession(client, sessionId, { json, follow }) {
   process.removeListener("SIGINT", onSigint);
 }
 
-async function chat(client, sessionId, { hintOnQuit } = {}) {
+async function chat(
+  client: ApiClient,
+  sessionId: string,
+  { hintOnQuit }: { hintOnQuit?: boolean } = {}
+): Promise<void> {
   const isTTY = Boolean(process.stdin.isTTY && process.stdout.isTTY);
   const out = process.stdout;
 
   let running = true;
   let agentRunning = false;
   let abortSent = false;
-  let dialog = null;
-  let sseAbort = null;
+  let dialog: { requestId: string; method: string; options?: string[] } | null = null;
+  let sseAbort: AbortController | null = null;
 
   const renderer = createEventRenderer();
-  let streamBlock = { text: "", height: 0, appendOnly: false };
+  let streamBlock: { text: string; height: number; appendOnly: boolean } = {
+    text: "",
+    height: 0,
+    appendOnly: false,
+  };
 
   if (isTTY) {
     out.write("\x1b[?1049h");
@@ -293,12 +308,12 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
   const rl = readline.createInterface({ input: process.stdin, output: out, terminal: isTTY });
   rl.setPrompt("you> ");
 
-  function setPrompt(p) {
+  function setPrompt(p: string) {
     rl.setPrompt(p);
     if (isTTY) rl.prompt(true);
   }
 
-  function printLine(text) {
+  function printLine(text: string) {
     if (isTTY) {
       out.write("\r\x1b[2K" + text + "\n");
       rl.prompt(true);
@@ -307,7 +322,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     }
   }
 
-  function printLines(lines) {
+  function printLines(lines: RenderLine[]) {
     for (const line of lines) {
       let text = line.text;
       if (isTTY) {
@@ -321,7 +336,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     }
   }
 
-  function updateStreamBlock(text) {
+  function updateStreamBlock(text: string) {
     streamBlock.text = text;
     if (!isTTY) return;
 
@@ -357,7 +372,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     streamBlock = { text: "", height: 0, appendOnly: false };
   }
 
-  function handleEvent(ev) {
+  function handleEvent(ev: AgentEvent) {
     switch (ev.type) {
       case "status":
         if (ev.status === "running") {
@@ -395,8 +410,8 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
       case "waiting_for_input":
         agentRunning = false;
         dialog = {
-          requestId: ev.requestId,
-          method: ev.method,
+          requestId: ev.requestId!,
+          method: ev.method ?? "input",
           options: ev.options,
         };
         setPrompt("answer> ");
@@ -433,7 +448,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
       try {
         await client.respond(sessionId, requestId, value);
       } catch (err) {
-        printLine(red(`respond failed: ${err.message}`));
+        printLine(red(`respond failed: ${(err as Error).message}`));
       }
       return;
     }
@@ -454,19 +469,19 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     try {
       await client.prompt(sessionId, trimmed, agentRunning ? "followUp" : undefined);
     } catch (err) {
-      printLine(red(`prompt failed: ${err.message}`));
+      printLine(red(`prompt failed: ${(err as Error).message}`));
     }
   });
 
   if (isTTY) {
-    process.stdin.on("keypress", (_ch, key) => {
+    process.stdin.on("keypress", (_ch: string, key: { ctrl?: boolean; name?: string }) => {
       if (!key || !key.ctrl || key.name !== "c") return;
       if (dialog) {
         const { requestId } = dialog;
         dialog = null;
         client
           .respond(sessionId, requestId, { cancelled: true })
-          .catch((err) => printLine(red(`cancel failed: ${err.message}`)));
+          .catch((err) => printLine(red(`cancel failed: ${(err as Error).message}`)));
         printLine(dim("· dialog cancelled"));
         setPrompt("you> ");
         return;
@@ -496,7 +511,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     }
     if (hintOnQuit) {
       out.write(dim(`detached — session ${sessionId} still running\n`));
-      out.write(dim(`re-attach: npm run al -- chat ${sessionId}\n`));
+      out.write(dim(`re-attach: al chat ${sessionId}\n`));
     }
     process.exit(0);
   }
@@ -517,7 +532,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
             break;
           }
           if (ev.data === undefined) continue;
-          let parsed;
+          let parsed: AgentEvent;
           try {
             parsed = JSON.parse(ev.data);
           } catch {
@@ -543,7 +558,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
 }
 
 async function main() {
-  let parsed;
+  let parsed: ParsedArgs;
   try {
     parsed = parseArgs(process.argv.slice(2));
   } catch (err) {
@@ -560,7 +575,7 @@ async function main() {
   const config = loadConfig();
   const client = createApiClient(config);
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     ...(opts.connectors.length > 0 ? { connectors: opts.connectors } : {}),
     ...(opts.manual ? { permissionPolicy: "manual" } : {}),
     ...(opts.model ? { model: opts.model } : {}),
@@ -574,7 +589,7 @@ async function main() {
       const { session } = await client.createSession(payload);
       await chat(client, session.id, { hintOnQuit: true });
     } catch (err) {
-      fail(`create failed: ${err.message}`);
+      fail(`create failed: ${(err as Error).message}`);
     }
   } else if (cmd === "chat") {
     const sessionId = positional[0];
@@ -582,23 +597,23 @@ async function main() {
     try {
       await client.getSession(sessionId);
     } catch (err) {
-      fail(`session ${sessionId}: ${err.message}`);
+      fail(`session ${sessionId}: ${(err as Error).message}`);
     }
     await chat(client, sessionId, { hintOnQuit: true });
   } else if (cmd === "ls") {
     try {
       await listSessions(client, { json: opts.json });
     } catch (err) {
-      fail(`list failed: ${err.message}`);
+      fail(`list failed: ${(err as Error).message}`);
     }
   } else if (cmd === "rm") {
     const sessionId = positional[0];
     if (!sessionId) fail("rm requires a session id");
-    let session;
+    let session: { status: string };
     try {
       ({ session } = await client.getSession(sessionId));
     } catch (err) {
-      fail(`session ${sessionId}: ${err.message}`);
+      fail(`session ${sessionId}: ${(err as Error).message}`);
     }
     if (session.status !== "stopped") {
       await confirmOrFail(`kill session ${sessionId} (${session.status})? [y/N] `, {
@@ -610,7 +625,7 @@ async function main() {
       await client.deleteSession(sessionId);
       process.stdout.write(`deleted ${sessionId}\n`);
     } catch (err) {
-      fail(`delete failed: ${err.message}`);
+      fail(`delete failed: ${(err as Error).message}`);
     }
   } else if (cmd === "log") {
     const sessionId = positional[0];
@@ -618,19 +633,19 @@ async function main() {
     try {
       await client.getSession(sessionId);
     } catch (err) {
-      fail(`session ${sessionId}: ${err.message}`);
+      fail(`session ${sessionId}: ${(err as Error).message}`);
     }
     try {
       await logSession(client, sessionId, { json: opts.json, follow: opts.follow });
     } catch (err) {
-      fail(`log failed: ${err.message}`);
+      fail(`log failed: ${(err as Error).message}`);
     }
   } else if (cmd === "models") {
     try {
       const { models } = await client.listModels();
       for (const m of models) process.stdout.write(m + "\n");
     } catch (err) {
-      fail(`models failed: ${err.message}`);
+      fail(`models failed: ${(err as Error).message}`);
     }
   } else if (cmd === "connectors") {
     const sub = positional[0] || "ls";
@@ -652,21 +667,21 @@ async function main() {
         fail(`connectors: unknown subcommand "${sub}"`);
       }
     } catch (err) {
-      fail(`connectors ${sub} failed: ${err.message}`);
+      fail(`connectors ${sub} failed: ${(err as Error).message}`);
     }
   } else if (cmd === "run") {
     const message = positional[0];
     if (!message) fail("run requires a message");
-    let session;
+    let session: { id: string };
     try {
       ({ session } = await client.createSession(payload));
       await client.prompt(session.id, message);
     } catch (err) {
-      fail(`run failed: ${err.message}`);
+      fail(`run failed: ${(err as Error).message}`);
     }
     const onDialog =
       process.stdin.isTTY && process.stdout.isTTY
-        ? async (dialog) => answerDialog(dialog)
+        ? async (dialog: AgentEvent) => answerDialog(dialog)
         : null;
     let result;
     try {
@@ -676,7 +691,7 @@ async function main() {
         onDialog,
       });
     } catch (err) {
-      fail(`run failed: ${err.message}`);
+      fail(`run failed: ${(err as Error).message}`);
     }
     if (result.settled) {
       if (result.finalMessage) process.stdout.write(result.finalMessage + "\n");
@@ -684,14 +699,14 @@ async function main() {
       try {
         await client.abort(session.id);
       } catch (err) {
-        process.stderr.write(`al: warning: abort failed: ${err.message}\n`);
+        process.stderr.write(`al: warning: abort failed: ${(err as Error).message}\n`);
       }
     }
     if (opts.rm) {
       try {
         await client.deleteSession(session.id);
       } catch (err) {
-        process.stderr.write(`al: warning: delete failed: ${err.message}\n`);
+        process.stderr.write(`al: warning: delete failed: ${(err as Error).message}\n`);
       }
     } else if (result.stopped || result.timedOut) {
       const note = !onDialog ? " (agent may be waiting for input)" : "";
@@ -702,10 +717,10 @@ async function main() {
     process.once("SIGINT", () => process.exit(0));
     if (!opts.all && !positional[0]) fail("watch requires a session id or --all");
     try {
-      let ids = [];
+      let ids: string[] = [];
       if (opts.all) {
         const { sessions } = await client.listSessions();
-        ids = sessions.filter((s) => s.status !== "stopped").map((s) => s.id);
+        ids = sessions.filter((s: { status: string }) => s.status !== "stopped").map((s: { id: string }) => s.id);
         if (ids.length === 0) {
           process.stdout.write("no active sessions\n");
           process.exit(0);
@@ -715,7 +730,7 @@ async function main() {
       }
       await Promise.all(ids.map((id) => watchSession(client, id)));
     } catch (err) {
-      fail(`watch failed: ${err.message}`);
+      fail(`watch failed: ${(err as Error).message}`);
     }
   }
 }

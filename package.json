@@ -2,40 +2,20 @@
   "name": "agent-land",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "al": "node cli/agent-land.mjs"
+  "packageManager": "pnpm@11.8.0",
+  "engines": {
+    "node": ">=20"
   },
-  "dependencies": {
-    "connect-flash": "^0.1.1",
-    "cookie-parser": "^1.4.7",
-    "dockerode": "^5.0.1",
-    "dotenv": "^17.4.2",
-    "ejs": "^3.1.10",
-    "express": "^5.1.0",
-    "express-session": "^1.18.1",
-    "uuid": "^10.0.0",
-    "yaml": "^2.9.0"
+  "scripts": {
+    "dev": "tsx watch packages/server/src/server.ts",
+    "build": "pnpm --filter \"@agent-land/*\" build",
+    "start": "node packages/server/dist/server.js",
+    "typecheck": "pnpm --filter \"@agent-land/*\" typecheck",
+    "test": "pnpm --filter \"@agent-land/*\" test",
+    "test:watch": "pnpm --filter @agent-land/server test:watch",
+    "al": "pnpm --filter @agent-land/cli start"
   },
   "devDependencies": {
-    "@types/connect-flash": "^0.0.40",
-    "@types/cookie-parser": "^1.4.9",
-    "@types/dockerode": "^4.0.1",
-    "@types/ejs": "^3.1.5",
-    "@types/express": "^5.0.6",
-    "@types/express-session": "^1.18.1",
-    "@types/supertest": "^7.2.1",
-    "@types/uuid": "^10.0.0",
-    "cheerio": "^1.2.0",
-    "supertest": "^7.2.2",
-    "tsx": "^4.19.0",
-    "typescript": "^5.9.0",
-    "vitest": "^4.1.10"
+    "tsx": "^4.19.0"
   }
 }

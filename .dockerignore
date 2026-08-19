@@ -5,3 +5,4 @@ dist/
 .age-key
 secrets/*.yaml
 .git/
+packages/*/dist/

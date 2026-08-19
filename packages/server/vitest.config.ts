@@ -1,7 +1,9 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const fixturesDir = path.resolve("./src/__tests__/fixtures");
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+const fixturesDir = path.join(configDir, "src/__tests__/fixtures");
 
 export default defineConfig({
   test: {
@@ -12,7 +14,7 @@ export default defineConfig({
     env: {
       SECRETS_DIR: path.join(fixturesDir, "secrets"),
       AGE_KEY_FILE: path.join(fixturesDir, ".age-key"),
-      DATA_DIR: path.resolve("./src/__tests__/tmp-test-data"),
+      DATA_DIR: path.join(configDir, "src/__tests__/tmp-test-data"),
       SESSION_SECRET: "test-secret",
       OPENCODE_API_KEY: "test-key",
       SSE_HEARTBEAT_MS: "50",
