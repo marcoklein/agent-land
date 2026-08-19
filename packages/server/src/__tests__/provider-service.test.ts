@@ -98,9 +98,16 @@ describe("ProviderService", () => {
   it("deletes a provider and its secret", async () => {
     const { service, sops } = await makeService();
     await service.create({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk" } });
-    await service.delete("mistral");
+
+    const deleted = await service.delete("mistral");
+    expect(deleted).toBe(true);
 
     expect(await service.get("mistral")).toBeNull();
     await expect(sops.secretExists("provider-mistral")).resolves.toBe(false);
+  });
+
+  it("returns false when deleting a provider that does not exist", async () => {
+    const { service } = await makeService();
+    await expect(service.delete("nope")).resolves.toBe(false);
   });
 });

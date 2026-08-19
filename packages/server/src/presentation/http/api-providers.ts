@@ -87,7 +87,10 @@ export function providersApiRouter(providerService: ProviderService) {
 
   router.delete("/:id", async (req, res) => {
     try {
-      await providerService.delete(req.params.id);
+      const deleted = await providerService.delete(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: `Provider "${req.params.id}" not found` });
+      }
       res.json({ deleted: true });
     } catch (err) {
       res.status(500).json({ error: errorMessage(err) });
