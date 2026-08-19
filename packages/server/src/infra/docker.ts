@@ -2,6 +2,7 @@ import Docker from "dockerode";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { PassThrough } from "stream";
+import tar from "tar-stream";
 import type { DockerPort, ExecResult, InteractiveExec } from "../core/ports.js";
 import { agentContainerId } from "../core/harness.js";
 
@@ -63,6 +64,30 @@ export class DockerService implements DockerPort {
     } catch {
       return false;
     }
+  }
+
+  async writeFile(containerId: string, destPath: string, content: string, mode = 0o644): Promise<void> {
+    const sep = destPath.lastIndexOf("/");
+    if (sep <= 0) {
+      throw new Error(`Invalid destination path: ${destPath}`);
+    }
+    const dir = destPath.slice(0, sep);
+    const name = destPath.slice(sep + 1);
+    if (name.length === 0 || name.includes("/")) {
+      throw new Error(`Invalid destination path: ${destPath}`);
+    }
+
+    const container = this.docker.getContainer(containerId);
+    const pack = tar.pack();
+    await new Promise<void>((resolve, reject) => {
+      pack.entry({ name, mode, mtime: new Date(0) }, content, (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+    pack.finalize();
+
+    await container.putArchive(pack, { path: dir });
   }
 
   async removeVolume(name: string): Promise<void> {

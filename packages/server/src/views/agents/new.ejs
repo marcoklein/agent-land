@@ -27,12 +27,26 @@
     <label for="ref">Branch / ref <small>(optional)</small></label>
     <input type="text" id="ref" name="ref" placeholder="main">
 
-    <label for="model">Model <% if (models.length > 0) { %><small>(<%= models.length %> available)</small><% } %></label>
-    <select id="model" name="model">
-      <% models.forEach(m => { %>
-        <option value="<%= m %>"<%= m === 'deepseek-v4-pro' ? ' selected' : '' %>><%= m %></option>
+    <label for="provider">Provider</label>
+    <select id="provider" name="provider"
+            hx-get="/agents/model-options"
+            hx-target="#model-wrap"
+            hx-trigger="change"
+            hx-include="this"
+            hx-swap="innerHTML">
+      <% providers.forEach(p => { %>
+        <option value="<%= p.id %>"<%= p.id === selectedProviderId ? ' selected' : '' %>><%= p.label || p.id %></option>
       <% }) %>
     </select>
+
+    <label for="model">Model <% if (models.length > 0) { %><small>(<%= models.length %> available)</small><% } %></label>
+    <div id="model-wrap">
+      <select id="model" name="model">
+        <% models.forEach(m => { %>
+          <option value="<%= m %>"<%= m === 'deepseek-v4-pro' ? ' selected' : '' %>><%= m %></option>
+        <% }) %>
+      </select>
+    </div>
 
     <label for="permissionPolicy">Permission Policy</label>
     <select id="permissionPolicy" name="permissionPolicy">

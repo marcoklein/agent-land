@@ -9,8 +9,16 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { PassThrough } from "stream";
 import { SopsService } from "../../infra/sops.js";
-import { JsonConnectorRepository, JsonSessionRepository, JsonSessionEventLog } from "../../infra/repositories.js";
+import {
+  JsonConnectorRepository,
+  JsonSessionRepository,
+  JsonSessionEventLog,
+  JsonProviderRepository,
+} from "../../infra/repositories.js";
 import { ConnectorService } from "../../core/connector-service.js";
+import { ProviderService } from "../../core/provider-service.js";
+import { ModelCatalog } from "../../infra/model-catalog.js";
+import { PiConfigProvisioner } from "../../infra/pi-config-provisioner.js";
 import { SessionService } from "../../core/session-service.js";
 import { GitCloneProvisioner } from "../../infra/git-clone-provisioner.js";
 import type { DockerPort } from "../../core/ports.js";
@@ -21,6 +29,7 @@ import { connectorsRouter } from "../../routes/connectors.js";
 import { agentsRouter } from "../../routes/agents.js";
 import { sessionsApiRouter } from "../../presentation/http/api-sessions.js";
 import { connectorsApiRouter } from "../../presentation/http/api-connectors.js";
+import { providersApiRouter } from "../../presentation/http/api-providers.js";
 import { modelsApiRouter } from "../../presentation/http/api-models.js";
 import { getConfig } from "../../config.js";
 
@@ -86,6 +95,7 @@ export class MockDockerPort implements DockerPort {
   execs: { containerId: string; args: string[] }[] = [];
   containers = new Set<string>();
   execCommandImpl?: (args: string[]) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
+  writtenFiles: { destPath: string; content: string }[] = [];
 
   reset() {
     this.created = [];
@@ -94,6 +104,7 @@ export class MockDockerPort implements DockerPort {
     this.execs = [];
     this.containers = new Set();
     this.execCommandImpl = undefined;
+    this.writtenFiles = [];
   }
 
   async createInteractiveContainer(opts: {
@@ -135,6 +146,11 @@ export class MockDockerPort implements DockerPort {
 
   async containerExists(id: string): Promise<boolean> {
     return this.containers.has(id);
+  }
+
+  async writeFile(_containerId: string, destPath: string, content: string, _mode?: number): Promise<void> {
+    this.writtenFiles = this.writtenFiles ?? [];
+    this.writtenFiles.push({ destPath, content });
   }
 }
 
@@ -207,8 +223,11 @@ export function createAgentTestApp(): AgentTestApp {
   const sops = new SopsService(testConfig.secretsDir, testConfig.ageKeyFile);
   const sessionRepository = new JsonSessionRepository(testConfig.dataDir);
   const connectorRepository = new JsonConnectorRepository(testConfig.dataDir);
+  const providerRepository = new JsonProviderRepository(testConfig.dataDir);
   const eventLog = new JsonSessionEventLog(testConfig.dataDir);
   const connectorService = new ConnectorService(connectorRepository, sops);
+  const providerService = new ProviderService(providerRepository, sops);
+  const modelCatalog = new ModelCatalog(providerService, sops);
 
   const mockDocker = new MockDockerPort();
   const fakeHarness = new FakeHarness();
@@ -216,24 +235,28 @@ export function createAgentTestApp(): AgentTestApp {
     gitUserName: "Test Bot",
     gitUserEmail: "bot@test.local",
   });
+  const piConfigProvisioner = new PiConfigProvisioner(mockDocker, providerRepository, sops);
   const sessionService = new SessionService(
     {
       docker: mockDocker,
       secrets: sops,
       sessions: sessionRepository,
       connectors: connectorRepository,
+      providers: providerRepository,
       harness: fakeHarness,
       provisioner,
       eventLog,
       config: testConfig,
+      piConfigProvisioner,
     },
     20
   );
 
-  app.use("/agents", agentsRouter(sessionService, connectorService));
+  app.use("/agents", agentsRouter(sessionService, connectorService, providerService, modelCatalog));
   app.use("/api/sessions", sessionsApiRouter(sessionService, testConfig));
   app.use("/api/connectors", connectorsApiRouter(connectorService));
-  app.use("/api/models", modelsApiRouter());
+  app.use("/api/providers", providersApiRouter(providerService));
+  app.use("/api/models", modelsApiRouter(modelCatalog));
 
   return { app, mockDocker, fakeHarness, sessionService };
 }
@@ -242,6 +265,7 @@ export async function setupDataDir() {
   await ensureTestFixtures();
   await mkdir(testConfig.dataDir, { recursive: true });
   await emptyConnectors();
+  await emptyProviders();
 }
 
 async function ensureTestFixtures(): Promise<void> {
@@ -282,6 +306,11 @@ export async function cleanupDataDir() {
 async function emptyConnectors() {
   const connectorPath = path.join(testConfig.dataDir, "connectors.json");
   await writeFile(connectorPath, "[]");
+}
+
+async function emptyProviders() {
+  const providerPath = path.join(testConfig.dataDir, "providers.json");
+  await writeFile(providerPath, "[]");
 }
 
 export function getDataDir() {

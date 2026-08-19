@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import type { AgentSession, PermissionPolicy, SessionStatus, WorkspaceSpec } from "./types.js";
+import { DEFAULT_PROVIDER_ID } from "./types.js";
 import type { SessionEvent, SequencedEvent, SequencedEventStream } from "./events.js";
 import type { AgentHandle, AgentHarness, EventStream } from "./harness.js";
 import type {
@@ -7,6 +8,7 @@ import type {
   SecretsPort,
   SessionRepository,
   ConnectorRepository,
+  ProviderRepository,
   WorkspaceProvisioner,
   SessionEventLog,
 } from "./ports.js";
@@ -32,10 +34,12 @@ interface SessionServiceDeps {
   secrets: SecretsPort;
   sessions: SessionRepository;
   connectors: ConnectorRepository;
+  providers: ProviderRepository;
   harness: AgentHarness;
   provisioner: WorkspaceProvisioner;
   eventLog: SessionEventLog;
   config: Config;
+  piConfigProvisioner?: { provision(session: AgentSession, containerId: string): Promise<void> };
 }
 
 const HISTORY_CAP = 10_000;
@@ -59,15 +63,15 @@ export class SessionService {
 
   constructor(private deps: SessionServiceDeps, private drainSettleTimeoutMs = 4000) {}
 
-  async resolveAgentEnv(connectorNames: string[]): Promise<Map<string, string>> {
+  async resolveAgentEnv(connectorNames: string[], providerId?: string): Promise<Map<string, string>> {
     const connectorsData = await this.deps.connectors.list();
     const selected = connectorsData.filter((c) => connectorNames.includes(c.name));
 
     const secretFilenames = selected.map((c) => c.secretFile);
     const envVarsMap = await this.deps.secrets.decryptMultiple(secretFilenames);
 
-    envVarsMap.set("OPENCODE_API_KEY", this.deps.config.opencodeGoApiKey);
-    envVarsMap.set("OPENCODE_API_URL", this.deps.config.opencodeGoUrl);
+    const resolvedProviderId = providerId && providerId.trim() ? providerId : DEFAULT_PROVIDER_ID;
+    await this.injectProviderEnv(envVarsMap, resolvedProviderId);
 
     for (const conn of selected) {
       if (conn.url) envVarsMap.set(`${conn.type.toUpperCase()}_URL`, conn.url);
@@ -76,10 +80,33 @@ export class SessionService {
     return envVarsMap;
   }
 
+  private async injectProviderEnv(envVarsMap: Map<string, string>, providerId: string): Promise<void> {
+    const provider = await this.deps.providers.get(providerId).catch(() => null);
+
+    if (provider?.secretFile) {
+      const secretName = provider.secretFile.replace(/\.(ya?ml)$/, "");
+      const exists = await this.deps.secrets.secretExists(secretName).catch(() => false);
+      if (exists) {
+        const providerEnv = await this.deps.secrets.decryptMultiple([provider.secretFile]);
+        for (const [key, value] of providerEnv) {
+          envVarsMap.set(key, value);
+        }
+      }
+    }
+
+    if (providerId === DEFAULT_PROVIDER_ID && !envVarsMap.has("OPENCODE_API_KEY")) {
+      if (this.deps.config.opencodeGoApiKey) {
+        envVarsMap.set("OPENCODE_API_KEY", this.deps.config.opencodeGoApiKey);
+      }
+      envVarsMap.set("OPENCODE_API_URL", this.deps.config.opencodeGoUrl);
+    }
+  }
+
   async createSession(options: {
     connectors?: string[];
     permissionPolicy?: PermissionPolicy;
     model?: string;
+    provider?: string;
     workspace?: WorkspaceSpec;
   }): Promise<AgentSession> {
     const connectors = (options.connectors ?? []).filter(
@@ -87,12 +114,21 @@ export class SessionService {
     );
     const permissionPolicy: PermissionPolicy =
       options.permissionPolicy === "manual" ? "manual" : "auto";
-    const model = options.model || this.deps.config.defaultModel;
+    const provider =
+      typeof options.provider === "string" && options.provider.trim().length > 0
+        ? options.provider.trim()
+        : undefined;
+
+    const envVarsMap = await this.resolveAgentEnv(connectors, provider);
+
+    const providerId = provider ?? DEFAULT_PROVIDER_ID;
+    const providerRecord = await this.deps.providers.get(providerId).catch(() => null);
+    const model = options.model || providerRecord?.defaultModel || this.deps.config.defaultModel;
+
     const id = randomUUID().slice(0, 8);
     const workspace = options.workspace ?? undefined;
     const workspaceVolume = `agent-land-ws-${id}`;
 
-    const envVarsMap = await this.resolveAgentEnv(connectors);
     await this.deps.docker.ensureAgentImage(this.deps.config.agentImage);
 
     const now = new Date().toISOString();
@@ -103,6 +139,7 @@ export class SessionService {
       sessionDir: `/sessions/${id}`,
       connectors,
       model,
+      provider,
       createdAt: now,
       updatedAt: now,
       workspace,
@@ -121,6 +158,10 @@ export class SessionService {
       session.containerId = container.id;
 
       await this.deps.sessions.save(session);
+
+      if (this.deps.piConfigProvisioner) {
+        await this.deps.piConfigProvisioner.provision(session, container.id);
+      }
 
       if (workspace) {
         await this.deps.provisioner.provision(session, container.id, Object.fromEntries(envVarsMap));

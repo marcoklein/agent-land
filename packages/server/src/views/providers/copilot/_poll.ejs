@@ -1,0 +1,12 @@
+<div>
+  <p>
+    Open <a href="<%= verificationUri %>" target="_blank" rel="noopener"><%= verificationUri %></a>
+    and enter code <strong><code><%= userCode %></code></strong>.
+  </p>
+  <div id="copilot-status"
+       hx-get="/providers/copilot/poll"
+       hx-trigger="load delay:3000ms"
+       hx-swap="outerHTML">
+    Waiting for authorization…
+  </div>
+</div>

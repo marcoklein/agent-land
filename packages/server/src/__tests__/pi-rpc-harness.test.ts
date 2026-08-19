@@ -27,6 +27,7 @@ function harnessWithStream(stream: PassThrough) {
     removeVolume: async () => {},
     ensureAgentImage: async () => {},
     containerExists: async () => false,
+    writeFile: async () => {},
   };
   return new PiRpcHarness(docker);
 }

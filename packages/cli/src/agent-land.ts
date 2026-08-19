@@ -8,12 +8,12 @@ import { createApiClient, type ApiClient } from "./lib/api.js";
 import { runSession, watchSession, createSeqFilter } from "./lib/ops.js";
 import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
 import { parseDialogAnswer } from "./lib/dialogs.js";
-import type { AgentEvent, ConnectorSummary, RenderLine, SessionSummary } from "./lib/types.js";
+import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, SessionSummary } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
 
 Usage:
-  al new [--workspace <repoUrl>] [--ref <branch>] [--connectors a,b,c] [--model <m>] [--manual]
+  al new [--workspace <repoUrl>] [--ref <branch>] [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual]
       create a session and enter the chat overlay
 
   al chat <session-id>
@@ -28,8 +28,11 @@ Usage:
   al log <session-id> [--follow] [--json]
       print the full event history; --follow keeps tailing, --json prints raw events
 
-  al models
-      list available models
+  al models [--provider <id>]
+      list available models (defaults to the default provider)
+
+  al providers [--json]
+      list configured providers (id, kind, api, enabled)
 
   al connectors ls
       list connectors (name, type, url — never secrets)
@@ -104,8 +107,9 @@ function sessionLine(s: SessionSummary): string {
       }`
     : "";
   const connectors = s.connectors && s.connectors.length ? ` · ${s.connectors.join(",")}` : "";
+  const provider = s.provider ? `${s.provider}/` : "";
   const status = s.status.padEnd(8);
-  return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${s.model}${workspace}${connectors}`;
+  return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${provider}${s.model}${workspace}${connectors}`;
 }
 
 async function listSessions(client: ApiClient, { json }: { json?: boolean } = {}): Promise<void> {
@@ -183,6 +187,26 @@ async function listConnectors(client: ApiClient): Promise<void> {
   const typeWidth = Math.max(4, ...connectors.map((x) => x.type.length));
   for (const x of connectors) {
     process.stdout.write(`${x.name.padEnd(nameWidth)}  ${x.type.padEnd(typeWidth)}  ${x.url}\n`);
+  }
+}
+
+async function listProviders(client: ApiClient, { json }: { json?: boolean } = {}): Promise<void> {
+  const { providers } = (await client.listProviders()) as { providers?: ProviderSummary[] };
+  if (json) {
+    process.stdout.write(JSON.stringify(providers ?? [], null, 2) + "\n");
+    return;
+  }
+  if (!providers || providers.length === 0) {
+    process.stdout.write("no providers (default: opencode-go)\n");
+    return;
+  }
+  const idWidth = Math.max(6, ...providers.map((x) => x.id.length));
+  const kindWidth = Math.max(4, ...providers.map((x) => x.kind.length));
+  for (const x of providers) {
+    const state = x.enabled ? "" : dim(" [disabled]");
+    process.stdout.write(
+      `${x.id.padEnd(idWidth)}  ${x.kind.padEnd(kindWidth)}  ${x.api ?? "-"}${state}\n`
+    );
   }
 }
 
@@ -579,6 +603,7 @@ async function main() {
     ...(opts.connectors.length > 0 ? { connectors: opts.connectors } : {}),
     ...(opts.manual ? { permissionPolicy: "manual" } : {}),
     ...(opts.model ? { model: opts.model } : {}),
+    ...(opts.provider ? { provider: opts.provider } : {}),
     ...(opts.workspace
       ? { workspace: { repoUrl: opts.workspace, ...(opts.ref ? { ref: opts.ref } : {}) } }
       : {}),
@@ -642,10 +667,16 @@ async function main() {
     }
   } else if (cmd === "models") {
     try {
-      const { models } = await client.listModels();
+      const { models } = await client.listModels(opts.provider);
       for (const m of models) process.stdout.write(m + "\n");
     } catch (err) {
       fail(`models failed: ${(err as Error).message}`);
+    }
+  } else if (cmd === "providers") {
+    try {
+      await listProviders(client, { json: opts.json });
+    } catch (err) {
+      fail(`providers failed: ${(err as Error).message}`);
     }
   } else if (cmd === "connectors") {
     const sub = positional[0] || "ls";

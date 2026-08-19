@@ -1,0 +1,13 @@
+<article>
+  <header><h2>Connect GitHub Copilot</h2></header>
+  <p><small>Authorize agent-land to use your Copilot subscription. Requires an active Copilot plan (Business or Individual).</small></p>
+
+  <% if (existing) { %>
+  <p><mark>github-copilot is already configured.</mark> <a href="/providers">Back to providers</a></p>
+  <% } else { %>
+  <form hx-post="/providers/copilot/start" hx-target="#copilot-flow" hx-swap="innerHTML">
+    <button type="submit">Start device flow</button>
+  </form>
+  <div id="copilot-flow"></div>
+  <% } %>
+</article>
