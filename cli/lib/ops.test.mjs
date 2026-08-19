@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runSession, watchSession } from "./ops.mjs";
+import { runSession, watchSession, createSeqFilter } from "./ops.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -10,7 +10,7 @@ function eventLine(ev) {
 function fakeStream(lines, { onAbort } = {}) {
   return async function* (url, { signal }) {
     for (const line of lines) {
-      if (signal.aborted) {
+      if (signal && signal.aborted) {
         if (onAbort) onAbort();
         throw Object.assign(new Error("aborted"), { name: "AbortError" });
       }
@@ -157,6 +157,62 @@ describe("runSession", () => {
 
     expect(result.stopped).toBe(true);
   });
+
+  it("rethrows when a dialog response fails instead of deadlocking", async () => {
+    const client = {
+      eventsUrl: () => "https://example.test/api/sessions/s1/events",
+      authHeader: "Basic x",
+      respond: async () => {
+        throw new Error("HTTP 409");
+      },
+    };
+    const lines = [
+      eventLine({ type: "waiting_for_input", requestId: "r1", method: "confirm", seq: 0 }),
+    ];
+
+    await expect(
+      runSession(client, "s1", {
+        out: { write: () => {} },
+        onDialog: async () => ({ confirmed: true }),
+        stream: fakeStream(lines),
+      })
+    ).rejects.toThrow(/respond failed/);
+  });
+
+  it("honors the timeout across reconnects with a single controller", async () => {
+    const { client } = makeClient();
+    const neverSettling = async function* (_url, { signal }) {
+      while (!signal.aborted) {
+        yield { event: "comment", data: "" };
+        await sleep(5);
+      }
+      throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    };
+
+    const result = await runSession(client, "s1", {
+      timeoutMs: 100,
+      out: { write: () => {} },
+      stream: neverSettling,
+    });
+
+    expect(result.timedOut).toBe(true);
+  });
+});
+
+describe("createSeqFilter", () => {
+  it("drops duplicate and out-of-order sequences", () => {
+    const filter = createSeqFilter();
+    expect(filter({ seq: 1 })).toBe(false);
+    expect(filter({ seq: 1 })).toBe(true);
+    expect(filter({ seq: 0 })).toBe(true);
+    expect(filter({ seq: 2 })).toBe(false);
+  });
+
+  it("passes events without a sequence number", () => {
+    const filter = createSeqFilter();
+    expect(filter({ type: "agent_settled" })).toBe(false);
+    expect(filter({ type: "agent_settled" })).toBe(false);
+  });
 });
 
 describe("watchSession", () => {
@@ -192,6 +248,31 @@ describe("watchSession", () => {
     const out = { write: (t) => printed.push(t) };
 
     await watchSession(client, "s1", { out, live: false, stream: fakeStream(lines) });
+
+    expect(printed).toEqual(["s1: stopped\n"]);
+  });
+
+  it("fails fast on a 404 instead of retrying forever", async () => {
+    const { client } = makeClient();
+    const stream = async function* () {
+      throw Object.assign(new Error("SSE request failed: HTTP 404"), { status: 404 });
+      yield undefined;
+    };
+
+    await expect(watchSession(client, "s1", { out: { write: () => {} }, stream })).rejects.toThrow(
+      /HTTP 404/
+    );
+  });
+
+  it("reports stopped when the stream ends with agent-done", async () => {
+    const { client } = makeClient();
+    const printed = [];
+    const out = { write: (t) => printed.push(t) };
+    const stream = async function* () {
+      yield { event: "agent-done", data: '{"status":"stopped"}' };
+    };
+
+    await watchSession(client, "s1", { out, stream });
 
     expect(printed).toEqual(["s1: stopped\n"]);
   });

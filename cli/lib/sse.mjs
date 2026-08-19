@@ -25,7 +25,7 @@ export class SseParser {
   }
 
   push(chunk) {
-    this.buffer += chunk;
+    this.buffer += chunk.replace(/\r\n/g, "\n");
     const events = [];
     let idx;
     while ((idx = this.buffer.indexOf("\n\n")) !== -1) {
@@ -36,6 +36,13 @@ export class SseParser {
     }
     return events;
   }
+
+  flush() {
+    if (this.buffer.length === 0) return [];
+    const parsed = parseSseEvent(this.buffer);
+    this.buffer = "";
+    return parsed !== null ? [parsed] : [];
+  }
 }
 
 export async function* streamSse(url, { authHeader, signal }) {
@@ -44,7 +51,9 @@ export async function* streamSse(url, { authHeader, signal }) {
 
   const res = await fetch(url, { headers, signal });
   if (!res.ok) {
-    throw new Error(`SSE request failed: HTTP ${res.status}`);
+    const err = new Error(`SSE request failed: HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
 
   const parser = new SseParser();
@@ -57,5 +66,8 @@ export async function* streamSse(url, { authHeader, signal }) {
     for (const ev of parser.push(decoder.decode(value, { stream: true }))) {
       yield ev;
     }
+  }
+  for (const ev of parser.flush()) {
+    yield ev;
   }
 }

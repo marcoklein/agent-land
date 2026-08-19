@@ -5,7 +5,9 @@ import { loadConfig } from "./lib/config.mjs";
 import { streamSse } from "./lib/sse.mjs";
 import { createEventRenderer, wrapText } from "./lib/render.mjs";
 import { createApiClient } from "./lib/api.mjs";
-import { runSession, watchSession } from "./lib/ops.mjs";
+import { runSession, watchSession, createSeqFilter } from "./lib/ops.mjs";
+import { parseArgs, UsageError } from "./lib/args.mjs";
+import { parseDialogAnswer } from "./lib/dialogs.mjs";
 
 const USAGE = `al — terminal chat client for agent-land
 
@@ -59,39 +61,6 @@ In chat:
 function fail(message) {
   process.stderr.write(`al: ${message}\n`);
   process.exit(1);
-}
-
-function parseArgs(argv) {
-  const opts = { connectors: [] };
-  const positional = [];
-  let cmd = null;
-
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--workspace") opts.workspace = argv[++i];
-    else if (a === "--ref") opts.ref = argv[++i];
-    else if (a === "--connectors") opts.connectors = (argv[++i] || "").split(",").filter(Boolean);
-    else if (a === "--model") opts.model = argv[++i];
-    else if (a === "--manual") opts.manual = true;
-    else if (a === "--yes" || a === "-y") opts.yes = true;
-    else if (a === "--json") opts.json = true;
-    else if (a === "--follow") opts.follow = true;
-    else if (a === "--rm") opts.rm = true;
-    else if (a === "--verbose") opts.verbose = true;
-    else if (a === "--all") opts.all = true;
-    else if (a === "--timeout") opts.timeout = parseInt(argv[++i], 10);
-    else if (a === "--name") opts.name = argv[++i];
-    else if (a === "--type") opts.type = argv[++i];
-    else if (a === "--url") opts.url = argv[++i];
-    else if (a === "--content") opts.content = argv[++i];
-    else if (a === "--field") (opts.fields ||= []).push(argv[++i]);
-    else if (a === "--help" || a === "-h") process.stdout.write(USAGE) || process.exit(0);
-    else if (cmd === null && (a === "new" || a === "chat" || a === "ls" || a === "rm" || a === "log" || a === "models" || a === "connectors" || a === "run" || a === "watch"))
-      cmd = a;
-    else positional.push(a);
-  }
-
-  return { cmd, opts, positional };
 }
 
 const c = {
@@ -181,10 +150,7 @@ async function answerDialog(dialog) {
       process.stdout.write(` ${i + 1}) ${dialog.options[i]}\n`);
     }
     const answer = await askLine("select> ");
-    const n = parseInt(answer, 10);
-    return {
-      value: !Number.isNaN(n) && dialog.options[n - 1] ? dialog.options[n - 1] : answer,
-    };
+    return parseDialogAnswer(dialog.method, dialog.options, answer);
   }
   const answer = await askLine(`${dialog.method}> `);
   return { value: answer };
@@ -247,7 +213,7 @@ async function addConnector(client, opts) {
 
 async function logSession(client, sessionId, { json, follow }) {
   const renderer = createEventRenderer();
-  let maxSeq = -1;
+  const dedupe = createSeqFilter();
   let stop = false;
   let ac = null;
   let quietTimer = null;
@@ -286,10 +252,7 @@ async function logSession(client, sessionId, { json, follow }) {
         } catch {
           continue;
         }
-        if (typeof parsed.seq === "number") {
-          if (maxSeq >= 0 && parsed.seq <= maxSeq) continue;
-          maxSeq = Math.max(maxSeq, parsed.seq);
-        }
+        if (dedupe(parsed)) continue;
         if (json) {
           process.stdout.write(JSON.stringify(parsed) + "\n");
         } else {
@@ -430,6 +393,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
       }
 
       case "waiting_for_input":
+        agentRunning = false;
         dialog = {
           requestId: ev.requestId,
           method: ev.method,
@@ -463,17 +427,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     if (dialog) {
       const { requestId, method, options } = dialog;
       dialog = null;
-      let value;
-      if (method === "confirm") {
-        value = { confirmed: /^y/i.test(trimmed) };
-      } else if (method === "select") {
-        const n = parseInt(trimmed, 10);
-        value = {
-          value: !Number.isNaN(n) && options && options[n - 1] ? options[n - 1] : trimmed,
-        };
-      } else {
-        value = { value: trimmed };
-      }
+      const value = parseDialogAnswer(method, options, trimmed);
       printLine(dim("· you answered"));
       setPrompt("you> ");
       try {
@@ -508,7 +462,11 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     process.stdin.on("keypress", (_ch, key) => {
       if (!key || !key.ctrl || key.name !== "c") return;
       if (dialog) {
+        const { requestId } = dialog;
         dialog = null;
+        client
+          .respond(sessionId, requestId, { cancelled: true })
+          .catch((err) => printLine(red(`cancel failed: ${err.message}`)));
         printLine(dim("· dialog cancelled"));
         setPrompt("you> ");
         return;
@@ -544,7 +502,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
   }
 
   async function attach() {
-    let maxSeq = -1;
+    const dedupe = createSeqFilter();
     while (running) {
       const ac = new AbortController();
       sseAbort = ac;
@@ -565,10 +523,7 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
           } catch {
             continue;
           }
-          if (typeof parsed.seq === "number") {
-            if (maxSeq >= 0 && parsed.seq <= maxSeq) continue;
-            maxSeq = Math.max(maxSeq, parsed.seq);
-          }
+          if (dedupe(parsed)) continue;
           handleEvent(parsed);
         }
       } catch {
@@ -583,12 +538,23 @@ async function chat(client, sessionId, { hintOnQuit } = {}) {
     }
   }
 
-  rl.prompt();
+  if (isTTY) rl.prompt();
   await attach();
 }
 
 async function main() {
-  const { cmd, opts, positional } = parseArgs(process.argv.slice(2));
+  let parsed;
+  try {
+    parsed = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    if (err instanceof UsageError) fail(err.message);
+    throw err;
+  }
+  if (parsed.help) {
+    process.stdout.write(USAGE);
+    process.exit(0);
+  }
+  const { cmd, opts, positional } = parsed;
   if (!cmd) fail("missing command\n\n" + USAGE);
 
   const config = loadConfig();
@@ -702,41 +668,51 @@ async function main() {
       process.stdin.isTTY && process.stdout.isTTY
         ? async (dialog) => answerDialog(dialog)
         : null;
-    const result = await runSession(client, session.id, {
-      verbose: opts.verbose,
-      timeoutMs: Number.isFinite(opts.timeout) && opts.timeout > 0 ? opts.timeout * 1000 : 0,
-      onDialog,
-    });
+    let result;
+    try {
+      result = await runSession(client, session.id, {
+        verbose: opts.verbose,
+        timeoutMs: opts.timeout ? opts.timeout * 1000 : 0,
+        onDialog,
+      });
+    } catch (err) {
+      fail(`run failed: ${err.message}`);
+    }
     if (result.settled) {
       if (result.finalMessage) process.stdout.write(result.finalMessage + "\n");
     } else if (result.timedOut) {
       try {
         await client.abort(session.id);
-      } catch {}
+      } catch (err) {
+        process.stderr.write(`al: warning: abort failed: ${err.message}\n`);
+      }
     }
     if (opts.rm) {
       try {
         await client.deleteSession(session.id);
-      } catch {}
+      } catch (err) {
+        process.stderr.write(`al: warning: delete failed: ${err.message}\n`);
+      }
     } else if (result.stopped || result.timedOut) {
-      process.stderr.write(dim(`session ${session.id} kept — al chat ${session.id}\n`));
+      const note = !onDialog ? " (agent may be waiting for input)" : "";
+      process.stderr.write(dim(`session ${session.id} kept${note} — al chat ${session.id}\n`));
     }
     process.exit(result.settled ? 0 : 1);
   } else if (cmd === "watch") {
-    let ids = [];
-    if (opts.all) {
-      const { sessions } = await client.listSessions();
-      ids = sessions.filter((s) => s.status !== "stopped").map((s) => s.id);
-      if (ids.length === 0) {
-        process.stdout.write("no active sessions\n");
-        process.exit(0);
-      }
-    } else {
-      if (!positional[0]) fail("watch requires a session id or --all");
-      ids = [positional[0]];
-    }
     process.once("SIGINT", () => process.exit(0));
+    if (!opts.all && !positional[0]) fail("watch requires a session id or --all");
     try {
+      let ids = [];
+      if (opts.all) {
+        const { sessions } = await client.listSessions();
+        ids = sessions.filter((s) => s.status !== "stopped").map((s) => s.id);
+        if (ids.length === 0) {
+          process.stdout.write("no active sessions\n");
+          process.exit(0);
+        }
+      } else {
+        ids = [positional[0]];
+      }
       await Promise.all(ids.map((id) => watchSession(client, id)));
     } catch (err) {
       fail(`watch failed: ${err.message}`);
