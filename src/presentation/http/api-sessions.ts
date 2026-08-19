@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { SessionService, SessionNotFoundError, SessionStoppedError } from "../../core/session-service.js";
+import { SessionService } from "../../core/session-service.js";
 import type { Config } from "../../config.js";
 import type { PermissionPolicy, WorkspaceSpec } from "../../core/types.js";
 import type { SequencedEvent } from "../../core/events.js";
+import { errorMessage, sessionErrorResponse } from "./errors.js";
 
 export function sessionsApiRouter(sessionService: SessionService, config: Config) {
   const router = Router();
@@ -219,14 +220,4 @@ function parseWorkspace(raw: unknown): WorkspaceSpec | undefined | null {
   if (ref !== undefined && typeof ref !== "string") return null;
   const trimmedRef = ref?.trim();
   return { repoUrl: repoUrl.trim(), ref: trimmedRef ? trimmedRef : undefined };
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
-function sessionErrorResponse(err: unknown): { status: number; error: string } {
-  if (err instanceof SessionStoppedError) return { status: 409, error: err.message };
-  if (err instanceof SessionNotFoundError) return { status: 404, error: err.message };
-  return { status: 500, error: errorMessage(err) };
 }

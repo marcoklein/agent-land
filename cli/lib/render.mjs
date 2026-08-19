@@ -15,6 +15,10 @@ export function wrapText(text, width) {
         lines.push(current);
         current = word;
       }
+      while (current.length > width) {
+        lines.push(current.slice(0, width));
+        current = current.slice(width);
+      }
     }
     if (current.length > 0) lines.push(current);
   }
@@ -28,7 +32,7 @@ export function messageText(message) {
   return content
     .filter((b) => b && typeof b === "object" && b.type === "text")
     .map((b) => b.text)
-    .join("");
+    .join("\n");
 }
 
 function shortArgs(args) {
