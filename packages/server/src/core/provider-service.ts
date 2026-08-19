@@ -178,6 +178,10 @@ export class ProviderService {
       return config;
     }
 
+    if (input.kind === "builtin") {
+      throw new Error(`Unknown built-in provider "${slug}". Pick one from the catalog.`);
+    }
+
     throw new Error("Could not create provider.");
   }
 

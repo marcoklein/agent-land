@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { AgentSession, PermissionPolicy, ProviderConfig, SessionStatus, WorkspaceSpec } from "./types.js";
+import type { AgentSession, PermissionPolicy, SessionStatus, WorkspaceSpec } from "./types.js";
 import { DEFAULT_PROVIDER_ID } from "./types.js";
 import type { SessionEvent, SequencedEvent, SequencedEventStream } from "./events.js";
 import type { AgentHandle, AgentHarness, EventStream } from "./harness.js";
@@ -80,10 +80,7 @@ export class SessionService {
     return envVarsMap;
   }
 
-  private async injectProviderEnv(
-    envVarsMap: Map<string, string>,
-    providerId: string
-  ): Promise<ProviderConfig | null> {
+  private async injectProviderEnv(envVarsMap: Map<string, string>, providerId: string): Promise<void> {
     const provider = await this.deps.providers.get(providerId).catch(() => null);
 
     if (provider?.secretFile) {
@@ -103,8 +100,6 @@ export class SessionService {
       }
       envVarsMap.set("OPENCODE_API_URL", this.deps.config.opencodeGoUrl);
     }
-
-    return provider;
   }
 
   async createSession(options: {

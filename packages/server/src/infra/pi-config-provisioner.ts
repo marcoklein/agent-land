@@ -77,7 +77,9 @@ export function renderCustomProviderEntry(provider: ProviderConfig): Record<stri
     entry.api = provider.api;
   }
 
-  entry.apiKey = `$${customProviderEnvVar(provider.id)}`;
+  if (provider.secretFile) {
+    entry.apiKey = `$${customProviderEnvVar(provider.id)}`;
+  }
 
   if (provider.models && provider.models.length > 0) {
     entry.models = provider.models.map((id) => ({ id }));

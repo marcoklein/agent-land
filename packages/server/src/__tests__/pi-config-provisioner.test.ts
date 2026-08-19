@@ -49,7 +49,10 @@ describe("normalizeBaseUrl", () => {
 describe("renderCustomProviderEntry", () => {
   it("renders a validated qwencloud models.json entry with env interpolation", () => {
     const entry = renderCustomProviderEntry(
-      custom({ models: ["qwen3.8-max", "deepseek-v4-pro"] })
+      custom({
+        models: ["qwen3.8-max", "deepseek-v4-pro"],
+        secretFile: "provider-qwencloud.yaml",
+      })
     );
     expect(entry).toEqual({
       baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
@@ -58,12 +61,31 @@ describe("renderCustomProviderEntry", () => {
       models: [{ id: "qwen3.8-max" }, { id: "deepseek-v4-pro" }],
     });
   });
+
+  it("omits apiKey for a keyless custom provider", () => {
+    const entry = renderCustomProviderEntry(custom({ models: ["llama3"] }));
+    expect(entry).toEqual({
+      baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
+      api: "anthropic-messages",
+      models: [{ id: "llama3" }],
+    });
+  });
 });
 
 describe("renderModelsJson", () => {
   it("merges multiple custom providers into one models.json", () => {
-    const a = custom({ id: "stub", api: "openai-completions", baseUrl: "http://stub:8080/v1" });
-    const b = custom({ id: "stub2", api: "openai-completions", baseUrl: "http://stub2:8080/v1" });
+    const a = custom({
+      id: "stub",
+      api: "openai-completions",
+      baseUrl: "http://stub:8080/v1",
+      secretFile: "provider-stub.yaml",
+    });
+    const b = custom({
+      id: "stub2",
+      api: "openai-completions",
+      baseUrl: "http://stub2:8080/v1",
+      secretFile: "provider-stub2.yaml",
+    });
     const json = renderModelsJson([a, b]);
     const providers = json.providers as Record<string, Record<string, unknown>>;
     expect(Object.keys(providers).sort()).toEqual(["stub", "stub2"]);
