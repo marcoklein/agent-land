@@ -34,9 +34,6 @@
             hx-trigger="change"
             hx-include="this"
             hx-swap="innerHTML">
-      <% if (providers.length === 0) { %>
-        <option value="opencode-go" selected>opencode-go</option>
-      <% } %>
       <% providers.forEach(p => { %>
         <option value="<%= p.id %>"<%= p.id === selectedProviderId ? ' selected' : '' %>><%= p.label || p.id %></option>
       <% }) %>

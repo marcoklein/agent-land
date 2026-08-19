@@ -3,7 +3,7 @@ import type { SessionService } from "../core/session-service.js";
 import type { ConnectorService } from "../core/connector-service.js";
 import type { ProviderService } from "../core/provider-service.js";
 import type { ModelCatalog } from "../infra/model-catalog.js";
-import { DEFAULT_PROVIDER_ID } from "../core/types.js";
+import { DEFAULT_PROVIDER_ID, type ProviderConfig } from "../core/types.js";
 import { buildPrompt } from "../core/prompt.js";
 import { renderSessionEvent, renderSessionEventFull, escapeHtml } from "../presentation/http/log-renderer.js";
 import type { SessionEvent, SequencedEvent } from "../core/events.js";
@@ -23,11 +23,19 @@ export function agentsRouter(
 
   router.get("/new", async (_req, res) => {
     const connectors = await connectorService.list();
-    const providers = await providerService.listEnabled().catch(() => []);
+    const stored = await providerService.listEnabled().catch(() => []);
 
-    const selected =
-      providers.find((p) => p.id === DEFAULT_PROVIDER_ID) ?? providers[0] ?? null;
-    const selectedProviderId = selected?.id ?? DEFAULT_PROVIDER_ID;
+    const hasDefault = stored.some((p) => p.id === DEFAULT_PROVIDER_ID);
+    const defaultOption: ProviderConfig = {
+      id: DEFAULT_PROVIDER_ID,
+      kind: "builtin",
+      piProvider: DEFAULT_PROVIDER_ID,
+      label: "OpenCode Go (default)",
+      enabled: true,
+    };
+    const providers = hasDefault ? stored : [defaultOption, ...stored];
+
+    const selectedProviderId = providers[0]?.id ?? DEFAULT_PROVIDER_ID;
     const models = await modelCatalog.getModels(selectedProviderId).catch(() => [] as string[]);
 
     res.render("layout", {

@@ -1,5 +1,7 @@
 import { Router } from "express";
 import type { ProviderService } from "../core/provider-service.js";
+import { customProviderEnvVar } from "../core/provider-service.js";
+import { slugify } from "../core/connector-service.js";
 import { PROVIDER_CATALOG, getCatalogEntry, type CatalogEntry } from "../core/provider-catalog.js";
 import { escapeHtml } from "../presentation/http/log-renderer.js";
 import type { ProviderApiType } from "../core/types.js";
@@ -138,8 +140,7 @@ function collectSecretFields(
   if (kind === "custom") {
     const apiKey = body.apiKey;
     if (typeof apiKey === "string" && apiKey.trim().length > 0) {
-      const envVar = `${id.replace(/-/g, "_").toUpperCase()}_API_KEY`;
-      fields[envVar] = apiKey;
+      fields[customProviderEnvVar(slugify(id))] = apiKey;
     }
     return fields;
   }

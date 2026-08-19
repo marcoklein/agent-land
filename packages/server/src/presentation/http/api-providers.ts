@@ -17,7 +17,7 @@ export function providersApiRouter(providerService: ProviderService) {
     }
   });
 
-  router.get("/catalog", async (req, res) => {
+  router.get("/catalog", async (_req, res) => {
     const stored = await providerService.list().catch(() => []);
     const storedIds = new Set(stored.map((p) => p.id));
     const available = PROVIDER_CATALOG.filter((entry) => !storedIds.has(entry.id)).map((entry) => ({
@@ -28,7 +28,6 @@ export function providersApiRouter(providerService: ProviderService) {
       defaultModel: entry.defaultModel ?? null,
     }));
     res.json({ catalog: available });
-    void req;
   });
 
   router.post("/", async (req, res) => {
