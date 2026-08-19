@@ -39,7 +39,7 @@ flowchart LR
         R[routes/*<br/>EJS pages]
         SS[core/SessionService<br/>state machine + policy]
         CS[core/ConnectorService]
-        H[infra/PiRpcHarness<br/>rpc → canonical events]
+        H["infra/PiRpcHarness<br/>rpc → canonical events"]
         D[infra/DockerService]
         SO[infra/SopsService]
         RP[infra/repositories<br/>JSON files]
@@ -47,7 +47,7 @@ flowchart LR
     end
 
     subgraph Host
-        Docker[containers<br/>agent-land-pi-&lt;id&gt;]
+        Docker["containers<br/>agent-land-pi-&lt;id&gt;"]
         F[data/sessions/*.json]
         SE[secrets/*.yaml<br/>SOPS/Age]
     end

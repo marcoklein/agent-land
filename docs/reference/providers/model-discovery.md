@@ -7,7 +7,7 @@ generated: { by: opencode/deepseek-v4-pro, at: 2026-07-31T00:00:00Z }
 updated: { by: opencode/deepseek-v4-pro, at: 2026-07-31T00:00:00Z }
 sources:
   - id: opencode-api
-    resource: /providers/opencode-api.md
+    resource: /reference/providers/opencode-api.md
     title: OpenCode API reference
   - id: pi-dockerfile
     resource: agent-image/Dockerfile
@@ -85,11 +85,12 @@ A standard HTML `<select>` element with `<option>` elements rendered server-side
 
 | File | Role |
 |------|------|
-| `src/services/providers.ts` | `getModels()` — fetches from OpenCode Go `/go/v1/models`, caches in memory |
+| `src/infra/providers.ts` | `getModels()` — fetches from OpenCode Go `/go/v1/models`, caches in memory (1h TTL, in-flight dedupe) |
+| `src/presentation/http/api-models.ts` | `GET /api/models` — machine-readable model list |
 | `src/routes/agents.ts` | `GET /new` — calls `getModels()`, passes `models` array to template |
 | `src/views/agents/new.ejs` | Model `<select>` with server-rendered `<option>` elements |
-| `src/services/docker.ts` | `--provider opencode-go` + `--model <id>` passed to pi CLI |
-| `src/services/agent-runner.ts` | Injects `OPENCODE_API_KEY`/`OPENCODE_API_URL` into container env |
+| `src/infra/docker.ts` | `--provider opencode-go` + `--model <id>` passed to pi CLI |
+| `src/core/session-service.ts` | Injects `OPENCODE_API_KEY`/`OPENCODE_API_URL` into container env |
 | `agent-image/Dockerfile` | Pi installation, version pin
 
 [^opencode-api]: OpenCode API reference

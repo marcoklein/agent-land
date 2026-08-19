@@ -16,4 +16,4 @@ npm test            # vitest run
 - Conventional commits (`type(scope): description`, imperative, no period)
 - Never commit secrets, `.env`, `.age-key`, or `secrets/*.yaml` (gitignored)
 - `thoughts/` stays untracked
-- Docs follow the existing `docs/` style (design docs with mermaid, ADRs for decisions)
+- Docs follow the existing `docs/` style: `docs/README.md` index, reference docs in OKF under `docs/reference/`, and ADRs under `docs/adrs/`

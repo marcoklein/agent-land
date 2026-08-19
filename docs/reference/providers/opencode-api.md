@@ -105,9 +105,9 @@ Both Zen and Go model listing endpoints are public — no SOPS decryption needed
 
 Agent Land currently uses `opencode-go` (Go subscription). The model dropdown in the launch form fetches from `GET https://opencode.ai/zen/go/v1/models` at page render time and caches the result.
 
-## Provider fix needed
+## Provider wiring
 
-The Docker command hardcodes `--provider opencode` but the container environment injects the Go API key (`OPENCODE_API_KEY`) and Go URL (`OPENCODE_API_URL`). This mismatch should be fixed: change `--provider opencode` to `--provider opencode-go` to match the credentials being passed.
+The harness now runs pi with `--provider opencode-go`, matching the Go API key (`OPENCODE_API_KEY`) and Go URL (`OPENCODE_API_URL`) injected into the container env.
 
 [^opencode-docs]: OpenCode API documentation
 [^opencode-go-docs]: OpenCode Go subscription docs
