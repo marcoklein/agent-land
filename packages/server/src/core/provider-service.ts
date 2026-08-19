@@ -75,7 +75,7 @@ export class ProviderService {
     return this.enqueue(() => this.doCreate(input));
   }
 
-  delete(id: string): Promise<void> {
+  delete(id: string): Promise<boolean> {
     return this.enqueue(() => this.doDelete(id));
   }
 
@@ -185,17 +185,20 @@ export class ProviderService {
     throw new Error("Could not create provider.");
   }
 
-  private async doDelete(id: string): Promise<void> {
+  private async doDelete(id: string): Promise<boolean> {
     const stored = await this.repository.list();
     const provider = stored.find((p) => p.id === id);
+    if (!provider) return false;
+
     const filtered = stored.filter((p) => p.id !== id);
     await this.repository.save(filtered);
 
-    if (provider?.secretFile) {
+    if (provider.secretFile) {
       await this.secrets
         .deleteSecret(provider.secretFile.replace(/\.(ya?ml)$/, ""))
         .catch(() => {});
     }
+    return true;
   }
 
   private async doSetEnabled(id: string, enabled: boolean): Promise<ProviderConfig | null> {

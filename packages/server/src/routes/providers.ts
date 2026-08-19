@@ -59,7 +59,16 @@ export function providersRouter(providerService: ProviderService) {
 
   router.post("/:id/delete", async (req, res) => {
     try {
-      await providerService.delete(req.params.id);
+      const deleted = await providerService.delete(req.params.id);
+      if (!deleted) {
+        if (req.headers["hx-request"]) {
+          res.status(404).send(`<tr><td colspan="5">Provider "${req.params.id}" not found</td></tr>`);
+        } else {
+          req.flash("error", `Provider "${req.params.id}" not found.`);
+          res.redirect("/providers");
+        }
+        return;
+      }
       if (req.headers["hx-request"]) {
         res.send("");
       } else {

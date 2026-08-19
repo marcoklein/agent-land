@@ -63,6 +63,23 @@ describe("Providers — API and launch flow", () => {
     expect(dup.status).toBe(409);
   });
 
+  it("deletes a provider and 404s on a missing one", async () => {
+    await agent
+      .post("/api/providers")
+      .send({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk" } });
+
+    const del = await agent.delete("/api/providers/mistral");
+    expect(del.status).toBe(200);
+    expect(del.body.deleted).toBe(true);
+
+    const missing = await agent.delete("/api/providers/mistral");
+    expect(missing.status).toBe(404);
+    expect(missing.body.error).toContain("not found");
+
+    const list = await agent.get("/api/providers");
+    expect(list.body.providers).toHaveLength(0);
+  });
+
   it("injects the provider secret into the session container env", async () => {
     await agent
       .post("/api/providers")
