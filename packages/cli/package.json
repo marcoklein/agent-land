@@ -1,0 +1,27 @@
+{
+  "name": "@agent-land/cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dependency terminal client for agent-land",
+  "bin": {
+    "al": "dist/agent-land.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx src/agent-land.ts",
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/agent-land.js",
+    "start": "node dist/agent-land.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.10"
+  }
+}

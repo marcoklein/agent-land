@@ -1,26 +1,32 @@
 FROM node:22-alpine AS build
 
+RUN npm install -g pnpm@11
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/server/package.json ./packages/server/
+COPY packages/cli/package.json ./packages/cli/
+RUN pnpm install --frozen-lockfile
 
-COPY src/ ./src/
-COPY tsconfig.json ./
-RUN npx tsc
+COPY packages/server/ ./packages/server/
+RUN pnpm --filter @agent-land/server build
 
 FROM node:22-alpine
 
 RUN apk add --no-cache sops age docker
+RUN npm install -g pnpm@11
 
 WORKDIR /app
 
-COPY --from=build /app/dist/ ./dist/
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages/server/package.json ./packages/server/
+COPY packages/cli/package.json ./packages/cli/
+RUN pnpm install --frozen-lockfile --prod --filter @agent-land/server
 
-COPY src/views/ ./dist/views/
-COPY public/ ./public/
+COPY --from=build /app/packages/server/dist/ ./packages/server/dist/
+COPY packages/server/src/views/ ./packages/server/dist/views/
+COPY packages/server/public/ ./packages/server/public/
 COPY agent-image/ /agent-image/
 
 ENV NODE_ENV=production
@@ -30,4 +36,4 @@ ENV DATA_DIR=/app/data
 
 EXPOSE 3000
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "packages/server/dist/server.js"]

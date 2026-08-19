@@ -6,6 +6,6 @@ data/
 *.log
 .env
 .age-key
-src/__tests__/fixtures/secrets/
-src/__tests__/tmp-test-data/
-src/__tests__/fixtures/.sops.yaml
+packages/server/src/__tests__/fixtures/secrets/
+packages/server/src/__tests__/tmp-test-data/
+packages/server/src/__tests__/fixtures/.sops.yaml

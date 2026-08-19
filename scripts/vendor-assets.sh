@@ -9,7 +9,7 @@ PICO_VERSION="2.1.1"
 HTMX_BASE="https://cdn.jsdelivr.net/npm/htmx.org@${HTMX_VERSION}/dist"
 PICO_BASE="https://cdn.jsdelivr.net/npm/@picocss/pico@${PICO_VERSION}"
 
-DIR="$(cd "$(dirname "$0")/.." && pwd)/public"
+DIR="$(cd "$(dirname "$0")/.." && pwd)/packages/server/public"
 
 echo "=== Vendoring vendor assets to $DIR ==="
 

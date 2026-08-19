@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadConfig } from "./config.mjs";
+import { loadConfig } from "./config.js";
 
 describe("loadConfig", () => {
   it("uses the default hosted URL", () => {

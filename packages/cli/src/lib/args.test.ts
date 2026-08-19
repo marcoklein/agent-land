@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseArgs, UsageError } from "./args.mjs";
+import { parseArgs, UsageError } from "./args.js";
 
 describe("parseArgs", () => {
   it("detects the command and collects positionals", () => {

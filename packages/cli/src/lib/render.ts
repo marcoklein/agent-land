@@ -1,5 +1,7 @@
-export function wrapText(text, width) {
-  const lines = [];
+import type { AgentEvent, Message, RenderLine } from "./types.js";
+
+export function wrapText(text: string, width: number): string[] {
+  const lines: string[] = [];
   for (const paragraph of text.split("\n")) {
     if (paragraph.length === 0) {
       lines.push("");
@@ -25,17 +27,17 @@ export function wrapText(text, width) {
   return lines;
 }
 
-export function messageText(message) {
+export function messageText(message: Message | null | undefined): string {
   if (!message || typeof message !== "object") return "";
   const content = message.content;
   if (!Array.isArray(content)) return "";
   return content
     .filter((b) => b && typeof b === "object" && b.type === "text")
-    .map((b) => b.text)
+    .map((b) => b.text ?? "")
     .join("\n");
 }
 
-function shortArgs(args) {
+function shortArgs(args: unknown): string {
   if (!args) return "";
   try {
     const s = JSON.stringify(args);
@@ -45,17 +47,22 @@ function shortArgs(args) {
   }
 }
 
-export function createEventRenderer({ width = 100 } = {}) {
+export interface EventRenderer {
+  render: (event: AgentEvent) => RenderLine[];
+  state: { turnCount: number; streamingText: string; messageFinalized: boolean };
+}
+
+export function createEventRenderer({ width = 100 }: { width?: number } = {}): EventRenderer {
   const state = { turnCount: 0, streamingText: "", messageFinalized: false };
 
-  function finalizeStreaming() {
+  function finalizeStreaming(): RenderLine[] {
     const text = state.streamingText;
     state.streamingText = "";
     if (!text) return [];
     return wrapText(text, width).map((l) => ({ kind: "text", text: l }));
   }
 
-  function render(event) {
+  function render(event: AgentEvent): RenderLine[] {
     switch (event.type) {
       case "turn_start":
         state.turnCount += 1;
@@ -63,7 +70,7 @@ export function createEventRenderer({ width = 100 } = {}) {
         return [{ kind: "turn", text: `── turn ${state.turnCount} ──` }];
 
       case "message_delta":
-        state.streamingText += event.text;
+        state.streamingText += event.text ?? "";
         return [];
 
       case "message_end": {
@@ -102,7 +109,7 @@ export function createEventRenderer({ width = 100 } = {}) {
         return [{ kind: "meta", text: "· settled" }];
 
       case "waiting_for_input": {
-        const lines = [];
+        const lines: RenderLine[] = [];
         const prompt = event.prompt ? ` ${event.prompt}` : "";
         if (event.method === "confirm") {
           lines.push({ kind: "dialog", text: `[agent asks] confirm:${prompt} [y/N]` });

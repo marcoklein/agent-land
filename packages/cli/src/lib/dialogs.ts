@@ -1,4 +1,8 @@
-export function parseDialogAnswer(method, options, input) {
+export function parseDialogAnswer(
+  method: string,
+  options: string[] | undefined,
+  input: string
+): { confirmed?: boolean; value?: string } {
   if (method === "confirm") return { confirmed: /^y/i.test(input.trim()) };
   if (method === "select") {
     const n = parseInt(input, 10);

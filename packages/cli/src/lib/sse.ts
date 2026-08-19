@@ -1,6 +1,8 @@
-export function parseSseEvent(raw) {
-  let eventName;
-  const dataLines = [];
+import type { SseEvent } from "./types.js";
+
+export function parseSseEvent(raw: string): SseEvent | null {
+  let eventName: string | undefined;
+  const dataLines: string[] = [];
   let hasData = false;
 
   for (const line of raw.split("\n")) {
@@ -20,14 +22,12 @@ export function parseSseEvent(raw) {
 }
 
 export class SseParser {
-  constructor() {
-    this.buffer = "";
-  }
+  private buffer = "";
 
-  push(chunk) {
+  push(chunk: string): SseEvent[] {
     this.buffer += chunk.replace(/\r\n/g, "\n");
-    const events = [];
-    let idx;
+    const events: SseEvent[] = [];
+    let idx: number;
     while ((idx = this.buffer.indexOf("\n\n")) !== -1) {
       const raw = this.buffer.slice(0, idx);
       this.buffer = this.buffer.slice(idx + 2);
@@ -37,7 +37,7 @@ export class SseParser {
     return events;
   }
 
-  flush() {
+  flush(): SseEvent[] {
     if (this.buffer.length === 0) return [];
     const parsed = parseSseEvent(this.buffer);
     this.buffer = "";
@@ -45,19 +45,27 @@ export class SseParser {
   }
 }
 
-export async function* streamSse(url, { authHeader, signal }) {
-  const headers = { Accept: "text/event-stream" };
+interface StreamOptions {
+  authHeader?: string;
+  signal?: AbortSignal;
+}
+
+export async function* streamSse(
+  url: string,
+  { authHeader, signal }: StreamOptions
+): AsyncGenerator<SseEvent> {
+  const headers: Record<string, string> = { Accept: "text/event-stream" };
   if (authHeader) headers.Authorization = authHeader;
 
   const res = await fetch(url, { headers, signal });
   if (!res.ok) {
-    const err = new Error(`SSE request failed: HTTP ${res.status}`);
+    const err: Error & { status?: number } = new Error(`SSE request failed: HTTP ${res.status}`);
     err.status = res.status;
     throw err;
   }
 
   const parser = new SseParser();
-  const reader = res.body.getReader();
+  const reader = res.body!.getReader();
   const decoder = new TextDecoder();
 
   while (true) {
