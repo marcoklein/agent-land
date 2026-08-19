@@ -34,6 +34,15 @@ Usage:
   al providers [--json]
       list configured providers (id, kind, api, enabled)
 
+  al providers add --kind <builtin|custom|oauth> --id <slug> [--label <l>] [--base-url <u>]
+                   [--api <type>] [--default-model <m>] [--models a,b,c]
+                   [--field KEY=VALUE ...] [--content <yaml>]
+      create a provider; builtins take --field ENV_VAR=value (e.g. MISTRAL_API_KEY=...),
+      custom takes --field <ID>_API_KEY=value, oauth takes --content (access/refresh/expires)
+
+  al providers rm <id> [-y|--yes]
+      delete a provider (prompts y/N)
+
   al connectors ls
       list connectors (name, type, url — never secrets)
 
@@ -236,6 +245,46 @@ async function addConnector(client: ApiClient, opts: ParsedArgs["opts"]): Promis
 
   const { connector } = await client.createConnector(payload);
   process.stdout.write(`created connector "${connector.name}" (${connector.type})\n`);
+}
+
+function parseFieldPairs(fields: string[] | undefined): Record<string, string> | undefined {
+  if (!fields || fields.length === 0) return undefined;
+  const provided: Record<string, string> = {};
+  for (const f of fields) {
+    const eq = f.indexOf("=");
+    if (eq === -1) fail(`--field expects KEY=VALUE, got "${f}"`);
+    provided[f.slice(0, eq).trim()] = f.slice(eq + 1);
+  }
+  return provided;
+}
+
+async function addProvider(client: ApiClient, opts: ParsedArgs["opts"]): Promise<void> {
+  const { kind, id } = opts;
+  if (!kind || !id) fail("providers add requires --kind and --id");
+  if (kind !== "builtin" && kind !== "custom" && kind !== "oauth") {
+    fail(`providers add: --kind must be builtin, custom, or oauth (got "${kind}")`);
+  }
+
+  const payload: Record<string, unknown> = { kind, id };
+  if (opts.label) payload.label = opts.label;
+  if (opts.baseUrl) payload.baseUrl = opts.baseUrl;
+  if (opts.api) payload.api = opts.api;
+  if (opts.defaultModel) payload.defaultModel = opts.defaultModel;
+
+  if (typeof opts.models === "string" && opts.models.trim()) {
+    const models = opts.models
+      .split(",")
+      .map((m: string) => m.trim())
+      .filter(Boolean);
+    if (models.length > 0) payload.models = models;
+  }
+
+  const secretFields = parseFieldPairs(opts.fields);
+  if (secretFields) payload.secretFields = secretFields;
+  if (opts.content) payload.secretContent = opts.content;
+
+  const { provider } = await client.createProvider(payload);
+  process.stdout.write(`created provider "${provider.id}" (${provider.kind})\n`);
 }
 
 async function logSession(
@@ -673,10 +722,26 @@ async function main() {
       fail(`models failed: ${(err as Error).message}`);
     }
   } else if (cmd === "providers") {
+    const sub = positional[0] || "ls";
     try {
-      await listProviders(client, { json: opts.json });
+      if (sub === "ls") {
+        await listProviders(client, { json: opts.json });
+      } else if (sub === "add") {
+        await addProvider(client, opts);
+      } else if (sub === "rm") {
+        const id = positional[1];
+        if (!id) fail("providers rm requires an id");
+        await confirmOrFail(`delete provider "${id}"? [y/N] `, {
+          yes: opts.yes,
+          what: "delete a provider",
+        });
+        await client.deleteProvider(id);
+        process.stdout.write(`deleted provider "${id}"\n`);
+      } else {
+        fail(`providers: unknown subcommand "${sub}"`);
+      }
     } catch (err) {
-      fail(`providers failed: ${(err as Error).message}`);
+      fail(`providers ${sub} failed: ${(err as Error).message}`);
     }
   } else if (cmd === "connectors") {
     const sub = positional[0] || "ls";
