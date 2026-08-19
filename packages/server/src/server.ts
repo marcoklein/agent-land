@@ -29,6 +29,7 @@ import { ModelCatalog } from "./infra/model-catalog.js";
 import { sessionsApiRouter } from "./presentation/http/api-sessions.js";
 import { connectorsApiRouter } from "./presentation/http/api-connectors.js";
 import { providersApiRouter } from "./presentation/http/api-providers.js";
+import { copilotApiRouter } from "./presentation/http/api-copilot.js";
 import { modelsApiRouter } from "./presentation/http/api-models.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -101,6 +102,7 @@ app.use("/providers/copilot", copilotRouter(providerService));
 app.use("/providers", providersRouter(providerService));
 app.use("/api/sessions", sessionsApiRouter(sessionService, config));
 app.use("/api/connectors", connectorsApiRouter(connectorService));
+app.use("/api/providers/copilot", copilotApiRouter(providerService));
 app.use("/api/providers", providersApiRouter(providerService));
 app.use("/api/models", modelsApiRouter(modelCatalog));
 

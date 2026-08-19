@@ -44,6 +44,7 @@ export async function runSession(
   const renderer = createEventRenderer();
   const dedupe = createSeqFilter();
   let finalMessage = "";
+  let error: string | undefined;
   let settled = false;
   let stopped = false;
   let timedOut = false;
@@ -72,6 +73,9 @@ export async function runSession(
 
         if (parsed.type === "message_end") {
           finalMessage = messageText(parsed.message) || renderer.state.streamingText;
+          if (parsed.message?.stopReason === "error" && parsed.message.errorMessage) {
+            error = parsed.message.errorMessage;
+          }
         }
         if (parsed.type === "agent_settled") {
           settled = true;
@@ -120,7 +124,7 @@ export async function runSession(
   }
 
   if (timer) clearTimeout(timer);
-  return { settled, stopped, timedOut, finalMessage };
+  return { settled, stopped, timedOut, finalMessage, error };
 }
 
 interface WatchSessionOptions {

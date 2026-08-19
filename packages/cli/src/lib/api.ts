@@ -55,6 +55,9 @@ export function createApiClient({ url, authHeader }: Config) {
     createProvider: (opts: RequestOptions) => request("POST", "/api/providers", opts),
     deleteProvider: (id: string) =>
       request("DELETE", `/api/providers/${encodeURIComponent(id)}`),
+    startCopilotLogin: () => request("POST", "/api/providers/copilot/start"),
+    pollCopilotLogin: (deviceCode: string) =>
+      request("POST", "/api/providers/copilot/poll", { deviceCode }),
     listConnectors: () => request("GET", "/api/connectors"),
     connectorFields: (type: string) =>
       request("GET", `/api/connectors/fields?type=${encodeURIComponent(type)}`),
