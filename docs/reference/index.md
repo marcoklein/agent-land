@@ -4,6 +4,7 @@ okf_version: "0.2"
 
 # Reference
 
+* [CLI (`al`)](cli.md) — install, configure, and drive agent-land from the terminal
 * [pi `--mode rpc` harness](pi-rpc.md) — how agent-land drives pi headless, and its exec-stream lifecycle semantics
 * [SSE over the hosted edge proxy](hosted-sse.md) — proxy buffering, heartbeats, and gapless replay/dedupe
 * [Session lifecycle & redeploy resilience](session-lifecycle.md) — what survives a redeploy and how sessions recover
