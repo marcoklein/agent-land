@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { ProviderService } from "../core/provider-service.js";
+import { escapeHtml } from "../presentation/http/log-renderer.js";
 import {
   startDeviceFlow,
   pollDeviceToken,
@@ -23,9 +24,11 @@ export function copilotRouter(providerService: ProviderService) {
     try {
       const flow = await startDeviceFlow();
       setSession(req, "copilotDeviceCode", flow.deviceCode);
+      setSession(req, "copilotInterval", flow.interval);
       res.render("providers/copilot/_poll", {
         userCode: flow.userCode,
         verificationUri: flow.verificationUri,
+        delay: Math.max(5000, flow.interval * 1000),
       });
     } catch (err: any) {
       res.status(500).send(`<p class="log-error">Device flow failed: ${err.message}</p>`);
@@ -67,8 +70,16 @@ export function copilotRouter(providerService: ProviderService) {
         clearSession(req, "copilotDeviceCode");
         return res.send(`<p class="log-error">Authorization denied. <a href="/providers/copilot/new">Start over</a></p>`);
       }
+      if (result.status === "failed") {
+        clearSession(req, "copilotDeviceCode");
+        return res.send(`<p class="log-error">Device flow failed (${escapeHtml(result.message)}). <a href="/providers/copilot/new">Start over</a></p>`);
+      }
 
-      const delay = result.status === "slow_down" ? 8000 : 3000;
+      const intervalSec = typeof getSession(req, "copilotInterval") === "number"
+        ? (getSession(req, "copilotInterval") as number)
+        : 5;
+      const intervalMs = Math.max(5000, intervalSec * 1000);
+      const delay = result.status === "slow_down" ? intervalMs + 5000 : intervalMs;
       res.render("providers/copilot/_poll-waiting", { delay });
     } catch (err: any) {
       res.send(`<p class="log-error">Copilot setup failed: ${err.message}</p>`);
