@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { ConnectorService } from "../core/connector-service.js";
-import { CONNECTOR_FIELDS } from "../core/connector-service.js";
+import { getConnectorFields } from "../core/connector-service.js";
 
 export function connectorsRouter(connectorService: ConnectorService) {
   const router = Router();
@@ -16,7 +16,7 @@ export function connectorsRouter(connectorService: ConnectorService) {
 
   router.get("/fields", (req, res) => {
     const type = req.query.type as string;
-    const fields = CONNECTOR_FIELDS[type];
+    const fields = getConnectorFields(type);
     if (!fields) {
       return res.send(`
         <label for="content">Credentials (YAML)</label>
