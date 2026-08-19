@@ -83,6 +83,41 @@ describe("createApiClient", () => {
     expect(r.url).toBe("/api/models");
   });
 
+  it("lists providers", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.listProviders();
+    const r = requests.at(-1)!;
+    expect(r.method).toBe("GET");
+    expect(r.url).toBe("/api/providers");
+  });
+
+  it("creates a provider with the given payload", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await client.createProvider({
+      kind: "custom",
+      id: "qwencloud",
+      baseUrl: "https://x",
+      api: "anthropic-messages",
+      secretFields: { QWENCLOUD_API_KEY: "sk_x" },
+    });
+    const r = requests.at(-1)!;
+    expect(r.method).toBe("POST");
+    expect(r.url).toBe("/api/providers");
+    expect(r.body).toEqual({
+      kind: "custom",
+      id: "qwencloud",
+      baseUrl: "https://x",
+      api: "anthropic-messages",
+      secretFields: { QWENCLOUD_API_KEY: "sk_x" },
+    });
+  });
+
+  it("deletes a provider URL-encoded", async () => {
+    const client = createApiClient({ url: baseUrl });
+    await expect(client.deleteProvider("my provider")).rejects.toThrow();
+    expect(requests.at(-1)!.url).toBe("/api/providers/my%20provider");
+  });
+
   it("lists connectors", async () => {
     const client = createApiClient({ url: baseUrl });
     await client.listConnectors();

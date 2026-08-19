@@ -50,6 +50,22 @@ describe("parseArgs", () => {
     expect(opts.name).toBe("n");
   });
 
+  it("parses providers add flags", () => {
+    const { opts } = parseArgs([
+      "providers", "add", "--kind", "custom", "--id", "qwencloud",
+      "--base-url", "https://x/v1", "--api", "anthropic-messages",
+      "--models", "qwen3.8-max,deepseek-v4-pro", "--field", "QWENCLOUD_API_KEY=sk",
+    ]);
+    expect(opts).toMatchObject({
+      kind: "custom",
+      id: "qwencloud",
+      baseUrl: "https://x/v1",
+      api: "anthropic-messages",
+      models: "qwen3.8-max,deepseek-v4-pro",
+      fields: ["QWENCLOUD_API_KEY=sk"],
+    });
+  });
+
   it("treats -- as a terminator for positional args", () => {
     expect(parseArgs(["run", "--", "--weird-message"])).toMatchObject({
       cmd: "run",

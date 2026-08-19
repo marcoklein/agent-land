@@ -26,6 +26,13 @@ const FLAGS: Record<string, FlagSpec> = {
   "--url": { key: "url", type: "value" },
   "--content": { key: "content", type: "value" },
   "--field": { key: "field", type: "value", multiple: true },
+  "--kind": { key: "kind", type: "value" },
+  "--id": { key: "id", type: "value" },
+  "--label": { key: "label", type: "value" },
+  "--base-url": { key: "baseUrl", type: "value" },
+  "--api": { key: "api", type: "value" },
+  "--models": { key: "models", type: "value" },
+  "--default-model": { key: "defaultModel", type: "value" },
 };
 
 const COMMAND_FLAGS: Record<string, string[]> = {
@@ -36,7 +43,7 @@ const COMMAND_FLAGS: Record<string, string[]> = {
   log: ["--follow", "--json"],
   models: ["--provider"],
   connectors: ["--yes", "-y", "--name", "--type", "--url", "--field", "--content"],
-  providers: ["--json"],
+  providers: ["--json", "--yes", "-y", "--kind", "--id", "--label", "--base-url", "--api", "--models", "--default-model", "--field", "--content"],
   run: ["--workspace", "--ref", "--connectors", "--model", "--provider", "--manual", "--rm", "--timeout", "--verbose"],
   watch: ["--all"],
 };

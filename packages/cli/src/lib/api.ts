@@ -52,6 +52,9 @@ export function createApiClient({ url, authHeader }: Config) {
     listModels: (provider?: string) =>
       request("GET", `/api/models${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`),
     listProviders: () => request("GET", "/api/providers"),
+    createProvider: (opts: RequestOptions) => request("POST", "/api/providers", opts),
+    deleteProvider: (id: string) =>
+      request("DELETE", `/api/providers/${encodeURIComponent(id)}`),
     listConnectors: () => request("GET", "/api/connectors"),
     connectorFields: (type: string) =>
       request("GET", `/api/connectors/fields?type=${encodeURIComponent(type)}`),
