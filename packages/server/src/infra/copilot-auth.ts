@@ -1,4 +1,4 @@
-const COPILOT_CLIENT_ID = "Iv1.b507a08c8ecfe98";
+const COPILOT_CLIENT_ID = "Iv1.b507a08c87ecfe98";
 
 const GITHUB_DEVICE_CODE_URL = "https://github.com/login/device/code";
 const GITHUB_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
