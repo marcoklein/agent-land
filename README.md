@@ -39,6 +39,9 @@ Agent output streams in real-time via SSE. Each session persists its record to `
 - **Live log streaming** via SSE — styled agent output in real-time
 - **Connector abstraction** — point at encrypted secrets, select at launch time
 - **RPC-driven sessions** — every session is a running pi agent (`--mode rpc`) with `auto`/`manual` permission policies
+- **Workspace provisioning** — persistent git checkout (`gh` credential helper) mounted per session, survives redeploys
+- **Session recovery** — durable event log, graceful drain, and re-attach on redeploy
+- **Terminal client (`al`)** — zero-dependency CLI to create, chat, watch, and script sessions
 - **Pre-baked agent tools** — git, curl, jq, gh ready in the container
 - **Agent skills** — each connector type teaches the agent how to use the API
 - **No database** — flat JSON files on mounted volumes
@@ -75,6 +78,7 @@ GET    /api/sessions/:id/events     SSE stream of session events
 
 ## Docs
 
+- [Documentation](docs/README.md) — product, architecture, reference, and decisions
 - [Architecture Decision Records](docs/adrs/)
 - [Contributing](CONTRIBUTING.md)
 - [Roadmap](ROADMAP.md)

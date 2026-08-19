@@ -51,7 +51,7 @@ Agent Land keeps the spirit — mine, controlled, private — but moves the work
 
 **Today** — long-lived sessions (pi `--mode rpc` in Docker), SOPS/Age-encrypted connectors (github, jira, gmail), live streaming, REST + SSE API, browser UI.
 
-**Next (designed)** — orchestration: role templates, workflows with routing/retries/gates, agent→agent channel, shared workspace, workflow UI (see `docs/agent-orchestration-design.md`).
+**Next (designed)** — orchestration: role templates, workflows with routing/retries/gates, agent→agent channel, shared workspace, workflow UI.
 
 **Then** — scheduled workflows (cron) for the release-notes pattern, and whatever the weekend sprints teach us.
 
