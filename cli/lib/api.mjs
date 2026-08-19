@@ -7,6 +7,7 @@ export function createApiClient({ url, authHeader }) {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     });
 
     const text = await res.text();

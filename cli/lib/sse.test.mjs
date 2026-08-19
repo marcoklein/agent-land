@@ -61,4 +61,20 @@ describe("SseParser", () => {
       { event: "agent-done", data: '{"status":"stopped"}' },
     ]);
   });
+
+  it("tolerates CRLF line endings", () => {
+    const p = new SseParser();
+    expect(p.push("data: a\r\n\r\ndata: b\r\n\r\n")).toEqual([
+      { event: undefined, data: "a" },
+      { event: undefined, data: "b" },
+    ]);
+  });
+
+  it("flushes an unterminated final event", () => {
+    const p = new SseParser();
+    expect(p.push("data: a\n\n")).toEqual([{ event: undefined, data: "a" }]);
+    expect(p.push("data: tail")).toEqual([]);
+    expect(p.flush()).toEqual([{ event: undefined, data: "tail" }]);
+    expect(p.flush()).toEqual([]);
+  });
 });
