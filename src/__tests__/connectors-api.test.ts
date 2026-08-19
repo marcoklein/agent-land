@@ -107,6 +107,47 @@ describe("Connectors JSON API", () => {
     expect(res.body.error).toContain("already exists");
   });
 
+  it("rejects names whose slug collides with an existing connector", async () => {
+    await api.post("/api/connectors").send(githubCreds);
+
+    const res = await api.post("/api/connectors").send({
+      name: "github-personal",
+      type: "github",
+      url: "https://api.github.com",
+      fields: { GITHUB_TOKEN: "other" },
+    });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("rejects names that slugify to an empty string", async () => {
+    const res = await api.post("/api/connectors").send({
+      name: "!!!",
+      type: "custom",
+      url: "https://example.com",
+      content: "KEY: value",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("letter or number");
+  });
+
+  it("treats prototype keys as custom types, not typed fields", async () => {
+    const fieldsRes = await api.get("/api/connectors/fields?type=constructor");
+    expect(fieldsRes.status).toBe(200);
+    expect(fieldsRes.body.type).toBe("custom");
+    expect(fieldsRes.body.fields).toBeNull();
+
+    const createRes = await api.post("/api/connectors").send({
+      name: "Proto Connector",
+      type: "constructor",
+      url: "https://example.com",
+      content: "KEY: value",
+    });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.connector.type).toBe("constructor");
+  });
+
   it("exposes typed field definitions", async () => {
     const res = await api.get("/api/connectors/fields?type=jira");
 

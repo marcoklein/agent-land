@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { ConnectorService } from "../../core/connector-service.js";
-import { CONNECTOR_FIELDS } from "../../core/connector-service.js";
+import { getConnectorFields, DuplicateConnectorError } from "../../core/connector-service.js";
 
 export function connectorsApiRouter(connectorService: ConnectorService) {
   const router = Router();
@@ -16,7 +16,7 @@ export function connectorsApiRouter(connectorService: ConnectorService) {
 
   router.get("/fields", (req, res) => {
     const type = typeof req.query.type === "string" ? req.query.type : "";
-    const fields = CONNECTOR_FIELDS[type];
+    const fields = getConnectorFields(type);
     res.json({ type: fields ? type : "custom", fields: fields ?? null });
   });
 
@@ -34,7 +34,7 @@ export function connectorsApiRouter(connectorService: ConnectorService) {
       return res.status(400).json({ error: "name, type and url are required" });
     }
 
-    const fieldDefs = CONNECTOR_FIELDS[type];
+    const fieldDefs = getConnectorFields(type);
     if (fieldDefs) {
       for (const f of fieldDefs) {
         const value = fields?.[f.envVar];
@@ -50,9 +50,8 @@ export function connectorsApiRouter(connectorService: ConnectorService) {
       const connector = await connectorService.create({ name, type, url, content, fields });
       res.status(201).json({ connector });
     } catch (err) {
-      const message = errorMessage(err);
-      const status = message.includes("already exists") ? 409 : 400;
-      res.status(status).json({ error: message });
+      const status = err instanceof DuplicateConnectorError ? 409 : 400;
+      res.status(status).json({ error: errorMessage(err) });
     }
   });
 

@@ -27,6 +27,17 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+export function getConnectorFields(type: string): FieldDef[] | undefined {
+  return Object.hasOwn(CONNECTOR_FIELDS, type) ? CONNECTOR_FIELDS[type] : undefined;
+}
+
+export class DuplicateConnectorError extends Error {
+  constructor(name: string) {
+    super(`Connector "${name}" already exists.`);
+    this.name = "DuplicateConnectorError";
+  }
+}
+
 export interface CreateConnectorInput {
   name: string;
   type: string;
@@ -36,23 +47,47 @@ export interface CreateConnectorInput {
 }
 
 export class ConnectorService {
+  private queue: Promise<unknown> = Promise.resolve();
+
   constructor(
     private repository: ConnectorRepository,
     private secrets: SecretsPort
   ) {}
 
+  private enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(fn, fn);
+    this.queue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
   async list(): Promise<Connector[]> {
     return this.repository.list();
   }
 
-  async create(input: CreateConnectorInput): Promise<Connector> {
+  create(input: CreateConnectorInput): Promise<Connector> {
+    return this.enqueue(() => this.doCreate(input));
+  }
+
+  delete(name: string): Promise<void> {
+    return this.enqueue(() => this.doDelete(name));
+  }
+
+  private async doCreate(input: CreateConnectorInput): Promise<Connector> {
     const { name, type, url } = input;
 
     if (!name || !type || !url) {
       throw new Error("Name, type, and URL are required.");
     }
 
-    const fields = CONNECTOR_FIELDS[type];
+    const slug = slugify(name);
+    if (!slug) {
+      throw new Error("Connector name must contain at least one letter or number.");
+    }
+
+    const fields = getConnectorFields(type);
     const isCustom = !fields;
 
     if (isCustom && !input.content) {
@@ -68,13 +103,13 @@ export class ConnectorService {
     }
 
     const connectors = await this.repository.list();
-    if (connectors.some((c) => c.name === name)) {
-      throw new Error(`Connector "${name}" already exists.`);
+    if (connectors.some((c) => c.name === name || slugify(c.name) === slug)) {
+      throw new DuplicateConnectorError(name);
     }
 
     const yamlContent = buildYamlFromFields(type, input);
 
-    const secretFile = `${slugify(name)}.yaml`;
+    const secretFile = `${slug}.yaml`;
     await this.secrets.saveEncrypted(secretFile.replace(/\.(ya?ml)$/, ""), yamlContent);
 
     const now = new Date().toISOString();
@@ -92,7 +127,7 @@ export class ConnectorService {
     return connector;
   }
 
-  async delete(name: string): Promise<void> {
+  private async doDelete(name: string): Promise<void> {
     const connectors = await this.repository.list();
     const connector = connectors.find((c) => c.name === name);
     const filtered = connectors.filter((c) => c.name !== name);
@@ -105,7 +140,7 @@ export class ConnectorService {
 }
 
 function buildYamlFromFields(type: string, input: CreateConnectorInput): string {
-  const fields = CONNECTOR_FIELDS[type];
+  const fields = getConnectorFields(type);
   if (!fields) return input.content || "";
   return fields.map((f) => `${f.envVar}: ${input.fields?.[f.envVar] || ""}`).join("\n");
 }
