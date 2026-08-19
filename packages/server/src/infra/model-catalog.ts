@@ -5,6 +5,12 @@ import type { ProviderService } from "../core/provider-service.js";
 import { customProviderEnvVar } from "../core/provider-service.js";
 import { getCatalogEntry, PROVIDER_CATALOG, type CatalogEntry } from "../core/provider-catalog.js";
 import { parseSecretYaml } from "./sops.js";
+import {
+  copilotApiBaseUrl,
+  parseCopilotModelList,
+  COPILOT_HEADERS,
+  COPILOT_API_VERSION,
+} from "./copilot-auth.js";
 
 const CACHE_TTL_MS = 3600_000;
 const FETCH_TIMEOUT_MS = 5000;
@@ -80,10 +86,31 @@ export class ModelCatalog {
     }
 
     if (provider.kind === "oauth") {
-      return [];
+      return this.discoverCopilot(provider);
     }
 
     return this.discoverCustom(provider);
+  }
+
+  private async discoverCopilot(provider: ProviderConfig): Promise<string[]> {
+    if (!provider.secretFile) return [];
+
+    const token = await this.readSecretVar(provider.secretFile, "access");
+    if (!token) return [];
+
+    const baseUrl = copilotApiBaseUrl(token);
+    try {
+      const body = await this.httpGet(`${baseUrl}/models`, {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        ...COPILOT_HEADERS,
+        "X-GitHub-Api-Version": COPILOT_API_VERSION,
+      });
+      return parseCopilotModelList(body);
+    } catch (err) {
+      console.warn(`Copilot model discovery failed: ${errMessage(err)}`);
+      return [];
+    }
   }
 
   private async discoverFromCatalog(catalog: CatalogEntry, provider: ProviderConfig | null): Promise<string[]> {
