@@ -13,4 +13,4 @@ okf_version: "0.2"
 
 ## Testing
 
-Tests use vitest + supertest with a page object pattern. No mocks for SOPS — a dedicated test age key encrypts fixtures at runtime. See `src/__tests__/` for the test suite.
+Tests use vitest + supertest with a page object pattern. No mocks for SOPS — a dedicated test age key encrypts fixtures at runtime. See `packages/server/src/__tests__/` for the test suite.

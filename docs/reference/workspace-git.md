@@ -6,13 +6,13 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
 sources:
   - id: provisioner
-    resource: src/infra/git-clone-provisioner.ts
+    resource: packages/server/src/infra/git-clone-provisioner.ts
     title: GitCloneProvisioner implementation
   - id: session-service
-    resource: src/core/session-service.ts
+    resource: packages/server/src/core/session-service.ts
     title: SessionService (volume creation + kill)
   - id: provision-test
-    resource: src/__tests__/workspace-provisioning.test.ts
+    resource: packages/server/src/__tests__/workspace-provisioning.test.ts
     title: Workspace provisioning tests
 ---
 
@@ -36,6 +36,6 @@ Any failing step aborts the launch: container and workspace volume are removed, 
 - `kill()` stops the agent and removes the container but **keeps** the workspace volume — the checkout is not lost.
 - The shared `agent-land-sessions` volume is session data only; the workspace is separate.
 
-[^provisioner]: `src/infra/git-clone-provisioner.ts`
-[^session-service]: `src/core/session-service.ts`
-[^provision-test]: `src/__tests__/workspace-provisioning.test.ts`
+[^provisioner]: `packages/server/src/infra/git-clone-provisioner.ts`
+[^session-service]: `packages/server/src/core/session-service.ts`
+[^provision-test]: `packages/server/src/__tests__/workspace-provisioning.test.ts`

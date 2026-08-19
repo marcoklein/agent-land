@@ -7,8 +7,10 @@
 ## Commands
 
 ```bash
-npm run typecheck   # tsc --noEmit
-npm test            # vitest run
+pnpm typecheck      # tsc --noEmit (all packages)
+pnpm test           # vitest run (all packages)
+pnpm dev            # run the server locally (tsx watch)
+pnpm build          # tsc (all packages)
 ```
 
 ## Conventions

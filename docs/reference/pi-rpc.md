@@ -6,16 +6,16 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
 sources:
   - id: harness
-    resource: src/core/harness.ts
+    resource: packages/server/src/core/harness.ts
     title: AgentHarness port + pi RPC preset
   - id: pi-rpc-harness
-    resource: src/infra/pi-rpc-harness.ts
+    resource: packages/server/src/infra/pi-rpc-harness.ts
     title: Docker exec harness implementation
   - id: dockerfile
     resource: agent-image/Dockerfile
     title: Agent image (pi install)
   - id: recovery-test
-    resource: src/__tests__/session-recovery.test.ts
+    resource: packages/server/src/__tests__/session-recovery.test.ts
     title: Session recovery tests (resume + re-attach)
 ---
 
@@ -43,6 +43,6 @@ Pi's stdin/stdout is a `docker exec` stream **owned by the web process** (`PiRpc
 - Pi persists its own per-session `jsonl` transcript to the `--session-dir`. This file is the **authoritative** record of the conversation; agent-land's event log is a best-effort projection of it.
 - Pi has no model-listing command; see [Model Discovery](/reference/providers/model-discovery.md) for how models are discovered without it.
 
-[^harness]: `src/core/harness.ts`, `piRpcPreset()`
-[^pi-rpc-harness]: `src/infra/pi-rpc-harness.ts`
-[^recovery-test]: `src/__tests__/session-recovery.test.ts`
+[^harness]: `packages/server/src/core/harness.ts`, `piRpcPreset()`
+[^pi-rpc-harness]: `packages/server/src/infra/pi-rpc-harness.ts`
+[^recovery-test]: `packages/server/src/__tests__/session-recovery.test.ts`
