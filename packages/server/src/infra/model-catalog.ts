@@ -48,7 +48,9 @@ export class ModelCatalog {
   private async fetch(providerId: string): Promise<string[]> {
     try {
       const models = await this.discover(providerId);
-      this.cache.set(providerId, { models, fetchedAt: Date.now() });
+      if (models.length > 0) {
+        this.cache.set(providerId, { models, fetchedAt: Date.now() });
+      }
       return [...models];
     } catch (err) {
       const cached = this.cache.get(providerId);
