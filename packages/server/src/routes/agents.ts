@@ -64,20 +64,13 @@ export function agentsRouter(
   });
 
   router.post("/run", async (req, res) => {
-    const { connectors, model, permissionPolicy, repoUrl, ref, provider } = req.body;
+    const { connectors, model, permissionPolicy, provider } = req.body;
     const task: string = typeof req.body.task === "string" ? req.body.task : "";
     const connectorList: string[] = Array.isArray(connectors)
       ? connectors
       : connectors
         ? [connectors]
         : [];
-    const workspace =
-      typeof repoUrl === "string" && repoUrl.trim()
-        ? {
-            repoUrl: repoUrl.trim(),
-            ref: typeof ref === "string" && ref.trim() ? ref.trim() : undefined,
-          }
-        : undefined;
 
     const isHtmx = !!req.headers["hx-request"];
 
@@ -90,7 +83,6 @@ export function agentsRouter(
         permissionPolicy: permissionPolicy === "manual" ? "manual" : "auto",
         model,
         provider: typeof provider === "string" && provider.trim() ? provider : undefined,
-        workspace,
       });
 
       if (task.trim()) {

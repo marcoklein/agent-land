@@ -43,7 +43,6 @@ export interface SessionSummary {
   createdAt: string;
   model: string;
   provider?: string;
-  workspace?: { repoUrl: string; ref?: string };
   connectors?: string[];
 }
 

@@ -21,11 +21,11 @@ describe("parseArgs", () => {
   });
 
   it("rejects a value flag missing its value", () => {
-    expect(() => parseArgs(["new", "--workspace"])).toThrow(/requires a value/);
+    expect(() => parseArgs(["new", "--model"])).toThrow(/requires a value/);
   });
 
   it("rejects a value flag followed by another flag", () => {
-    expect(() => parseArgs(["new", "--workspace", "--manual"])).toThrow(/requires a value/);
+    expect(() => parseArgs(["new", "--model", "--manual"])).toThrow(/requires a value/);
   });
 
   it("parses boolean and value flags", () => {

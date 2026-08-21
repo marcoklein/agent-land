@@ -14,7 +14,7 @@ import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, Session
 const USAGE = `al — terminal chat client for agent-land
 
 Usage:
-  al new [--workspace <repoUrl>] [--ref <branch>] [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual]
+  al new [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual]
       create a session and enter the chat overlay
       (interactive: prompts for provider, model and connectors when flags are omitted)
 
@@ -22,7 +22,7 @@ Usage:
       attach to an existing session (history replays, then live events)
 
   al ls [--json]
-      list sessions with status, age, model, workspace and connectors
+      list sessions with status, age, model and connectors
 
   al rm <session-id> [-y|--yes]
       delete a session (prompts y/N when it is still running)
@@ -116,15 +116,10 @@ function statusColor(status: string): (s: string) => string {
 }
 
 function sessionLine(s: SessionSummary): string {
-  const workspace = s.workspace
-    ? ` · ${s.workspace.repoUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "")}${
-        s.workspace.ref ? `@${s.workspace.ref}` : ""
-      }`
-    : "";
   const connectors = s.connectors && s.connectors.length ? ` · ${s.connectors.join(",")}` : "";
   const provider = s.provider ? `${s.provider}/` : "";
   const status = s.status.padEnd(8);
-  return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${provider}${s.model}${workspace}${connectors}`;
+  return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${provider}${s.model}${connectors}`;
 }
 
 async function listSessions(client: ApiClient, { json }: { json?: boolean } = {}): Promise<void> {
@@ -754,9 +749,6 @@ async function main() {
     ...(opts.manual ? { permissionPolicy: "manual" } : {}),
     ...(model ? { model } : {}),
     ...(provider ? { provider } : {}),
-    ...(opts.workspace
-      ? { workspace: { repoUrl: opts.workspace, ...(opts.ref ? { ref: opts.ref } : {}) } }
-      : {}),
   };
 
   if ((cmd === "new" || cmd === "run") && opts.model && !opts.provider) {

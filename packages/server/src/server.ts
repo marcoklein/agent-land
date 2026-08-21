@@ -14,7 +14,6 @@ import { copilotRouter } from "./routes/copilot.js";
 import { SopsService } from "./infra/sops.js";
 import { DockerService } from "./infra/docker.js";
 import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
-import { GitCloneProvisioner } from "./infra/git-clone-provisioner.js";
 import { PiConfigProvisioner } from "./infra/pi-config-provisioner.js";
 import {
   JsonSessionRepository,
@@ -46,10 +45,6 @@ const connectorService = new ConnectorService(connectorRepository, sops);
 const providerService = new ProviderService(providerRepository, sops);
 const modelCatalog = new ModelCatalog(providerService, sops);
 const harness = new PiRpcHarness(docker);
-const provisioner = new GitCloneProvisioner(docker, {
-  gitUserName: config.gitUserName,
-  gitUserEmail: config.gitUserEmail,
-});
 const piConfigProvisioner = new PiConfigProvisioner(docker, providerRepository, sops);
 const sessionService = new SessionService({
   docker,
@@ -58,7 +53,6 @@ const sessionService = new SessionService({
   connectors: connectorRepository,
   providers: providerRepository,
   harness,
-  provisioner,
   eventLog,
   config,
   piConfigProvisioner,
