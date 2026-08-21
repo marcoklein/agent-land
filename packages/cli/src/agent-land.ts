@@ -7,7 +7,8 @@ import { createEventRenderer, wrapText } from "./lib/render.js";
 import { createApiClient, type ApiClient } from "./lib/api.js";
 import { runSession, watchSession, createSeqFilter } from "./lib/ops.js";
 import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
-import { parseDialogAnswer } from "./lib/dialogs.js";
+import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
+import { gatherChoices, type SelectOption } from "./lib/new-wizard.js";
 import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, SessionSummary } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
@@ -15,6 +16,7 @@ const USAGE = `al — terminal chat client for agent-land
 Usage:
   al new [--workspace <repoUrl>] [--ref <branch>] [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual]
       create a session and enter the chat overlay
+      (interactive: prompts for provider, model and connectors when flags are omitted)
 
   al chat <session-id>
       attach to an existing session (history replays, then live events)
@@ -58,6 +60,7 @@ Usage:
   al run <message> [new-flags] [--rm] [--timeout <seconds>] [--verbose]
       one-shot: create, prompt, wait for settle, print the final answer
       exits 0 on settle, 1 on stop/timeout; session is kept unless --rm
+      (interactive: prompts for provider, model and connectors when flags are omitted)
 
   al watch [<session-id> | --all]
       tail live events and print "<id>: settled" notifications (stdout only)
@@ -156,6 +159,22 @@ function askLine(prompt: string): Promise<string> {
       resolve(answer);
     });
   });
+}
+
+async function askSelect(
+  options: SelectOption[],
+  prompt: string,
+  { multiple }: { multiple?: boolean } = {}
+): Promise<string[]> {
+  for (;;) {
+    for (let i = 0; i < options.length; i++) {
+      process.stdout.write(` ${i + 1}) ${options[i].label}\n`);
+    }
+    const answer = await askLine(prompt);
+    const indices = parseSelectAnswer(answer, options.length, { multiple });
+    if (indices) return indices.map((i) => options[i].value);
+    process.stderr.write(dim(`pick a number between 1 and ${options.length}\n`));
+  }
 }
 
 async function answerDialog(dialog: AgentEvent): Promise<Record<string, unknown>> {
@@ -706,11 +725,35 @@ async function main() {
   const config = loadConfig();
   const client = createApiClient(config);
 
+  let provider = opts.provider;
+  let model = opts.model;
+  let connectors = opts.connectors;
+
+  const interactive =
+    (cmd === "new" || cmd === "run") &&
+    Boolean(process.stdin.isTTY && process.stdout.isTTY) &&
+    (!provider || !model || connectors.length === 0);
+
+  if (interactive) {
+    try {
+      const choices = await gatherChoices(
+        client,
+        { provider, model, connectors },
+        { select: askSelect, text: askLine }
+      );
+      if (choices.provider) provider = choices.provider;
+      if (choices.model) model = choices.model;
+      if (choices.connectors) connectors = choices.connectors;
+    } catch (err) {
+      fail(`selection failed: ${(err as Error).message}`);
+    }
+  }
+
   const payload: Record<string, unknown> = {
-    ...(opts.connectors.length > 0 ? { connectors: opts.connectors } : {}),
+    ...(connectors.length > 0 ? { connectors } : {}),
     ...(opts.manual ? { permissionPolicy: "manual" } : {}),
-    ...(opts.model ? { model: opts.model } : {}),
-    ...(opts.provider ? { provider: opts.provider } : {}),
+    ...(model ? { model } : {}),
+    ...(provider ? { provider } : {}),
     ...(opts.workspace
       ? { workspace: { repoUrl: opts.workspace, ...(opts.ref ? { ref: opts.ref } : {}) } }
       : {}),
