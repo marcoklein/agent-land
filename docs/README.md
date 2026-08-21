@@ -7,7 +7,7 @@
 
 Agent-consumable reference material (OKF v0.2) with source citations and status metadata:
 
-* [Reference index](reference/) — pi RPC harness, hosted SSE, session lifecycle, workspace provisioning, LLM providers
+* [Reference index](reference/) — pi RPC harness, hosted SSE, session lifecycle, LLM providers
 
 ## Decisions
 

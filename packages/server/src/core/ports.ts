@@ -30,10 +30,6 @@ export interface DockerPort {
   writeFile(containerId: string, destPath: string, content: string, mode?: number): Promise<void>;
 }
 
-export interface WorkspaceProvisioner {
-  provision(session: AgentSession, containerId: string, env: Record<string, string>): Promise<void>;
-}
-
 export interface SecretsPort {
   decrypt(filename: string): Promise<DecryptedSecret>;
   decryptMultiple(filenames: string[]): Promise<Map<string, string>>;

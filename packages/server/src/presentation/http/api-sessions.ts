@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { SessionService } from "../../core/session-service.js";
 import type { Config } from "../../config.js";
-import type { PermissionPolicy, WorkspaceSpec } from "../../core/types.js";
+import type { PermissionPolicy } from "../../core/types.js";
 import type { SequencedEvent } from "../../core/events.js";
 import { errorMessage, sessionErrorResponse } from "./errors.js";
 
@@ -10,17 +10,12 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
 
   router.post("/", async (req, res) => {
     try {
-      const { connectors, permissionPolicy, model, workspace, provider } = req.body ?? {};
-      const parsedWorkspace = parseWorkspace(workspace);
-      if (parsedWorkspace === null) {
-        return res.status(400).json({ error: "workspace must be { repoUrl: string, ref?: string }" });
-      }
+      const { connectors, permissionPolicy, model, provider } = req.body ?? {};
       const session = await sessionService.createSession({
         connectors: Array.isArray(connectors) ? connectors : undefined,
         permissionPolicy: (permissionPolicy as PermissionPolicy) ?? "auto",
         model: typeof model === "string" ? model : undefined,
         provider: typeof provider === "string" ? provider : undefined,
-        workspace: parsedWorkspace,
       });
       res.status(201).json({ session });
     } catch (err) {
@@ -211,14 +206,4 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
   });
 
   return router;
-}
-
-function parseWorkspace(raw: unknown): WorkspaceSpec | undefined | null {
-  if (raw === undefined || raw === null) return undefined;
-  if (typeof raw !== "object") return null;
-  const { repoUrl, ref } = raw as Record<string, unknown>;
-  if (typeof repoUrl !== "string" || repoUrl.trim().length === 0) return null;
-  if (ref !== undefined && typeof ref !== "string") return null;
-  const trimmedRef = ref?.trim();
-  return { repoUrl: repoUrl.trim(), ref: trimmedRef ? trimmedRef : undefined };
 }

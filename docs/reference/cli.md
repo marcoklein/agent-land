@@ -51,9 +51,9 @@ Local dev: `AGENT_LAND_URL=http://localhost:3000` and no auth vars (the dev serv
 # Command surface
 
 ```
-al new [--workspace <repoUrl>] [--ref <branch>] [--connectors a,b,c] [--model <m>] [--manual]
+al new [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual]
 al chat <session-id>            attach (history replays, then live events)
-al ls [--json]                  list sessions with status, age, model, workspace, connectors
+al ls [--json]                  list sessions with status, age, model, connectors
 al rm <session-id> [-y|--yes]   delete a session (prompts y/N while running)
 al log <session-id> [--follow] [--json]
 al models                       list available models
@@ -65,7 +65,7 @@ al run <message> [new-flags] [--rm] [--timeout <s>] [--verbose]
 al watch [<session-id> | --all] tail live events, print "<id>: settled" (stdout only)
 ```
 
-`al run` exits 0 on `agent_settled` and 1 on stop/timeout; the session is kept unless `--rm`. `--manual` sets `permissionPolicy: "manual"` so dialogs reach the client.
+`al new` and `al run` are interactive in a TTY: when provider/model/connectors flags are omitted, they prompt for them. Repo setup (e.g. `git clone`) is left to the agent — start a session and ask it to clone the repo. `al run` exits 0 on `agent_settled` and 1 on stop/timeout; the session is kept unless `--rm`. `--manual` sets `permissionPolicy: "manual"` so dialogs reach the client.
 
 # In chat
 

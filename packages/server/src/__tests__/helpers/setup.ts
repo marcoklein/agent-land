@@ -20,7 +20,6 @@ import { ProviderService } from "../../core/provider-service.js";
 import { ModelCatalog } from "../../infra/model-catalog.js";
 import { PiConfigProvisioner } from "../../infra/pi-config-provisioner.js";
 import { SessionService } from "../../core/session-service.js";
-import { GitCloneProvisioner } from "../../infra/git-clone-provisioner.js";
 import type { DockerPort } from "../../core/ports.js";
 import type { AgentHarness, AgentHandle, EventStream } from "../../core/harness.js";
 import type { SessionEvent } from "../../core/events.js";
@@ -232,10 +231,6 @@ export function createAgentTestApp(): AgentTestApp {
 
   const mockDocker = new MockDockerPort();
   const fakeHarness = new FakeHarness();
-  const provisioner = new GitCloneProvisioner(mockDocker, {
-    gitUserName: "Test Bot",
-    gitUserEmail: "bot@test.local",
-  });
   const piConfigProvisioner = new PiConfigProvisioner(mockDocker, providerRepository, sops);
   const sessionService = new SessionService(
     {
@@ -245,7 +240,6 @@ export function createAgentTestApp(): AgentTestApp {
       connectors: connectorRepository,
       providers: providerRepository,
       harness: fakeHarness,
-      provisioner,
       eventLog,
       config: testConfig,
       piConfigProvisioner,

@@ -27,11 +27,6 @@ export interface ProviderConfig {
   updatedAt?: string;
 }
 
-export interface WorkspaceSpec {
-  repoUrl: string;
-  ref?: string;
-}
-
 export interface AgentSession {
   id: string;
   status: SessionStatus;
@@ -43,7 +38,6 @@ export interface AgentSession {
   createdAt: string;
   updatedAt: string;
   containerId?: string;
-  workspace?: WorkspaceSpec;
   waitingFor?: {
     requestId: string;
     method: "confirm" | "input" | "select" | "editor";
