@@ -3,7 +3,8 @@ import type { ProviderService } from "../../core/provider-service.js";
 import { DuplicateProviderError } from "../../core/provider-service.js";
 import { PROVIDER_CATALOG } from "../../core/provider-catalog.js";
 import { errorMessage } from "./errors.js";
-import type { ProviderApiType, ProviderKind } from "../../core/types.js";
+import { createProviderInputSchema } from "@agent-land/contracts";
+import { parseInput } from "./validate.js";
 
 export function providersApiRouter(providerService: ProviderService) {
   const router = Router();
@@ -31,39 +32,22 @@ export function providersApiRouter(providerService: ProviderService) {
   });
 
   router.post("/", async (req, res) => {
-    const body = req.body ?? {};
-    const id = typeof body.id === "string" ? body.id : "";
-    const kind = typeof body.kind === "string" ? body.kind : "";
-
-    if (id.trim().length === 0) {
-      return res.status(400).json({ error: "id is required" });
-    }
-    if (kind !== "builtin" && kind !== "custom" && kind !== "oauth") {
-      return res.status(400).json({ error: 'kind must be "builtin", "custom", or "oauth"' });
-    }
-    if (kind === "custom") {
-      if (typeof body.baseUrl !== "string" || body.baseUrl.trim().length === 0) {
-        return res.status(400).json({ error: "baseUrl is required for custom providers" });
-      }
-      if (typeof body.api !== "string" || body.api.trim().length === 0) {
-        return res.status(400).json({ error: "api is required for custom providers" });
-      }
-    }
-
-    const secretFields = toRecord(body.secretFields ?? body.fields);
-    const secretContent = typeof body.secretContent === "string" ? body.secretContent : undefined;
+    const parsed = parseInput(createProviderInputSchema, req.body);
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const { id, kind, baseUrl, api, models, defaultModel, label, enabled, secretFields, fields, secretContent } =
+      parsed.data;
 
     try {
       const provider = await providerService.create({
         id,
-        kind: kind as ProviderKind,
-        baseUrl: typeof body.baseUrl === "string" ? body.baseUrl.trim() : undefined,
-        api: typeof body.api === "string" ? (body.api.trim() as ProviderApiType) : undefined,
-        models: Array.isArray(body.models) ? body.models : undefined,
-        defaultModel: typeof body.defaultModel === "string" ? body.defaultModel : undefined,
-        label: typeof body.label === "string" ? body.label : undefined,
-        enabled: typeof body.enabled === "boolean" ? body.enabled : undefined,
-        secretFields,
+        kind,
+        baseUrl,
+        api,
+        models,
+        defaultModel,
+        label,
+        enabled,
+        secretFields: secretFields ?? fields,
         secretContent,
       });
       res.status(201).json({ provider });
@@ -98,13 +82,4 @@ export function providersApiRouter(providerService: ProviderService) {
   });
 
   return router;
-}
-
-function toRecord(value: unknown): Record<string, string> | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const out: Record<string, string> = {};
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof val === "string") out[key] = val;
-  }
-  return out;
 }

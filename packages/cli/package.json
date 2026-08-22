@@ -19,9 +19,11 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@agent-land/contracts": "workspace:*",
     "@types/node": "^26.1.2",
     "tsx": "^4.19.0",
     "typescript": "^5.9.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "zod": "^3.23.8"
   }
 }

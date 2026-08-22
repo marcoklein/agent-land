@@ -1,4 +1,18 @@
-import type { Config } from "./types.js";
+import type {
+  Config,
+  SessionEnvelope,
+  SessionListEnvelope,
+  AcceptedEnvelope,
+  DeletedEnvelope,
+  ConnectorEnvelope,
+  ConnectorListEnvelope,
+  ConnectorFieldsEnvelope,
+  ProviderEnvelope,
+  ProviderListEnvelope,
+  ModelsEnvelope,
+  CopilotStartEnvelope,
+  CopilotPollEnvelope,
+} from "./types.js";
 
 type RequestOptions = Record<string, unknown>;
 
@@ -37,32 +51,39 @@ export function createApiClient({ url, authHeader }: Config) {
   return {
     url,
     authHeader,
-    createSession: (opts: RequestOptions) => request("POST", "/api/sessions", opts),
-    getSession: (id: string) => request("GET", `/api/sessions/${id}`),
-    listSessions: () => request("GET", "/api/sessions"),
-    prompt: (id: string, message: string, behavior?: string) =>
+    createSession: (opts: RequestOptions): Promise<SessionEnvelope> =>
+      request("POST", "/api/sessions", opts),
+    getSession: (id: string): Promise<SessionEnvelope> =>
+      request("GET", `/api/sessions/${id}`),
+    listSessions: (): Promise<SessionListEnvelope> => request("GET", "/api/sessions"),
+    prompt: (id: string, message: string, behavior?: string): Promise<AcceptedEnvelope> =>
       request("POST", `/api/sessions/${id}/prompt`, {
         message,
         ...(behavior ? { behavior } : {}),
       }),
-    respond: (id: string, requestId: string, value: RequestOptions) =>
+    respond: (id: string, requestId: string, value: RequestOptions): Promise<AcceptedEnvelope> =>
       request("POST", `/api/sessions/${id}/respond`, { requestId, ...value }),
-    abort: (id: string) => request("POST", `/api/sessions/${id}/abort`, {}),
-    deleteSession: (id: string) => request("DELETE", `/api/sessions/${id}`),
-    listModels: (provider?: string) =>
+    abort: (id: string): Promise<AcceptedEnvelope> =>
+      request("POST", `/api/sessions/${id}/abort`, {}),
+    deleteSession: (id: string): Promise<DeletedEnvelope> =>
+      request("DELETE", `/api/sessions/${id}`),
+    listModels: (provider?: string): Promise<ModelsEnvelope> =>
       request("GET", `/api/models${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`),
-    listProviders: () => request("GET", "/api/providers"),
-    createProvider: (opts: RequestOptions) => request("POST", "/api/providers", opts),
-    deleteProvider: (id: string) =>
+    listProviders: (): Promise<ProviderListEnvelope> => request("GET", "/api/providers"),
+    createProvider: (opts: RequestOptions): Promise<ProviderEnvelope> =>
+      request("POST", "/api/providers", opts),
+    deleteProvider: (id: string): Promise<DeletedEnvelope> =>
       request("DELETE", `/api/providers/${encodeURIComponent(id)}`),
-    startCopilotLogin: () => request("POST", "/api/providers/copilot/start"),
-    pollCopilotLogin: (deviceCode: string) =>
+    startCopilotLogin: (): Promise<CopilotStartEnvelope> =>
+      request("POST", "/api/providers/copilot/start"),
+    pollCopilotLogin: (deviceCode: string): Promise<CopilotPollEnvelope> =>
       request("POST", "/api/providers/copilot/poll", { deviceCode }),
-    listConnectors: () => request("GET", "/api/connectors"),
-    connectorFields: (type: string) =>
+    listConnectors: (): Promise<ConnectorListEnvelope> => request("GET", "/api/connectors"),
+    connectorFields: (type: string): Promise<ConnectorFieldsEnvelope> =>
       request("GET", `/api/connectors/fields?type=${encodeURIComponent(type)}`),
-    createConnector: (opts: RequestOptions) => request("POST", "/api/connectors", opts),
-    deleteConnector: (name: string) =>
+    createConnector: (opts: RequestOptions): Promise<ConnectorEnvelope> =>
+      request("POST", "/api/connectors", opts),
+    deleteConnector: (name: string): Promise<DeletedEnvelope> =>
       request("DELETE", `/api/connectors/${encodeURIComponent(name)}`),
     eventsUrl: (id: string) => `${url}/api/sessions/${id}/events`,
   };

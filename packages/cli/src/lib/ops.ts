@@ -1,6 +1,6 @@
 import { streamSse } from "./sse.js";
 import { createEventRenderer, messageText } from "./render.js";
-import type { AgentEvent, RunResult, SseEvent } from "./types.js";
+import type { AgentEvent, RunResult, SseEvent, WaitingForInput } from "./types.js";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -26,7 +26,7 @@ interface SessionClient {
   respond: (id: string, requestId: string, value: Record<string, unknown>) => Promise<unknown>;
 }
 
-type DialogHandler = (dialog: AgentEvent) => Promise<Record<string, unknown> | null>;
+type DialogHandler = (dialog: WaitingForInput) => Promise<Record<string, unknown> | null>;
 
 interface RunSessionOptions {
   verbose?: boolean;

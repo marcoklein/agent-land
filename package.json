@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "tsx watch packages/server/src/server.ts",
+    "dev": "pnpm --filter @agent-land/contracts build && tsx watch packages/server/src/server.ts",
     "build": "pnpm --filter \"@agent-land/*\" build",
     "start": "node packages/server/dist/server.js",
     "typecheck": "pnpm --filter \"@agent-land/*\" typecheck",

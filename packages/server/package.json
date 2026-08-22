@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@agent-land/contracts": "workspace:*",
     "connect-flash": "^0.1.1",
     "cookie-parser": "^1.4.7",
     "dockerode": "^5.0.1",
@@ -21,7 +22,8 @@
     "express-session": "^1.18.1",
     "tar-stream": "^2.2.0",
     "uuid": "^10.0.0",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/connect-flash": "^0.0.40",

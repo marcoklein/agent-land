@@ -9,7 +9,7 @@ import { runSession, watchSession, createSeqFilter } from "./lib/ops.js";
 import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
 import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
 import { gatherChoices, type SelectOption } from "./lib/new-wizard.js";
-import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, SessionSummary } from "./lib/types.js";
+import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, SessionSummary, WaitingForInput } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
 
@@ -172,7 +172,7 @@ async function askSelect(
   }
 }
 
-async function answerDialog(dialog: AgentEvent): Promise<Record<string, unknown>> {
+async function answerDialog(dialog: WaitingForInput): Promise<Record<string, unknown>> {
   if (dialog.method === "confirm") {
     const answer = await askYesNo(`${dialog.prompt ? dialog.prompt + " " : ""}[y/N] `);
     return { confirmed: answer };
@@ -883,9 +883,7 @@ async function main() {
       fail(`run failed: ${(err as Error).message}`);
     }
     const onDialog =
-      process.stdin.isTTY && process.stdout.isTTY
-        ? async (dialog: AgentEvent) => answerDialog(dialog)
-        : null;
+      process.stdin.isTTY && process.stdout.isTTY ? answerDialog : null;
     let result;
     try {
       result = await runSession(client, session.id, {
