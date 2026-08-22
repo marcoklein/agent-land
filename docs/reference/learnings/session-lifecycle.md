@@ -27,7 +27,7 @@ sources:
 | Agent container `agent-land-pi-<id>` | Yes | Sibling on host daemon; Dokku never manages it |
 | pi RPC process | No (exits) | stdio is an exec stream owned by the dying web process |
 | pi transcript `/sessions/<id>/*.jsonl` | Yes | Shared named volume `agent-land-sessions` |
-| Workspace `agent-land-ws-<id>` | Yes | Per-session named volume, kept on `kill()` |
+| Working directory volume `agent-land-ws-<id>` | Yes | Per-session named volume, kept on `kill()` |
 | `AgentSession` JSON record | Yes | Dokku storage mount `/app/data` |
 | Harness handle (prompt/respond/abort) | No | `SessionService.handles` is in-memory |
 | Event history | No | In-memory ring buffer (capped at `HISTORY_CAP`), replayed from disk |
@@ -39,7 +39,7 @@ Three mechanisms cooperate: **durable event log → drain on SIGTERM → re-atta
 
 1. **Durable event log (always on)** — every event appends to `data/sessions/<id>.events.jsonl`, capped at `HISTORY_CAP` (10 000), serialized per session id so concurrent events can't interleave. Replayed on boot and on SSE reconnect.
 2. **Drain on SIGTERM** — for each live session: send `abort`, wait for settle (bounded ~4s), then close the exec streams. A `draining` flag makes `SessionService` ignore the resulting close→`stopped` events. Finishes well inside Dokku's 30s grace.
-3. **Re-attach on boot** — `recover()` re-runs the identical harness preset if the container still exists (see [pi rpc](/reference/pi-rpc.md)), replays the event log, sets status `idle`, clears a stale `waitingFor`. Missing container ⇒ session is genuinely dead, marked `stopped`.
+3. **Re-attach on boot** — `recover()` re-runs the identical harness preset if the container still exists (see [pi rpc](pi-rpc.md)), replays the event log, sets status `idle`, clears a stale `waitingFor`. Missing container ⇒ session is genuinely dead, marked `stopped`.
 
 # Ground-truth rule
 

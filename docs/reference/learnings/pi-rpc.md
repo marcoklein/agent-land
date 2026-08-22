@@ -41,7 +41,7 @@ Pi's stdin/stdout is a `docker exec` stream **owned by the web process** (`PiRpc
 
 - Mid-turn prompts pass `streamingBehavior` (`steer` | `followUp`) through to pi.[^pi-rpc-harness] Without it, pi treats a mid-turn prompt as a separate empty turn.
 - Pi persists its own per-session `jsonl` transcript to the `--session-dir`. This file is the **authoritative** record of the conversation; agent-land's event log is a best-effort projection of it.
-- Pi has no model-listing command; see [Model Discovery](/reference/providers/model-discovery.md) for how models are discovered without it.
+- Pi has no model-listing command; see [Model Discovery](../providers/model-discovery.md) for how models are discovered without it.
 
 [^harness]: `packages/server/src/core/harness.ts`, `piRpcPreset()`
 [^pi-rpc-harness]: `packages/server/src/infra/pi-rpc-harness.ts`
