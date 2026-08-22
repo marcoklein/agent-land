@@ -11,7 +11,7 @@
     "build": "pnpm --filter \"@agent-land/*\" build",
     "start": "node packages/server/dist/server.js",
     "typecheck": "pnpm --filter \"@agent-land/*\" typecheck",
-    "test": "pnpm --filter \"@agent-land/*\" test",
+    "test": "pnpm --filter @agent-land/contracts build && pnpm --filter \"@agent-land/*\" test",
     "test:watch": "pnpm --filter @agent-land/server test:watch",
     "al": "pnpm --filter @agent-land/cli start"
   },
