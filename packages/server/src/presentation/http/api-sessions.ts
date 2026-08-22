@@ -3,6 +3,8 @@ import { SessionService } from "../../core/session-service.js";
 import type { Config } from "../../config.js";
 import type { PermissionPolicy } from "../../core/types.js";
 import type { SequencedEvent } from "../../core/events.js";
+import { createSessionInputSchema, promptInputSchema, respondInputSchema } from "@agent-land/contracts";
+import { parseInput } from "./validate.js";
 import { errorMessage, sessionErrorResponse } from "./errors.js";
 
 export function sessionsApiRouter(sessionService: SessionService, config: Config) {
@@ -10,12 +12,14 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
 
   router.post("/", async (req, res) => {
     try {
-      const { connectors, permissionPolicy, model, provider } = req.body ?? {};
+      const parsed = parseInput(createSessionInputSchema, req.body);
+      if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+      const { connectors, permissionPolicy, model, provider } = parsed.data;
       const session = await sessionService.createSession({
-        connectors: Array.isArray(connectors) ? connectors : undefined,
+        connectors,
         permissionPolicy: (permissionPolicy as PermissionPolicy) ?? "auto",
-        model: typeof model === "string" ? model : undefined,
-        provider: typeof provider === "string" ? provider : undefined,
+        model,
+        provider,
       });
       res.status(201).json({ session });
     } catch (err) {
@@ -35,15 +39,10 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
   });
 
   router.post("/:id/prompt", async (req, res) => {
-    const { message, behavior } = req.body ?? {};
-    if (typeof message !== "string" || message.length === 0) {
-      return res.status(400).json({ error: "message is required" });
-    }
-    if (behavior !== undefined && behavior !== "steer" && behavior !== "followUp") {
-      return res.status(400).json({ error: 'behavior must be "steer" or "followUp"' });
-    }
+    const parsed = parseInput(promptInputSchema, req.body);
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
     try {
-      await sessionService.prompt(req.params.id, message, behavior);
+      await sessionService.prompt(req.params.id, parsed.data.message, parsed.data.behavior);
       res.status(202).json({ accepted: true });
     } catch (err) {
       const { status, error } = sessionErrorResponse(err);
@@ -52,27 +51,9 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
   });
 
   router.post("/:id/respond", async (req, res) => {
-    const { requestId, value, confirmed, cancelled } = req.body ?? {};
-    if (typeof requestId !== "string" || requestId.length === 0) {
-      return res.status(400).json({ error: "requestId is required" });
-    }
-    const provided = [value !== undefined, confirmed !== undefined, cancelled !== undefined].filter(
-      Boolean
-    ).length;
-    if (provided !== 1) {
-      return res
-        .status(400)
-        .json({ error: "Provide exactly one of value, confirmed, or cancelled" });
-    }
-    if (value !== undefined && typeof value !== "string") {
-      return res.status(400).json({ error: "value must be a string" });
-    }
-    if (confirmed !== undefined && typeof confirmed !== "boolean") {
-      return res.status(400).json({ error: "confirmed must be a boolean" });
-    }
-    if (cancelled !== undefined && typeof cancelled !== "boolean") {
-      return res.status(400).json({ error: "cancelled must be a boolean" });
-    }
+    const parsed = parseInput(respondInputSchema, req.body);
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const { requestId, value, confirmed, cancelled } = parsed.data;
     try {
       await sessionService.respond(req.params.id, requestId, { value, confirmed, cancelled });
       res.json({ accepted: true });

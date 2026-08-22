@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { ConnectorService } from "../../core/connector-service.js";
 import { getConnectorFields, DuplicateConnectorError } from "../../core/connector-service.js";
+import { createConnectorInputSchema } from "@agent-land/contracts";
+import { parseInput } from "./validate.js";
 import { errorMessage } from "./errors.js";
 
 export function connectorsApiRouter(connectorService: ConnectorService) {
@@ -22,18 +24,9 @@ export function connectorsApiRouter(connectorService: ConnectorService) {
   });
 
   router.post("/", async (req, res) => {
-    const { name, type, url, content, fields } = req.body ?? {};
-
-    if (
-      typeof name !== "string" ||
-      name.trim().length === 0 ||
-      typeof type !== "string" ||
-      type.trim().length === 0 ||
-      typeof url !== "string" ||
-      url.trim().length === 0
-    ) {
-      return res.status(400).json({ error: "name, type and url are required" });
-    }
+    const parsed = parseInput(createConnectorInputSchema, req.body);
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const { name, type, url, content, fields } = parsed.data;
 
     const fieldDefs = getConnectorFields(type);
     if (fieldDefs) {

@@ -7,11 +7,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "tsx watch packages/server/src/server.ts",
-    "build": "pnpm --filter \"@agent-land/*\" build",
+    "dev": "pnpm --filter @agent-land/contracts build && tsx watch packages/server/src/server.ts",
+    "build": "pnpm -r build",
     "start": "node packages/server/dist/server.js",
-    "typecheck": "pnpm --filter \"@agent-land/*\" typecheck",
-    "test": "pnpm --filter \"@agent-land/*\" test",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r build && pnpm -r test",
     "test:watch": "pnpm --filter @agent-land/server test:watch",
     "al": "pnpm --filter @agent-land/cli start"
   },

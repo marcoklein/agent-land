@@ -3,6 +3,8 @@ import type { ProviderService } from "../../core/provider-service.js";
 import { startDeviceFlow, pollDeviceToken } from "../../infra/copilot-auth.js";
 import { createCopilotProvider } from "../../infra/copilot-provider.js";
 import { errorMessage } from "./errors.js";
+import { copilotPollInputSchema } from "@agent-land/contracts";
+import { parseInput } from "./validate.js";
 
 export function copilotApiRouter(providerService: ProviderService) {
   const router = Router();
@@ -23,10 +25,9 @@ export function copilotApiRouter(providerService: ProviderService) {
   });
 
   router.post("/poll", async (req, res) => {
-    const deviceCode = typeof req.body?.deviceCode === "string" ? req.body.deviceCode : "";
-    if (!deviceCode) {
-      return res.status(400).json({ error: "deviceCode is required" });
-    }
+    const parsed = parseInput(copilotPollInputSchema, req.body);
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const deviceCode = parsed.data.deviceCode;
     try {
       const result = await pollDeviceToken(deviceCode);
       if (result.status === "authorized") {

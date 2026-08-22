@@ -208,10 +208,10 @@ describe("runSession", () => {
 describe("createSeqFilter", () => {
   it("drops duplicate and out-of-order sequences", () => {
     const filter = createSeqFilter();
-    expect(filter({ type: "a", seq: 1 })).toBe(false);
-    expect(filter({ type: "a", seq: 1 })).toBe(true);
-    expect(filter({ type: "a", seq: 0 })).toBe(true);
-    expect(filter({ type: "a", seq: 2 })).toBe(false);
+    expect(filter({ type: "turn_start", seq: 1 })).toBe(false);
+    expect(filter({ type: "turn_start", seq: 1 })).toBe(true);
+    expect(filter({ type: "turn_start", seq: 0 })).toBe(true);
+    expect(filter({ type: "turn_start", seq: 2 })).toBe(false);
   });
 
   it("passes events without a sequence number", () => {

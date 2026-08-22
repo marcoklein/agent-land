@@ -1,69 +1,87 @@
-export interface MessageBlock {
-  type: string;
-  text?: string;
-}
+import type {
+  Session,
+  SessionStatus,
+  PermissionPolicy,
+  Connector,
+  ConnectorType,
+  ConnectorFieldDef,
+  Provider,
+  ProviderKind,
+  ProviderApiType,
+  ProviderCatalogItem,
+  SessionEvent,
+  SsePayload,
+  Message,
+  MessageBlock,
+  SessionEnvelope,
+  SessionListEnvelope,
+  ConnectorEnvelope,
+  ConnectorListEnvelope,
+  ConnectorFieldsEnvelope,
+  ProviderEnvelope,
+  ProviderListEnvelope,
+  ProviderCatalogEnvelope,
+  ModelsEnvelope,
+  AcceptedEnvelope,
+  DeletedEnvelope,
+  CopilotStartEnvelope,
+  CopilotPollEnvelope,
+  CreateSessionInput,
+  CreateConnectorInput,
+} from "@agent-land/contracts";
 
-export interface Message {
-  role?: string;
-  content?: MessageBlock[];
-  stopReason?: string;
-  errorMessage?: string;
-}
+export type {
+  Session,
+  SessionStatus,
+  PermissionPolicy,
+  Connector,
+  ConnectorType,
+  ConnectorFieldDef,
+  Provider,
+  ProviderKind,
+  ProviderApiType,
+  ProviderCatalogItem,
+  SessionEvent,
+  SsePayload,
+  Message,
+  MessageBlock,
+  SessionEnvelope,
+  SessionListEnvelope,
+  ConnectorEnvelope,
+  ConnectorListEnvelope,
+  ConnectorFieldsEnvelope,
+  ProviderEnvelope,
+  ProviderListEnvelope,
+  ProviderCatalogEnvelope,
+  ModelsEnvelope,
+  AcceptedEnvelope,
+  DeletedEnvelope,
+  CopilotStartEnvelope,
+  CopilotPollEnvelope,
+  CreateSessionInput,
+  CreateConnectorInput,
+};
 
-export interface AgentEvent {
-  type: string;
-  seq?: number;
-  status?: string;
-  text?: string;
-  message?: Message | null;
-  requestId?: string;
-  method?: string;
-  prompt?: string;
-  options?: string[];
-  toolCallId?: string;
-  toolName?: string;
-  args?: unknown;
-  isError?: boolean;
-  [key: string]: unknown;
-}
-
-export interface RenderLine {
-  kind: string;
-  text: string;
-}
+export type SessionSummary = Pick<
+  Session,
+  "id" | "status" | "createdAt" | "model" | "provider" | "connectors"
+>;
+export type ConnectorSummary = Pick<Connector, "name" | "type" | "url">;
+export type ProviderSummary = Pick<
+  Provider,
+  "id" | "kind" | "label" | "api" | "enabled" | "defaultModel"
+>;
+export type AgentEvent = SsePayload;
+export type WaitingForInput = Extract<SessionEvent, { type: "waiting_for_input" }>;
 
 export interface SseEvent {
   event?: string;
   data?: string;
 }
 
-export interface SessionSummary {
-  id: string;
-  status: string;
-  createdAt: string;
-  model: string;
-  provider?: string;
-  connectors?: string[];
-}
-
-export interface ConnectorSummary {
-  name: string;
-  type: string;
-  url: string;
-}
-
-export interface ProviderSummary {
-  id: string;
+export interface RenderLine {
   kind: string;
-  label?: string;
-  api?: string;
-  enabled: boolean;
-  defaultModel?: string;
-}
-
-export interface ConnectorFieldDef {
-  envVar: string;
-  label: string;
+  text: string;
 }
 
 export interface Dialog {
