@@ -83,6 +83,30 @@ describe("createEventRenderer", () => {
     ).toEqual([{ kind: "text", text: "done" }]);
   });
 
+  it("surfaces a model error on message_end", () => {
+    const r = createEventRenderer();
+    expect(
+      r.render({ type: "message_end", message: { stopReason: "error", errorMessage: "401 Model is disabled" } })
+    ).toEqual([{ kind: "error", text: "error: 401 Model is disabled" }]);
+  });
+
+  it("surfaces a model error on turn_end without message_end", () => {
+    const r = createEventRenderer();
+    expect(
+      r.render({ type: "turn_end", message: { stopReason: "error", errorMessage: "401 Model is disabled" } })
+    ).toEqual([{ kind: "error", text: "error: 401 Model is disabled" }]);
+  });
+
+  it("does not duplicate a model error on turn_end after message_end", () => {
+    const r = createEventRenderer();
+    expect(
+      r.render({ type: "message_end", message: { errorMessage: "401 Model is disabled" } })
+    ).toEqual([{ kind: "error", text: "error: 401 Model is disabled" }]);
+    expect(
+      r.render({ type: "turn_end", message: { errorMessage: "401 Model is disabled" } })
+    ).toEqual([]);
+  });
+
   it("renders tool start and end", () => {
     const r = createEventRenderer();
     expect(r.render({ type: "tool_start", toolCallId: "c1", toolName: "bash", args: { cmd: "ls" } })).toEqual([
