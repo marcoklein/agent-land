@@ -645,7 +645,7 @@ async function chat(
   });
   process.on("SIGTERM", () => quit());
 
-  function quit() {
+  function quit(reason?: "stopped") {
     if (!running) return;
     running = false;
     if (sseAbort) sseAbort.abort();
@@ -654,7 +654,7 @@ async function chat(
       process.stdin.setRawMode(false);
       out.write("\x1b[?1049l");
     }
-    if (hintOnQuit) {
+    if (hintOnQuit && reason !== "stopped") {
       out.write(dim(`detached — session ${sessionId} still running\n`));
       out.write(dim(`re-attach: al chat ${sessionId}\n`));
     }
@@ -694,7 +694,7 @@ async function chat(
     }
     if (running) {
       printLine(dim("· session stopped"));
-      quit();
+      quit("stopped");
     }
   }
 
@@ -773,10 +773,14 @@ async function main() {
   } else if (cmd === "chat") {
     const sessionId = positional[0];
     if (!sessionId) fail("chat requires a session id");
+    let session: { status: string };
     try {
-      await client.getSession(sessionId);
+      ({ session } = await client.getSession(sessionId));
     } catch (err) {
       fail(`session ${sessionId}: ${(err as Error).message}`);
+    }
+    if (session.status === "stopped") {
+      fail(`session ${sessionId} is stopped`);
     }
     await chat(client, sessionId, { hintOnQuit: true });
   } else if (cmd === "ls") {
