@@ -37,6 +37,11 @@ export function messageText(message: Message | null | undefined): string {
     .join("\n");
 }
 
+function errorLines(message: Message | null | undefined, width: number): RenderLine[] {
+  if (!message?.errorMessage) return [];
+  return wrapText(`error: ${message.errorMessage}`, width).map((l) => ({ kind: "error", text: l }));
+}
+
 function shortArgs(args: unknown): string {
   if (!args) return "";
   try {
@@ -78,7 +83,8 @@ export function createEventRenderer({ width = 100 }: { width?: number } = {}): E
         const lines = finalizeStreaming();
         if (lines.length > 0) return lines;
         const text = messageText(event.message);
-        return wrapText(text, width).map((l) => ({ kind: "text", text: l }));
+        if (text) return wrapText(text, width).map((l) => ({ kind: "text", text: l }));
+        return errorLines(event.message, width);
       }
 
       case "turn_end": {
@@ -89,7 +95,8 @@ export function createEventRenderer({ width = 100 }: { width?: number } = {}): E
           return [];
         }
         const text = messageText(event.message);
-        return wrapText(text, width).map((l) => ({ kind: "text", text: l }));
+        if (text) return wrapText(text, width).map((l) => ({ kind: "text", text: l }));
+        return errorLines(event.message, width);
       }
 
       case "tool_start": {

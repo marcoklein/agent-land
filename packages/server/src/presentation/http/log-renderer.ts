@@ -39,7 +39,15 @@ export function renderSessionEvent(
       const msg = event.message as any;
       if (!msg) return { html: null, turnCount };
       const text = extractText(msg.content);
-      if (!text) return { html: null, turnCount };
+      if (!text) {
+        if (msg.errorMessage) {
+          return {
+            html: `<div class="log-error">Model error: ${escapeHtml(String(msg.errorMessage))}</div>`,
+            turnCount,
+          };
+        }
+        return { html: null, turnCount };
+      }
       if (msg.role === "assistant") {
         return { html: `<div class="log-assistant">${escapeHtml(text)}</div>`, turnCount };
       }
