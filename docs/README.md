@@ -1,14 +1,14 @@
 # Agent Land — Documentation
 
 * [Product & value](product-value.md) — vision, user journeys, principles, and roadmap
-* [Architecture](architecture.md) — how a session flows through the refactored system
+* [Dogfooding](dogfooding.md) — design & roadmap for developing agent-land on agent-land
 
 ## Reference
 
 Agent-consumable reference material (OKF v0.2) with source citations and status metadata:
 
-* [Reference index](reference/) — pi RPC harness, hosted SSE, session lifecycle, LLM providers
+* [Reference index](reference/) — CLI, LLM providers, and operational learnings
 
 ## Decisions
 
-* [Architecture Decision Records](adrs/) — 14 ADRs recording the platform's design decisions
+* [Architecture Decision Records](adrs/) — the platform's design decisions
