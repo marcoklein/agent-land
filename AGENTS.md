@@ -19,3 +19,14 @@ pnpm build          # tsc (all packages)
 - Never commit secrets, `.env`, `.age-key`, or `secrets/*.yaml` (gitignored)
 - `thoughts/` stays untracked
 - Docs follow the existing `docs/` style: `docs/README.md` index, reference docs in OKF under `docs/reference/`, and ADRs under `docs/adrs/`
+
+## Development loop
+
+When asked to implement a change, drive it to a green PR and report the result — do not stop after a single step or wait to be nudged between steps.
+
+1. Create a branch off `main` (`fix/…`, `feat/…`, `docs/…`, `refactor/…`, `chore/…`).
+2. Make the change, then `pnpm typecheck` and `pnpm test` — fix failures until both pass.
+3. Commit (conventional message) and `git push -u origin <branch>`.
+4. Open a PR with `gh pr create` (title + a short body describing what changed and how it was verified).
+5. `gh pr checks <number> --watch`; if CI is red, fix, commit/push again, and re-watch until green.
+6. Report the PR URL and CI status. Do not merge — merging stays human-gated.
