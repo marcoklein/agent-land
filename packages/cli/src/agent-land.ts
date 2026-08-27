@@ -8,6 +8,7 @@ import { createApiClient, type ApiClient } from "./lib/api.js";
 import { runSession, watchSession, createSeqFilter } from "./lib/ops.js";
 import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
 import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
+import { formatAge } from "./lib/format.js";
 import { gatherChoices, type SelectOption } from "./lib/new-wizard.js";
 import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, SessionSummary, WaitingForInput } from "./lib/types.js";
 
@@ -98,16 +99,6 @@ const red = color(c.red);
 const yellow = color(c.yellow);
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-function formatAge(createdAt: string): string {
-  const s = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h${m % 60}m`;
-  return `${Math.floor(h / 24)}d${h % 24}h`;
-}
 
 function statusColor(status: string): (s: string) => string {
   if (status === "idle") return green;
