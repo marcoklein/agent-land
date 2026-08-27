@@ -14,7 +14,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @earendil-works/pi-coding-agent@0.82.1
+RUN npm install -g @earendil-works/pi-coding-agent@0.82.1 pnpm@11.8.0
 
 RUN ARCH=$(dpkg --print-architecture) \
     && curl -fsSL "https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-${ARCH}.tar.gz" \
