@@ -110,9 +110,9 @@
     <p>Agent Land runs long-lived coding agents in Docker containers on your server.
     The engine does <strong>one thing well</strong>: launch a session with three injected capabilities
     (connector, provider, mount) and stream its behavior as a single, sequenced event log.</p>
-    <p>The platform <strong>observes, never interprets</strong> — it knows nothing about vendors, workflows, or your domain.
+    <p>The platform <strong>observes and reports</strong> — vendor, workflow, and domain knowledge all live in the use-case layer.
     The CLI (<code>al</code>) is the primary interface; the JSON/SSE API is the composition surface.
-    Projects, workflows, schedules — all recipes built from the primitives, never inside them.</p>
+    Projects, workflows, schedules — recipes built from the primitives.</p>
   </section>
 
   <!-- ============================================================ -->
@@ -121,7 +121,7 @@
 
     <pre class="mermaid">
 graph TB
-    subgraph usecase["USE-CASE LAYER — recipes, NOT the engine"]
+    subgraph usecase["USE-CASE LAYER — composition recipes"]
         direction LR
         project["Project"]:::outside
         workflow["Workflow"]:::outside
@@ -217,7 +217,7 @@ graph TB
       <div class="flow-box"><span class="tag tag-core">core</span><br><strong>New Session</strong></div>
     </div>
 
-    <p>That feedback loop — <strong>not</strong> anything in the engine — is where orchestration lives.
+    <p>Orchestration lives in that feedback loop, outside the engine.
     A workflow is just a script that creates sessions, prompts them, watches their event streams, and reacts.
     <span class="tag tag-roadmap">roadmap</span> Agent-driven looping (agents spawning agents) arrives with the Platform Connector;
     today the loop is driven externally via the CLI and the API.</p>
@@ -287,8 +287,8 @@ curl http://localhost:3000/api/sessions</code></pre>
     <ol>
       <li><strong>Registries outlive sessions.</strong> Connectors, providers, mounts are catalogs; sessions reference but never mutate them.</li>
       <li><strong>Create-time is resolution-time.</strong> Env, engine config, and mounts are fixed when the session starts.</li>
-      <li><strong>The platform observes, never interprets.</strong> The event stream is the only observation channel; its vocabulary is agent-mechanical, never business-semantic.</li>
-      <li><strong>No vendor knowledge or workflow engine in-core.</strong> Presets, packs, projects, workflows — all composition, never inside the engine.</li>
+      <li><strong>The platform observes.</strong> The event stream is the only observation channel; its vocabulary is agent-mechanical.</li>
+      <li><strong>Vendor knowledge and workflows stay in the composition layer.</strong> Presets, packs, projects, workflows — recipes that build on the primitives.</li>
     </ol>
   </section>
 

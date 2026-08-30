@@ -61,9 +61,9 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ## One engine opinion
 
-`pi --mode rpc` is the fixed agent runtime. The platform does not abstract the engine — this is a platform-level choice, not a session-level knob.
+`pi --mode rpc` is the fixed agent runtime — a platform-level choice rather than a session-level knob.
 
-## What is NOT part of the engine
+## The composition layer
 
 - **Projects** — a named mount + a recipe (connectors, provider, model, playbook). A use-case convention.
 - **Workflows** — sequences of session / prompt / respond calls. Defined in prompts, scripts, or YAML recipes.
@@ -71,7 +71,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 - **Connector packs** — field schemas and skill files for specific external systems. Live in mounts and CLI presets.
 - **Provider presets** — base URLs, API dialects, default models for known vendors. Live in CLI presets.
 
-All of these are **composition** — built from the six primitives, never inside them.
+All of these are **composition** — built from the six primitives, outside the engine.
 
 ## Deployment
 
