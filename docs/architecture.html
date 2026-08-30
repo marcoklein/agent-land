@@ -142,7 +142,7 @@ git push dokku main:master</code></pre>
         <p>Single-service compose file. The orchestrator mounts the Docker socket, <code>secrets/</code>, and <code>data/</code>. No auth, no SSL — just <code>localhost:3000</code>.</p>
         <pre><code>cp .env.example .env
 docker compose up --build -d
-open http://localhost:3000</code></pre>
+curl http://localhost:3000/api/sessions</code></pre>
         <footer><small><code>docker-compose.yml</code> · local only</small></footer>
       </article>
     </div>
@@ -151,7 +151,7 @@ open http://localhost:3000</code></pre>
       <thead><tr><th>Env var</th><th>Purpose</th></tr></thead>
       <tbody>
         <tr><td><code>PORT</code></td><td>listen port (default 3000)</td></tr>
-        <tr><td><code>SESSION_SECRET</code></td><td>random 32+ chars; required in production</td></tr>
+        <tr><td><code>SSE_HEARTBEAT_MS</code></td><td>keep-alive interval for event streams (default 30000)</td></tr>
         <tr><td><code>OPENCODE_API_KEY</code></td><td>default LLM provider key</td></tr>
         <tr><td><code>DEFAULT_MODEL</code></td><td>fallback model (default deepseek-v4-pro)</td></tr>
         <tr><td><code>SECRETS_DIR</code> · <code>DATA_DIR</code></td><td>paths for SOPS files + session data</td></tr>
@@ -630,7 +630,7 @@ graph LR
         </tr>
         <tr>
           <td><strong>Web UI</strong></td>
-          <td>✅ lightweight (EJS + HTMX)</td>
+          <td>❌ none in core — JSON/SSE API + CLI; UIs are add-ons</td>
           <td>❌</td>
           <td>❌ (LangSmith is SaaS)</td>
           <td>✅ full web app</td>

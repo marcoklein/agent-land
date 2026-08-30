@@ -15,7 +15,6 @@ export default defineConfig({
       SECRETS_DIR: path.join(fixturesDir, "secrets"),
       AGE_KEY_FILE: path.join(fixturesDir, ".age-key"),
       DATA_DIR: path.join(configDir, "src/__tests__/tmp-test-data"),
-      SESSION_SECRET: "test-secret",
       OPENCODE_API_KEY: "test-key",
       SSE_HEARTBEAT_MS: "50",
     },
