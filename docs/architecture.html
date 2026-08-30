@@ -17,15 +17,6 @@
   .tag-roadmap { background: var(--pico-color-sand-400); color: #000; }
   pre { font-size: 0.85rem; }
   table small { opacity: 0.7; }
-  .purest { background: var(--pico-card-background-color); border: 2px solid var(--pico-color-jade-400); border-radius: 12px; padding: 2rem; margin: 2rem 0; }
-  .purest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem 0; }
-  .purest-item { text-align: center; }
-  .purest-item .icon { font-size: 2rem; margin-bottom: 0.5rem; }
-  .purest-item h4 { margin-bottom: 0.3rem; }
-  .purest-item p { font-size: 0.85rem; opacity: 0.8; margin: 0; }
-  .purest-divider { grid-column: span 3; text-align: center; opacity: 0.4; font-size: 0.85rem; }
-  .purest-solo { grid-column: span 3; display: flex; justify-content: center; }
-  .purest-solo .purest-item { max-width: 260px; }
   .flow { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: center; margin: 1.5rem 0; }
   .flow-box { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.8rem 1.2rem; text-align: center; }
   .flow-arrow { font-size: 1.5rem; opacity: 0.5; }
@@ -45,65 +36,6 @@
   <hr>
 
   <!-- ============================================================ -->
-  <div class="purest">
-    <h2 style="margin-top:0; text-align:center">The Purest Form</h2>
-    <p style="text-align:center; opacity:0.7">Agent Land is a session engine. Six things. Nothing more.</p>
-
-    <div class="purest-grid">
-      <div class="purest-item">
-        <div class="icon">🔑</div>
-        <h4>Connector</h4>
-        <p>Credentials → env vars<br/>Sealed at rest, decrypted at launch</p>
-      </div>
-      <div class="purest-item">
-        <div class="icon">🧠</div>
-        <h4>Provider</h4>
-        <p>LLM backend + model<br/>Generic record, no vendor knowledge</p>
-      </div>
-      <div class="purest-item">
-        <div class="icon">📁</div>
-        <h4>Mount</h4>
-        <p>Durable folder, M:N attach<br/>Repo checkouts, warm caches</p>
-      </div>
-
-      <div class="purest-divider">↓ injected at session creation &nbsp;·&nbsp; the agent gets all three ↓</div>
-
-      <div class="purest-solo">
-        <div class="purest-item">
-          <div class="icon">▶️</div>
-          <h4>Session</h4>
-          <p>Agent lifecycle · pi · container<br/><code>idle → running → settled</code></p>
-        </div>
-      </div>
-
-      <div class="purest-divider">↓ produces</div>
-
-      <div class="purest-solo">
-        <div class="purest-item">
-          <div class="icon">📡</div>
-          <h4>Event Stream</h4>
-          <p>Sequenced SSE<br/>The single observation channel</p>
-        </div>
-      </div>
-
-      <div class="purest-divider">↓ consumed by</div>
-
-      <div class="purest-solo">
-        <div class="purest-item">
-          <div class="icon">🔄</div>
-          <h4>Platform Connector</h4>
-          <p>Self-injected API auth<br/>Agents spawn more sessions</p>
-        </div>
-      </div>
-    </div>
-
-    <p style="text-align:center; font-size:0.8rem">
-      <span class="tag tag-core">implemented</span> Session · Connector · Provider · Event Stream &nbsp;·&nbsp;
-      <span class="tag tag-roadmap">roadmap</span> Mount · Platform Connector self-injection
-    </p>
-  </div>
-
-  <!-- ============================================================ -->
   <section>
     <h2>The idea</h2>
 
@@ -113,6 +45,27 @@
     <p>The platform <strong>observes and reports</strong> — vendor, workflow, and domain knowledge all live in the use-case layer.
     The CLI (<code>al</code>) is the primary interface; the JSON/SSE API is the composition surface.
     Projects, workflows, schedules — recipes built from the primitives.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>The core — a session's lifecycle</h2>
+
+    <pre class="mermaid">
+stateDiagram-v2
+    [*] --> idle : create
+    idle --> running : prompt
+    running --> waiting_for_input : dialog
+    waiting_for_input --> running : respond
+    running --> idle : settled
+    idle --> stopped : kill
+    running --> stopped : kill
+    waiting_for_input --> stopped : kill
+    stopped --> [*]
+    </pre>
+
+    <p style="text-align:center; opacity:0.7"><small>The session is the atom of the platform — one <code>pi</code> agent in one container.
+    Long-lived, re-attachable from anywhere, durable across orchestrator restarts.</small></p>
   </section>
 
   <!-- ============================================================ -->
