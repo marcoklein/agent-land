@@ -6,7 +6,7 @@ export function buildPrompt(task: string, connectors: Connector[]): string {
   if (connectors.length > 0) {
     parts.push("Connectors available this session:");
     for (const conn of connectors) {
-      const envKeys = Object.keys(conn.env);
+      const envKeys = conn.envKeys ?? [];
       const envList = envKeys.map((v) => `$${v}`).join(", ");
       parts.push(`- ${conn.name}: Credentials in ${envList}`);
     }

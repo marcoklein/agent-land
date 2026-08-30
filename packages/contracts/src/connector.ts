@@ -4,12 +4,12 @@ export const connectorSchema = z
   .object({
     name: z.string().describe("Display name; also the slug source for the secret file."),
     url: z.string().optional().describe("Base URL of the external system."),
-    env: z.record(z.string(), z.string()).describe("Environment variables (secrets encrypted at rest)."),
+    envKeys: z.array(z.string()).describe("Names of the env vars provided; values never leave the server."),
     secretFile: z.string().describe("SOPS/Age-encrypted secret file backing this connector."),
     createdAt: z.string().describe("ISO timestamp of creation."),
     updatedAt: z.string().describe("ISO timestamp of the last update."),
   })
-  .describe("A connector: name + generic env bag, encrypted at rest, decrypted only at launch.");
+  .describe("A connector: name + sealed env bag. Values encrypted at rest and never exposed over the API.");
 export type Connector = z.infer<typeof connectorSchema>;
 
 export const createConnectorInputSchema = z

@@ -1,5 +1,6 @@
 import type { Connector } from "./types.js";
 import type { SecretsPort, ConnectorRepository } from "./ports.js";
+import { parseSecretYaml } from "../infra/sops.js";
 
 export function slugify(name: string): string {
   return name
@@ -76,6 +77,7 @@ export class ConnectorService {
     }
 
     const yamlContent = content ?? buildYamlFromEnv(env);
+    const envKeys = deriveEnvKeys(env, content);
 
     const secretFile = `${slug}.yaml`;
     await this.secrets.saveEncrypted(secretFile.replace(/\.(ya?ml)$/, ""), yamlContent);
@@ -84,7 +86,7 @@ export class ConnectorService {
     const connector: Connector = {
       name,
       url,
-      env,
+      envKeys,
       secretFile,
       createdAt: now,
       updatedAt: now,
@@ -111,4 +113,21 @@ function buildYamlFromEnv(env: Record<string, string>): string {
   return Object.entries(env)
     .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
     .join("\n") + (Object.keys(env).length > 0 ? "\n" : "");
+}
+
+function deriveEnvKeys(
+  env: Record<string, string> | undefined,
+  content: string | undefined
+): string[] {
+  if (env && Object.keys(env).length > 0) {
+    return Object.keys(env);
+  }
+  if (content) {
+    try {
+      return [...parseSecretYaml(content).keys()];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }

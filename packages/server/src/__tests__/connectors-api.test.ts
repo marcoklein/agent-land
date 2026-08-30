@@ -39,10 +39,21 @@ describe("Connectors JSON API", () => {
     expect(res.body.connector.name).toBe("GitHub Personal");
     expect(res.body.connector.url).toBe("https://api.github.com");
     expect(res.body.connector.secretFile).toBe("github-personal.yaml");
-    expect(res.body.connector.env.GITHUB_TOKEN).toBe("ghp_test123");
+    expect(res.body.connector.envKeys).toEqual(["GITHUB_TOKEN"]);
+    expect(res.body.connector.env).toBeUndefined();
 
     const secretPath = path.join(config.secretsDir, "github-personal.yaml");
     await expect(stat(secretPath)).resolves.toBeDefined();
+  });
+
+  it("does not leak secret values over the API", async () => {
+    await api.post("/api/connectors").send(githubCreds);
+
+    const res = await api.get("/api/connectors");
+    const [connector] = res.body.connectors;
+
+    expect(connector.envKeys).toEqual(["GITHUB_TOKEN"]);
+    expect(JSON.stringify(res.body)).not.toContain("ghp_test123");
   });
 
   it("creates a connector from YAML content", async () => {
