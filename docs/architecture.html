@@ -120,42 +120,57 @@
     <h2>One diagram</h2>
 
     <pre class="mermaid">
-graph TB
-    subgraph usecase["USE-CASE LAYER — composition recipes"]
-        direction LR
-        project["Project"]:::outside
-        workflow["Workflow"]:::outside
-        pack["Connector pack"]:::outside
-        preset["Provider preset"]:::outside
-    end
-
-    subgraph core["THE ENGINE"]
+graph LR
+    subgraph usecase["USE-CASE LAYER — recipes"]
         direction TB
-        registries["3 registries<br/>Connector · Provider · Mount"]:::core
-        session["Session<br/>pi agent in one Docker container"]:::core
-        events["Event Stream<br/>sequenced SSE log"]:::core
+        workflow["Workflow<br/>scripts"]:::outside
+        project["Project<br/>mount + recipe"]:::outside
+        pack["Connector pack<br/>schema + skills"]:::outside
+        preset["Provider preset<br/>endpoint + models"]:::outside
     end
 
-    subgraph infra["SUBSTRATE"]
+    subgraph engine["THE ENGINE"]
         direction LR
-        docker["Docker<br/>containers · volumes"]:::substrate
-        sops["SOPS/Age<br/>secrets at rest"]:::substrate
-        json["Flat JSON<br/>storage"]:::substrate
+        connector["Connector<br/>sealed env bag"]:::core
+        provider["Provider<br/>LLM backend record"]:::core
+        mount["Mount<br/>durable volume (roadmap)"]:::core
+        session["Session<br/>pi agent in Docker"]:::core
+        events["Event Stream<br/>sequenced SSE"]:::core
     end
 
-    registries -->|"injected at creation"| session
-    session -->|"produces"| events
-    events -->|"consumed by"| workflow
-    workflow -->|"creates"| session
+    subgraph substrate["SUBSTRATE"]
+        direction TB
+        docker["Docker"]:::substrate
+        sops["SOPS/Age"]:::substrate
+        json["Flat JSON"]:::substrate
+    end
+
+    connector -->|"env vars at launch"| session
+    provider  -->|"model + key at launch"| session
+    mount     -->|"workspace at launch"| session
+    session   -->|"produces"| events
+
+    events    -->|"watch"| workflow
+    workflow  -->|"create"| session
+
+    pack      -->|"informs"| connector
+    preset    -->|"informs"| provider
+    project   -->|"uses"| mount
 
     docker -.->|"hosts"| session
-    sops -.->|"seals"| registries
-    json -.->|"persists"| session
+    docker -.->|"hosts"| mount
+    sops   -.->|"seals"| connector
+    sops   -.->|"seals"| provider
+    json   -.->|"persists"| session
+    json   -.->|"persists"| events
+    json   -.->|"persists"| connector
+    json   -.->|"persists"| provider
 
     classDef core fill:#1b5e20,stroke:#4caf50,color:#e8f5e9
     classDef substrate fill:#37474f,stroke:#90a4ae,color:#eceff1
     classDef outside fill:#e65100,stroke:#ff9800,color:#fff3e0
     </pre>
+    <p style="text-align:center; opacity:0.7"><small>Capabilities are injected at launch · sessions produce event streams · recipes watch streams and create sessions · substrate hosts, seals, and persists.</small></p>
   </section>
 
   <!-- ============================================================ -->
