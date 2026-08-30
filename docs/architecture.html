@@ -17,9 +17,6 @@
   .tag-roadmap { background: var(--pico-color-sand-400); color: #000; }
   pre { font-size: 0.85rem; }
   table small { opacity: 0.7; }
-  .flow { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: center; margin: 1.5rem 0; }
-  .flow-box { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.8rem 1.2rem; text-align: center; }
-  .flow-arrow { font-size: 1.5rem; opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -49,7 +46,45 @@
 
   <!-- ============================================================ -->
   <section>
-    <h2>The core — a session's lifecycle</h2>
+    <h2>Zoom in — one turn, concretely</h2>
+
+    <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant You
+    participant CLI as al CLI
+    participant API as JSON/SSE API
+    participant SS as Session engine
+    participant SOPS as SOPS/Age
+    participant DK as Docker
+    participant PI as pi agent
+
+    You->>CLI: al run fix-the-typo --rm
+    CLI->>API: POST /api/sessions {connectors, model}
+    API->>SS: createSession
+    SS->>SOPS: decrypt connector secrets
+    SOPS-->>SS: env vars (in-memory)
+    SS->>DK: create container + volumes
+    DK-->>SS: container id
+    SS->>PI: exec pi --mode rpc
+    API-->>CLI: { session }
+    CLI->>API: POST /api/sessions/:id/prompt
+    API->>PI: RPC prompt
+    loop the turn
+        PI-->>API: events (turn_start, message_delta, tool_…)
+        API-->>CLI: SSE stream
+    end
+    PI-->>API: agent_settled
+    CLI->>You: final answer
+    CLI->>API: DELETE /api/sessions/:id
+    </pre>
+
+    <p style="text-align:center; opacity:0.7"><small>Secrets are decrypted in-memory at launch and injected as container env vars — they never touch disk or the API.</small></p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>The atom — a session's lifecycle</h2>
 
     <pre class="mermaid">
 stateDiagram-v2
@@ -70,7 +105,7 @@ stateDiagram-v2
 
   <!-- ============================================================ -->
   <section>
-    <h2>One diagram</h2>
+    <h2>The system — one diagram</h2>
 
     <pre class="mermaid">
 graph LR
@@ -173,17 +208,31 @@ graph LR
 
   <!-- ============================================================ -->
   <section>
-    <h2>The composition loop</h2>
+    <h2>Zoom out — the composition loop</h2>
 
-    <div class="flow">
-      <div class="flow-box"><span class="tag tag-core">core</span><br><strong>Session</strong></div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-box"><span class="tag tag-core">core</span><br><strong>Event Stream</strong></div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-box"><span class="tag tag-outside">outside</span><br><strong>Use case</strong><br>(script or agent reacts)</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-box"><span class="tag tag-core">core</span><br><strong>New Session</strong></div>
-    </div>
+    <pre class="mermaid">
+graph LR
+    subgraph parent["Orchestrator session"]
+        main["Agent A<br/>plans + reviews"]:::core
+    end
+
+    api["Platform API"]:::core
+
+    subgraph children["Child sessions"]
+        planner["Agent B<br/>planner"]:::core
+        coder["Agent C<br/>coder"]:::core
+        reviewer["Agent D<br/>reviewer"]:::core
+    end
+
+    main    -->|"POST /api/sessions"| api
+    api     --> planner
+    api     --> coder
+    api     --> reviewer
+    planner -->|"SSE events"| api
+    coder   -->|"SSE events"| api
+    reviewer -->|"SSE events"| api
+    api     -->|"watch streams"| main
+    </pre>
 
     <p>Orchestration lives in that feedback loop, outside the engine.
     A workflow is just a script that creates sessions, prompts them, watches their event streams, and reacts.
@@ -221,7 +270,36 @@ al watch "$SESSION"        # block until settled</code></pre>
 
   <!-- ============================================================ -->
   <section>
-    <h2>Deployment</h2>
+    <h2>Zoom out — the platform on a server</h2>
+
+    <pre class="mermaid">
+graph TB
+    subgraph clients["CLIENTS"]
+        direction LR
+        laptop["al CLI — anywhere"]:::outside
+        cron["Cron · CI · scripts"]:::outside
+    end
+
+    subgraph server["YOUR SERVER"]
+        direction TB
+        nginx["nginx<br/>SSL + basic auth"]:::outside
+        orch["Orchestrator<br/>JSON/SSE API"]:::core
+        data[("volumes<br/>data/ · secrets/")]:::substrate
+        dk["Docker daemon"]:::substrate
+        subgraph agents["Agent containers (siblings)"]
+            direction LR
+            s1["agent-land-pi-…"]:::core
+            s2["agent-land-pi-…"]:::core
+        end
+    end
+
+    laptop --> nginx
+    cron --> nginx
+    nginx --> orch
+    orch -->|"flat JSON + SOPS"| data
+    orch -->|"docker socket"| dk
+    dk --> agents
+    </pre>
 
     <div class="grid">
       <article>
