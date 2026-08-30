@@ -115,4 +115,17 @@ describe("Providers — API and launch flow", () => {
     expect(json.providers.qwencloud.apiKey).toBe("$QWENCLOUD_API_KEY");
     expect(json.providers.qwencloud.models).toEqual([{ id: "qwen3.8-max" }]);
   });
+
+  it("removes the container and workspace volume when a session is deleted", async () => {
+    const create = await agent.post("/api/sessions").send({});
+    expect(create.status).toBe(201);
+    const { id } = create.body.session;
+    const created = mockDocker.created[0];
+
+    const del = await agent.delete(`/api/sessions/${id}`);
+    expect(del.status).toBe(200);
+
+    expect(mockDocker.removed).toContain(`mock-${id}`);
+    expect(mockDocker.removedVolumes).toContain(created.workspaceVolume);
+  });
 });
