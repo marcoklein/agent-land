@@ -24,6 +24,8 @@
   .purest-item h4 { margin-bottom: 0.3rem; }
   .purest-item p { font-size: 0.85rem; opacity: 0.8; margin: 0; }
   .purest-divider { grid-column: span 3; text-align: center; opacity: 0.4; font-size: 0.85rem; }
+  .purest-solo { grid-column: span 3; display: flex; justify-content: center; }
+  .purest-solo .purest-item { max-width: 260px; }
   .flow { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: center; margin: 1.5rem 0; }
   .flow-box { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.8rem 1.2rem; text-align: center; }
   .flow-arrow { font-size: 1.5rem; opacity: 0.5; }
@@ -66,26 +68,32 @@
 
       <div class="purest-divider">↓ injected at session creation &nbsp;·&nbsp; the agent gets all three ↓</div>
 
-      <div class="purest-item">
-        <div class="icon">▶️</div>
-        <h4>Session</h4>
-        <p>Agent lifecycle · pi · container<br/><code>idle → running → settled</code></p>
+      <div class="purest-solo">
+        <div class="purest-item">
+          <div class="icon">▶️</div>
+          <h4>Session</h4>
+          <p>Agent lifecycle · pi · container<br/><code>idle → running → settled</code></p>
+        </div>
       </div>
 
       <div class="purest-divider">↓ produces</div>
 
-      <div class="purest-item">
-        <div class="icon">📡</div>
-        <h4>Event Stream</h4>
-        <p>Sequenced SSE<br/>The single observation channel</p>
+      <div class="purest-solo">
+        <div class="purest-item">
+          <div class="icon">📡</div>
+          <h4>Event Stream</h4>
+          <p>Sequenced SSE<br/>The single observation channel</p>
+        </div>
       </div>
 
       <div class="purest-divider">↓ consumed by</div>
 
-      <div class="purest-item">
-        <div class="icon">🔄</div>
-        <h4>Platform Connector</h4>
-        <p>Self-injected API auth<br/>Agents spawn more sessions</p>
+      <div class="purest-solo">
+        <div class="purest-item">
+          <div class="icon">🔄</div>
+          <h4>Platform Connector</h4>
+          <p>Self-injected API auth<br/>Agents spawn more sessions</p>
+        </div>
       </div>
     </div>
 
@@ -217,19 +225,29 @@ graph TB
 
   <!-- ============================================================ -->
   <section>
-    <h2>Try it</h2>
+    <h2>Hello world — how to use</h2>
 
-    <pre><code># One-shot agent session
-al run "Summarize this repo's README" --model deepseek-v4-pro --rm
+    <p>Three commands take you from zero to a running agent:</p>
 
-# Interactive, re-attachable from anywhere
-al new --connectors github,jira
-al chat &lt;session-id&gt;</code></pre>
+    <h3>1. Register a connector</h3>
+    <p>Credentials are encrypted at rest (SOPS/Age) and never leave the server — the API only ever shows their names.</p>
+    <pre><code>al connectors add --name github --url https://api.github.com \
+    --field GITHUB_TOKEN=ghp-xxx</code></pre>
 
-    <pre><code># The API is the composition surface — any language, any script
-SESSION=$(curl -s -u "$AUTH" -X POST "$URL/api/sessions" \
+    <h3>2. Run a one-shot session</h3>
+    <p>Create, prompt, stream to settle, print the final answer, and clean up:</p>
+    <pre><code>al run "Clone the repo and fix the typo in README" \
+    --model deepseek-v4-pro --connectors github --rm</code></pre>
+
+    <h3>3. Chat interactively — re-attachable from anywhere</h3>
+    <pre><code>al new --connectors github     # create + enter the chat overlay
+/quit                          # detach — session keeps running
+al chat &lt;session-id&gt;           # re-attach later, from any machine</code></pre>
+
+    <p>The API is the composition surface — any language, any script, even the agents themselves:</p>
+    <pre><code>SESSION=$(curl -s -u "$AUTH" -X POST "$URL/api/sessions" \
   -H 'content-type: application/json' \
-  -d '{"model":"deepseek-v4-pro","connectors":["GitHub"]}' | jq -r .session.id)
+  -d '{"model":"deepseek-v4-pro","connectors":["github"]}' | jq -r .session.id)
 al watch "$SESSION"        # block until settled</code></pre>
   </section>
 
