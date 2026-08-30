@@ -29,6 +29,8 @@
   .purest-item p { font-size: 0.85rem; opacity: 0.8; margin: 0; }
   .purest-divider { grid-column: span 3; text-align: center; opacity: 0.4; font-size: 0.85rem; }
   .overflow-auto { overflow-x: auto; }
+  .tag-impl { background: var(--pico-color-jade-400); color: #000; }
+  .tag-roadmap { background: var(--pico-color-sand-400); color: #000; }
 </style>
 </head>
 <body>
@@ -95,6 +97,10 @@
       <strong>Recipes</strong> (workflows, projects, schedules) are <em>not</em> part of the engine.<br/>
       They are prompts, scripts, or YAML files that compose these six primitives.
     </p>
+    <p style="text-align:center; font-size:0.8rem; margin-top:0.5rem">
+      <span class="tag tag-impl">implemented</span> Session · Connector · Provider · Event Stream &nbsp;·&nbsp;
+      <span class="tag tag-roadmap">roadmap</span> Mount · Platform Connector self-injection
+    </p>
   </div>
 
   <!-- ============================================================ -->
@@ -109,9 +115,9 @@
       <div><span class="tag tag-core">core</span> <strong>Session</strong> — agent lifecycle, container, policy</div>
       <div><span class="tag tag-core">core</span> <strong>Connector</strong> — named sealed env bag</div>
       <div><span class="tag tag-core">core</span> <strong>Provider</strong> — LLM backend config</div>
-      <div><span class="tag tag-core">core</span> <strong>Mount</strong> — named durable folder</div>
+      <div><span class="tag tag-core">core</span> <strong>Mount</strong> — named durable folder <span class="tag tag-roadmap">roadmap</span></div>
       <div><span class="tag tag-core">core</span> <strong>Event Stream</strong> — sequenced SSE log</div>
-      <div><span class="tag tag-core">core</span> <strong>Platform Connector</strong> — self-injected API auth</div>
+      <div><span class="tag tag-core">core</span> <strong>Platform Connector</strong> — self-injected API auth <span class="tag tag-roadmap">roadmap</span></div>
       <div><span class="tag tag-substrate">substrate</span> Docker — containers + volumes</div>
       <div><span class="tag tag-substrate">substrate</span> SOPS/Age — secrets at rest</div>
       <div><span class="tag tag-substrate">substrate</span> Flat JSON — persistence</div>
@@ -152,11 +158,12 @@ curl http://localhost:3000/api/sessions</code></pre>
       <tbody>
         <tr><td><code>PORT</code></td><td>listen port (default 3000)</td></tr>
         <tr><td><code>SSE_HEARTBEAT_MS</code></td><td>keep-alive interval for event streams (default 30000)</td></tr>
-        <tr><td><code>OPENCODE_API_KEY</code></td><td>default LLM provider key</td></tr>
+        <tr><td><code>OPENCODE_API_KEY</code> · <code>OPENCODE_API_URL</code></td><td>default LLM provider key + endpoint</td></tr>
         <tr><td><code>DEFAULT_MODEL</code></td><td>fallback model (default deepseek-v4-pro)</td></tr>
         <tr><td><code>SECRETS_DIR</code> · <code>DATA_DIR</code></td><td>paths for SOPS files + session data</td></tr>
         <tr><td><code>AGE_KEY_FILE</code></td><td>age private key for SOPS</td></tr>
         <tr><td><code>AGENT_IMAGE</code></td><td>agent container image (default agent-land-pi:latest)</td></tr>
+        <tr><td><code>DOCKER_SOCKET</code></td><td>docker socket path (default /var/run/docker.sock)</td></tr>
       </tbody>
     </table>
   </section>
@@ -248,7 +255,7 @@ graph TB
           <li>Keys are public (listed, never exposed); values are sealed (decrypted in-memory, only at launch)</li>
           <li>Field schemas, validation, and skills live <strong>outside</strong> — in connector packs</li>
         </ul>
-        <footer><small>Shape: <code>{ name, url?, env: sealed{KEY: value} }</code></small></footer>
+        <footer><small>Shape: <code>{ name, url?, envKeys: [KEY], secretFile }</code> — keys public, values never exposed over the API</small></footer>
       </article>
 
       <article class="card">
@@ -258,14 +265,14 @@ graph TB
         <code>models</code>, <code>defaultModel</code>, and a sealed credential payload.</p>
         <ul>
           <li>No vendor catalog in-core — preset values live in the CLI/packs</li>
-          <li>OAuth device flows (Copilot) run <strong>client-side</strong>; the sever only stores the resulting tokens</li>
+          <li>OAuth device flows (Copilot) run <strong>client-side</strong>; the server only stores the resulting tokens</li>
           <li>Model resolution: explicit session model → provider default → platform default</li>
         </ul>
         <footer><small>Kinds: key-based or oauth token payload — same generic record</small></footer>
       </article>
 
       <article class="card">
-        <header><span class="tag tag-core">core</span> <strong>Mount</strong></header>
+        <header><span class="tag tag-core">core</span> <strong>Mount</strong> <span class="tag tag-roadmap">roadmap</span></header>
         <p>A named, durable folder attached to a session container — <strong>the MATTER axis.</strong>
         Realized as a Docker volume with a label; outlives any session.</p>
         <ul>
@@ -296,18 +303,18 @@ graph TB
           <div>
             <strong>Four consumer roles:</strong>
             <ol>
-              <li>Rendering — web log renderer, CLI terminal</li>
+              <li>Rendering — CLI terminal, API consumers</li>
               <li>Settle detection — <code>al run</code>, <code>al watch</code></li>
               <li>Machine consumption — extract final answer, detect errors</li>
               <li>Cross-session observation — <strong>any</strong> client may read <strong>any</strong> session's stream</li>
             </ol>
           </div>
         </div>
-        <footer><small>Properties: sequenced (dedupe), replayable (after=&hellip; cursor), capped (10k in-memory), durable until session removal</small></footer>
+        <footer><small>Properties: sequenced (dedupe), replayable (history + live in one stream), capped (10k in-memory), durable until session removal</small></footer>
       </article>
 
       <article class="card" style="grid-column: span 2;">
-        <header><span class="tag tag-core">core</span> <strong>Platform Connector</strong></header>
+        <header><span class="tag tag-core">core</span> <strong>Platform Connector</strong> <span class="tag tag-roadmap">roadmap</span></header>
         <p>Every session is a first-class client of the platform. At creation, the engine self-injects two env vars: <code>AGENT_LAND_URL</code> and <code>AGENT_LAND_BASIC_AUTH</code>. The agent can then <code>curl</code> the API to create child sessions, prompt them, and watch their event streams — the foundation of multi-agent orchestration.</p>
         <div class="grid">
           <div>
@@ -342,11 +349,11 @@ curl -u "$AGENT_LAND_BASIC_AUTH" \
       <tbody>
         <tr><td>Session → Connector</td><td>reference (by name)</td><td>M:N</td><td>connector outlives session</td></tr>
         <tr><td>Session → Provider</td><td>reference (by id)</td><td>N:1</td><td>provider outlives session</td></tr>
-        <tr><td>Session → Mount</td><td>attach (path:name)</td><td>M:N</td><td>≤1 live session per mount</td></tr>
+        <tr><td>Session → Mount <small>(roadmap)</small></td><td>attach (path:name)</td><td>M:N</td><td>≤1 live session per mount</td></tr>
         <tr><td>Session → Event Stream</td><td>produces</td><td>1:1</td><td>deleted with session</td></tr>
         <tr><td>Connector → Secret</td><td>owns</td><td>1:1</td><td>deleted with connector</td></tr>
         <tr><td>Provider → Secret</td><td>owns</td><td>1:0..1</td><td>deleted with provider</td></tr>
-        <tr><td>Mount → Session</td><td>independent</td><td>—</td><td>outlives all sessions</td></tr>
+        <tr><td>Mount → Session <small>(roadmap)</small></td><td>independent</td><td>—</td><td>outlives all sessions</td></tr>
       </tbody>
     </table>
 
@@ -357,6 +364,10 @@ curl -u "$AGENT_LAND_BASIC_AUTH" \
   <!-- ============================================================ -->
   <section>
     <h2>How to use — a concrete walkthrough</h2>
+
+    <p><span class="tag tag-roadmap">roadmap</span> These walkthroughs show the <strong>target</strong> usage with durable mounts.
+    Today sessions launch without mounts — each gets an ephemeral workspace volume that is removed with the session.
+    Until mounts ship, run the same commands without <code>--mount</code> and let the agent clone fresh.</p>
 
     <h3>1. Define a project</h3>
     <p>A <em>project</em> is simply a named mount + a recipe of which connectors &amp; provider to use. The mount is the durable footprint.</p>
@@ -402,7 +413,9 @@ al log &lt;session-id&gt; --json</code></pre>
 
     <h3>5. Compose a workflow (automation)</h3>
     <pre><code># Shell script that creates, prompts, waits, and reacts
-SESSION=$(al new --mount proj-x:/workspace --connectors "GitHub" --model deepseek-v4-pro --json | jq -r .session.id)
+SESSION=$(curl -s -u "$AUTH" -X POST "$URL/api/sessions" \
+  -H 'content-type: application/json' \
+  -d '{"model":"deepseek-v4-pro","connectors":["GitHub"]}' | jq -r .session.id)
 curl -s -u "$AUTH" -X POST "$URL/api/sessions/$SESSION/prompt" \
   -H 'content-type: application/json' \
   -d '{"message":"Implement the feature from the spec in /workspace/spec.md"}'
@@ -415,8 +428,12 @@ echo "PR opened: $PR"</code></pre>
   <section>
     <h2>Platform Connector — how agents reach back to the API</h2>
 
+    <p><span class="tag tag-roadmap">roadmap</span> Self-injection is designed but not yet implemented — sessions do not yet receive
+    <code>AGENT_LAND_URL</code>/<code>AGENT_LAND_BASIC_AUTH</code> automatically. Until it ships, child-session composition
+    works by passing credentials explicitly (connector env or prompt).</p>
+
     <p>For an agent session to <strong>spawn sub-agents and watch their results</strong>, it needs to reach the Agent Land API.
-    The platform self-injects its own URL and credentials at session creation — the agent becomes a first-class citizen of the platform.</p>
+    The platform will self-inject its own URL and credentials at session creation — the agent becomes a first-class citizen of the platform.</p>
 
     <div class="grid">
       <article class="card">
@@ -454,6 +471,8 @@ curl -s -u "$AGENT_LAND_BASIC_AUTH" \
   <!-- ============================================================ -->
   <section>
     <h2>Hello World — the composition loop</h2>
+
+    <p><span class="tag tag-roadmap">roadmap</span> This showcase needs Platform Connector self-injection (above). The section describes the target loop.</p>
 
     <p>The smallest orchestration that proves the platform: <strong>you chat with one agent, it spawns sub-agents, watches their results, and reports back.</strong> Like subagents — but each sub-agent is a full session with its own lifecycle, event stream, and capabilities.</p>
 
@@ -703,7 +722,7 @@ graph LR
       <li><strong>Create-time is resolution-time.</strong> Env, engine config, and mount binds are fixed when the session starts. Changing a connector affects the next session.</li>
       <li><strong>The platform observes, never interprets.</strong> Everything it knows about agent behavior comes from the event stream — the vocabulary is agent-mechanical, never business-semantic.</li>
       <li><strong>No technology baked into containers.</strong> The agent image is node + pi + git + curl. Skills, tooling, dependency caches — everything else is a mount or a pack, owned by the use case.</li>
-      <li><strong>Every session is a platform client.</strong> The engine self-injects <code>AGENT_LAND_URL</code> + <code>AGENT_LAND_BASIC_AUTH</code> at creation. Any agent can spawn sub-agents and watch their event streams — multi-agent composition needs no new primitives.</li>
+      <li><strong>Every session is a platform client.</strong> The engine self-injects <code>AGENT_LAND_URL</code> + <code>AGENT_LAND_BASIC_AUTH</code> at creation <small>(roadmap)</small>. Any agent can spawn sub-agents and watch their event streams — multi-agent composition needs no new primitives.</li>
       <li><strong>Everything above is composition.</strong> Projects, workflows, schedules, gates — built from the base components, never inside them.</li>
     </ol>
   </section>
