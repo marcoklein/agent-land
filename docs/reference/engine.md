@@ -37,7 +37,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 2. **Provider** — LLM backend config. One generic record shape: `id`, `baseUrl`, `api` (dialect), `models`, `defaultModel`, and a sealed credential payload. No vendor catalog in-core — presets and device flows live in the CLI/packs.
 
-3. **Mount** — named durable folder attached to a session container at a chosen path. Realized as a Docker volume with a label. Outlives any session. M:N attach; at most one live session per mount. Carries repo checkouts, warm caches, skill files, tooling dirs — the platform is content-agnostic.
+3. **Mount** — named durable folder attached to a session container at a chosen path. Realized as a Docker volume with a label. Outlives any session. M:N attach; at most one live session per mount. Carries repo checkouts, warm caches, skill files, tooling dirs — the platform is content-agnostic. *(roadmap — not yet implemented)*
 
 ### The engine
 
@@ -49,13 +49,13 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ### Loopback
 
-6. **Platform Connector** — at session creation, the engine self-injects `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` as env vars. The agent becomes a first-class client of the platform: it can create child sessions, prompt them, and watch their event streams. Multi-agent composition needs no new primitives.
+6. **Platform Connector** — at session creation, the engine self-injects `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` as env vars. The agent becomes a first-class client of the platform: it can create child sessions, prompt them, and watch their event streams. Multi-agent composition needs no new primitives. *(roadmap — not yet implemented)*
 
 ## Substrate (three services)
 
 | Service | Realizes |
 |---|---|
-| Docker | Session → container (limited, cap-dropped, no-new-privileges, socket-sibling), Mount → volume |
+| Docker | Session → container (limited, cap-dropped, no-new-privileges, socket-sibling), Mount → volume *(roadmap)* |
 | SOPS/Age | Secrets at rest (Connector and Provider credentials) |
 | Flat JSON | Session records, connector/provider registries, per-session event logs |
 
@@ -85,5 +85,5 @@ Local dev: `docker compose up --build -d` against `docker-compose.yml`.
 2. Create-time is resolution-time — env, engine config, and mount binds are fixed when the session starts.
 3. The platform observes, never interprets — everything it knows about agent behavior comes from the event stream.
 4. No technology baked into containers — the agent image is node + pi + git + curl.
-5. Every session is a platform client — self-injected auth enables multi-agent composition.
+5. Every session is a platform client — self-injected auth enables multi-agent composition. *(roadmap)*
 6. Everything above is composition — projects, workflows, schedules, gates build from the primitives.
