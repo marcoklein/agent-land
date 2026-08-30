@@ -1,7 +1,6 @@
 import type { DockerPort, ProviderRepository, SecretsPort } from "../core/ports.js";
 import type { AgentSession, ProviderConfig } from "../core/types.js";
 import { DEFAULT_PROVIDER_ID } from "../core/types.js";
-import { customProviderEnvVar } from "../core/provider-service.js";
 
 export const PI_CONFIG_DIR = "/tmp/pi-config";
 
@@ -18,9 +17,8 @@ export class PiConfigProvisioner {
     const selectedId = session.provider ?? DEFAULT_PROVIDER_ID;
     const selected = enabled.find((p) => p.id === selectedId) ?? null;
 
-    const customs = enabled.filter((p) => p.kind === "custom");
-    if (customs.length > 0) {
-      const modelsJson = renderModelsJson(customs);
+    if (enabled.length > 0) {
+      const modelsJson = renderModelsJson(enabled);
       await this.docker.writeFile(
         containerId,
         `${PI_CONFIG_DIR}/models.json`,
@@ -29,7 +27,7 @@ export class PiConfigProvisioner {
       );
     }
 
-    if (selected?.kind === "oauth") {
+    if (selected) {
       const authJson = await this.renderAuthJson(selected);
       if (authJson) {
         await this.docker.writeFile(
@@ -46,39 +44,44 @@ export class PiConfigProvisioner {
     if (!provider.secretFile) return null;
     const name = provider.secretFile.replace(/\.(ya?ml)$/, "");
     const exists = await this.secrets.secretExists(name).catch(() => false);
-    if (!exists) return null;
+    if (!exists) {
+      if (provider.id === DEFAULT_PROVIDER_ID) {
+        return { apiKey: "$OPENCODE_API_KEY", baseUrl: "$OPENCODE_API_URL" };
+      }
+      return null;
+    }
 
     try {
       const env = await this.secrets.decryptMultiple([provider.secretFile]);
-      const entry = oauthEntryFromEnv(provider, env);
+      const entry = providerEntryFromEnv(provider, env);
       if (!entry) return null;
-      return { [provider.piProvider]: entry };
+      return { [provider.id]: entry };
     } catch {
       return null;
     }
   }
 }
 
-export function renderModelsJson(customs: ProviderConfig[]): Record<string, unknown> {
-  const providers: Record<string, unknown> = {};
-  for (const provider of customs) {
-    providers[provider.id] = renderCustomProviderEntry(provider);
+export function renderModelsJson(providers: ProviderConfig[]): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const provider of providers) {
+    result[provider.id] = renderProviderEntry(provider);
   }
-  return { providers };
+  return { providers: result };
 }
 
-export function renderCustomProviderEntry(provider: ProviderConfig): Record<string, unknown> {
+export function renderProviderEntry(provider: ProviderConfig): Record<string, unknown> {
   const entry: Record<string, unknown> = {};
 
   if (provider.baseUrl) {
-    entry.baseUrl = normalizeBaseUrl(provider);
+    entry.baseUrl = provider.baseUrl;
   }
   if (provider.api) {
     entry.api = provider.api;
   }
 
   if (provider.secretFile) {
-    entry.apiKey = `$${customProviderEnvVar(provider.id)}`;
+    entry.apiKey = `$${provider.id.toUpperCase()}_API_KEY`;
   }
 
   if (provider.models && provider.models.length > 0) {
@@ -88,46 +91,36 @@ export function renderCustomProviderEntry(provider: ProviderConfig): Record<stri
   return entry;
 }
 
-export function normalizeBaseUrl(provider: ProviderConfig): string {
-  const base = trimSlash(provider.baseUrl ?? "");
-  switch (provider.api) {
-    case "anthropic-messages":
-      return stripTrailingSegment(base, "v1");
-    case "openai-completions":
-    case "openai-responses":
-      return base.endsWith("/v1") ? base : `${base}/v1`;
-    default:
-      return base;
-  }
-}
-
-export function oauthEntryFromEnv(
+export function providerEntryFromEnv(
   provider: ProviderConfig,
   env: Map<string, string>
-): { type: "oauth"; access: string; refresh: string; expires?: number } | null {
+): Record<string, unknown> | null {
   const access = env.get("access") ?? env.get("ACCESS");
   const refresh = env.get("refresh") ?? env.get("REFRESH");
-  if (!access || !refresh) return null;
-
-  const entry: { type: "oauth"; access: string; refresh: string; expires?: number } = {
-    type: "oauth",
-    access,
-    refresh,
-  };
-
-  const expiresRaw = env.get("expires") ?? env.get("EXPIRES");
-  if (expiresRaw) {
-    const expires = Number(expiresRaw);
-    if (Number.isFinite(expires)) entry.expires = expires;
+  if (access && refresh) {
+    const entry: Record<string, unknown> = {
+      type: "oauth",
+      access,
+      refresh,
+    };
+    const expiresRaw = env.get("expires") ?? env.get("EXPIRES");
+    if (expiresRaw) {
+      const expires = Number(expiresRaw);
+      if (Number.isFinite(expires)) entry.expires = expires;
+    }
+    return entry;
   }
-  return entry;
-}
 
-function trimSlash(url: string): string {
-  return url.replace(/\/+$/, "");
-}
+  const apiKey = env.get(`${provider.id.toUpperCase()}_API_KEY`);
+  if (apiKey) {
+    const entry: Record<string, unknown> = { apiKey };
+    if (provider.baseUrl) entry.baseUrl = provider.baseUrl;
+    if (provider.api) entry.api = provider.api;
+    if (provider.models && provider.models.length > 0) {
+      entry.models = provider.models.map((id) => ({ id }));
+    }
+    return entry;
+  }
 
-function stripTrailingSegment(url: string, segment: string): string {
-  const suffix = `/${segment}`;
-  return url.endsWith(suffix) ? url.slice(0, -suffix.length) : url;
+  return null;
 }

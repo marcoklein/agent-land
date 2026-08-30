@@ -121,7 +121,7 @@ async function chooseConnectors(client: ApiClient, io: PromptIO): Promise<string
 
   const options: SelectOption[] = [
     { value: "", label: "none" },
-    ...connectors.map((c) => ({ value: c.name, label: `${c.name} (${c.type})` })),
+    ...connectors.map((c) => ({ value: c.name, label: c.name })),
   ];
 
   const chosen = await io.select(options, "connectors (comma-separated)> ", { multiple: true });

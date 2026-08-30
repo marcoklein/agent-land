@@ -43,7 +43,7 @@ describe("parseArgs", () => {
 
   it("collects repeated --field flags", () => {
     const { opts } = parseArgs([
-      "connectors", "add", "--name", "n", "--type", "github", "--url", "u",
+      "connectors", "add", "--name", "n", "--url", "u",
       "--field", "A=1", "--field", "B=2",
     ]);
     expect(opts.fields).toEqual(["A=1", "B=2"]);
@@ -52,12 +52,11 @@ describe("parseArgs", () => {
 
   it("parses providers add flags", () => {
     const { opts } = parseArgs([
-      "providers", "add", "--kind", "custom", "--id", "qwencloud",
+      "providers", "add", "--id", "qwencloud",
       "--base-url", "https://x/v1", "--api", "anthropic-messages",
       "--models", "qwen3.8-max,deepseek-v4-pro", "--field", "QWENCLOUD_API_KEY=sk",
     ]);
     expect(opts).toMatchObject({
-      kind: "custom",
       id: "qwencloud",
       baseUrl: "https://x/v1",
       api: "anthropic-messages",

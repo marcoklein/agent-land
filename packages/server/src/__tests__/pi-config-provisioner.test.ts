@@ -1,18 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizeBaseUrl,
-  renderCustomProviderEntry,
   renderModelsJson,
-  oauthEntryFromEnv,
+  renderProviderEntry,
+  providerEntryFromEnv,
 } from "../infra/pi-config-provisioner.js";
 import { parseModelList } from "../infra/model-catalog.js";
 import type { ProviderConfig } from "../core/types.js";
 
-function custom(overrides: Partial<ProviderConfig>): ProviderConfig {
+function provider(overrides: Partial<ProviderConfig>): ProviderConfig {
   return {
     id: "qwencloud",
-    kind: "custom",
-    piProvider: "qwencloud",
     enabled: true,
     api: "anthropic-messages",
     baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
@@ -20,36 +17,10 @@ function custom(overrides: Partial<ProviderConfig>): ProviderConfig {
   };
 }
 
-describe("normalizeBaseUrl", () => {
-  it("strips a trailing /v1 for anthropic-messages", () => {
-    const provider = custom({
-      api: "anthropic-messages",
-      baseUrl: "https://example.com/apps/anthropic/v1",
-    });
-    expect(normalizeBaseUrl(provider)).toBe("https://example.com/apps/anthropic");
-  });
-
-  it("keeps an anthropic baseUrl without /v1 unchanged", () => {
-    expect(normalizeBaseUrl(custom({}))).toBe(
-      "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic"
-    );
-  });
-
-  it("appends /v1 to an openai-completions baseUrl missing it", () => {
-    const provider = custom({ api: "openai-completions", baseUrl: "http://host:11434" });
-    expect(normalizeBaseUrl(provider)).toBe("http://host:11434/v1");
-  });
-
-  it("keeps an openai-responses baseUrl already ending in /v1", () => {
-    const provider = custom({ api: "openai-responses", baseUrl: "https://opencode.ai/zen/v1" });
-    expect(normalizeBaseUrl(provider)).toBe("https://opencode.ai/zen/v1");
-  });
-});
-
-describe("renderCustomProviderEntry", () => {
-  it("renders a validated qwencloud models.json entry with env interpolation", () => {
-    const entry = renderCustomProviderEntry(
-      custom({
+describe("renderProviderEntry", () => {
+  it("renders a qwencloud models.json entry with env interpolation", () => {
+    const entry = renderProviderEntry(
+      provider({
         models: ["qwen3.8-max", "deepseek-v4-pro"],
         secretFile: "provider-qwencloud.yaml",
       })
@@ -62,8 +33,8 @@ describe("renderCustomProviderEntry", () => {
     });
   });
 
-  it("omits apiKey for a keyless custom provider", () => {
-    const entry = renderCustomProviderEntry(custom({ models: ["llama3"] }));
+  it("omits apiKey for a keyless provider", () => {
+    const entry = renderProviderEntry(provider({ models: ["llama3"] }));
     expect(entry).toEqual({
       baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
       api: "anthropic-messages",
@@ -73,14 +44,14 @@ describe("renderCustomProviderEntry", () => {
 });
 
 describe("renderModelsJson", () => {
-  it("merges multiple custom providers into one models.json", () => {
-    const a = custom({
+  it("merges multiple providers into one models.json", () => {
+    const a = provider({
       id: "stub",
       api: "openai-completions",
       baseUrl: "http://stub:8080/v1",
       secretFile: "provider-stub.yaml",
     });
-    const b = custom({
+    const b = provider({
       id: "stub2",
       api: "openai-completions",
       baseUrl: "http://stub2:8080/v1",
@@ -94,11 +65,11 @@ describe("renderModelsJson", () => {
   });
 });
 
-describe("oauthEntryFromEnv", () => {
-  it("builds a github-copilot auth.json entry", () => {
-    const provider = custom({ id: "github-copilot", kind: "oauth", piProvider: "github-copilot" });
-    const entry = oauthEntryFromEnv(
-      provider,
+describe("providerEntryFromEnv", () => {
+  it("builds an oauth auth.json entry", () => {
+    const p = provider({ id: "github-copilot" });
+    const entry = providerEntryFromEnv(
+      p,
       new Map([
         ["access", "copilot-token"],
         ["refresh", "ghu_refresh"],
@@ -114,8 +85,8 @@ describe("oauthEntryFromEnv", () => {
   });
 
   it("returns null without both access and refresh", () => {
-    const provider = custom({ kind: "oauth" });
-    expect(oauthEntryFromEnv(provider, new Map([["access", "x"]]))).toBeNull();
+    const p = provider({});
+    expect(providerEntryFromEnv(p, new Map([["access", "x"]]))).toBeNull();
   });
 });
 

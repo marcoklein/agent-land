@@ -31,9 +31,9 @@ function makeIO(opts: {
 describe("gatherChoices", () => {
   it("walks through provider, model and connectors interactively", async () => {
     const client = makeClient({
-      providers: [{ id: "github-copilot", kind: "oauth", enabled: true, label: "GitHub Copilot" }],
+      providers: [{ id: "github-copilot", enabled: true, label: "GitHub Copilot" }],
       models: { "github-copilot": ["claude-haiku-4.5"] },
-      connectors: [{ name: "jira", type: "jira", url: "https://jira" }],
+      connectors: [{ name: "jira", url: "https://jira" }],
     });
     const select = vi
       .fn()
@@ -53,7 +53,7 @@ describe("gatherChoices", () => {
   });
 
   it("skips provider and model prompts when a model flag is given", async () => {
-    const client = makeClient({ connectors: [{ name: "jira", type: "jira", url: "u" }] });
+    const client = makeClient({ connectors: [{ name: "jira", url: "u" }] });
     const select = vi.fn().mockResolvedValueOnce([]);
     const io = makeIO({ select });
 
@@ -79,7 +79,6 @@ describe("gatherChoices", () => {
       providers: [
         {
           id: "github-copilot",
-          kind: "oauth",
           enabled: true,
           label: "GitHub Copilot",
           defaultModel: "claude-haiku-4.5",
@@ -98,7 +97,7 @@ describe("gatherChoices", () => {
 
   it("returns no connectors when the user picks none", async () => {
     const client = makeClient({
-      connectors: [{ name: "jira", type: "jira", url: "u" }],
+      connectors: [{ name: "jira", url: "u" }],
     });
     const select = vi.fn().mockResolvedValueOnce([]);
     const io = makeIO({ select });

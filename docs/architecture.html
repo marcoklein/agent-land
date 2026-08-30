@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Land — Architecture v2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root { --pico-font-size: 95%; }
+  h2 { margin-top: 2.5rem; }
+  .mermaid { text-align: center; margin: 2rem 0; }
+  .card { margin-bottom: 1.5rem; }
+  .tag { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; }
+  .tag-core { background: var(--pico-color-jade-400); color: #000; }
+  .tag-substrate { background: var(--pico-color-grey-500); color: #fff; }
+  .tag-outside { background: var(--pico-color-amber-400); color: #000; }
+  table small { opacity: 0.7; }
+  pre { font-size: 0.85rem; }
+  .flow { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
+  .flow-box { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.8rem 1.2rem; text-align: center; }
+  .flow-arrow { font-size: 1.5rem; opacity: 0.5; }
+  .highlight { background: var(--pico-code-background-color); padding: 0.1rem 0.4rem; border-radius: 3px; }
+  .purest { background: var(--pico-card-background-color); border: 2px solid var(--pico-color-jade-400); border-radius: 12px; padding: 2rem; margin: 2rem 0; }
+  .purest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem 0; }
+  .purest-item { text-align: center; }
+  .purest-item .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .purest-item h4 { margin-bottom: 0.3rem; }
+  .purest-item p { font-size: 0.85rem; opacity: 0.8; margin: 0; }
+  .purest-divider { grid-column: span 3; text-align: center; opacity: 0.4; font-size: 0.85rem; }
+  .overflow-auto { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<main class="container">
+
+  <header style="margin-top: 2rem;">
+    <hgroup>
+      <h1>Agent Land — Architecture v2</h1>
+      <p>Easy-to-deploy infrastructure for multi-agent workflows. A minimal session engine. Five base components. Use cases compose them.</p>
+    </hgroup>
+  </header>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <div class="purest">
+    <h2 style="margin-top:0; text-align:center">The Purest Form</h2>
+    <p style="text-align:center; opacity:0.7; margin-bottom:1.5rem">Agent Land is a <strong>session engine</strong>. Six things. Nothing more.</p>
+
+    <div class="purest-grid">
+      <div class="purest-item">
+        <div class="icon">🔑</div>
+        <h4>Connector</h4>
+        <p>Credentials → env vars<br/>Sealed at rest, decrypted at launch</p>
+      </div>
+      <div class="purest-item">
+        <div class="icon">🧠</div>
+        <h4>Provider</h4>
+        <p>LLM backend + model<br/>Generic record, no vendor knowledge</p>
+      </div>
+      <div class="purest-item">
+        <div class="icon">📁</div>
+        <h4>Mount</h4>
+        <p>Durable folder, M:N attach<br/>Repo checkouts, warm caches, skills</p>
+      </div>
+
+      <div class="purest-divider">↓ injected at session creation &nbsp;·&nbsp; the agent gets all three ↓</div>
+
+      <div class="purest-item">
+        <div class="icon">▶️</div>
+        <h4>Session</h4>
+        <p>Agent lifecycle · pi · container<br/><code>idle → running → settled</code></p>
+      </div>
+
+      <div class="purest-divider">↓ produces</div>
+
+      <div class="purest-item">
+        <div class="icon">📡</div>
+        <h4>Event Stream</h4>
+        <p>Sequenced SSE<br/>Observation + composition channel</p>
+      </div>
+
+      <div class="purest-divider">↓ consumed by</div>
+
+      <div class="purest-item">
+        <div class="icon">🔄</div>
+        <h4>Platform Connector</h4>
+        <p>Self-injected API auth<br/>Agent spawns more sessions</p>
+      </div>
+    </div>
+
+    <p style="text-align:center; opacity:0.6; font-size:0.85rem; margin-top:1.5rem">
+      <strong>Recipes</strong> (workflows, projects, schedules) are <em>not</em> part of the engine.<br/>
+      They are prompts, scripts, or YAML files that compose these six primitives.
+    </p>
+  </div>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>What is Agent Land?</h2>
+
+    <p>Agent Land is a <strong>session engine</strong> that runs long-lived coding agents in Docker containers on your server.
+    Its mission: <strong>easy-to-deploy infrastructure for multi-agent workflows.</strong> Agent sessions can spawn sub-agents, watch their event streams, and compose them into larger pipelines — all through the platform's own API.
+    The platform itself is five base components, three substrate services, and one fixed engine opinion (pi).</p>
+
+    <div class="grid">
+      <div><span class="tag tag-core">core</span> <strong>Session</strong> — agent lifecycle, container, policy</div>
+      <div><span class="tag tag-core">core</span> <strong>Connector</strong> — named sealed env bag</div>
+      <div><span class="tag tag-core">core</span> <strong>Provider</strong> — LLM backend config</div>
+      <div><span class="tag tag-core">core</span> <strong>Mount</strong> — named durable folder</div>
+      <div><span class="tag tag-core">core</span> <strong>Event Stream</strong> — sequenced SSE log</div>
+      <div><span class="tag tag-core">core</span> <strong>Platform Connector</strong> — self-injected API auth</div>
+      <div><span class="tag tag-substrate">substrate</span> Docker — containers + volumes</div>
+      <div><span class="tag tag-substrate">substrate</span> SOPS/Age — secrets at rest</div>
+      <div><span class="tag tag-substrate">substrate</span> Flat JSON — persistence</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Deployment</h2>
+
+    <div class="grid">
+      <article class="card">
+        <header><strong>Production — Dokku on a VPS</strong></header>
+        <p>One <code>git push</code> deploys the whole platform. Dokku auto-detects the root <code>Dockerfile</code>, builds it, provisions SSL, and places nginx with basic auth in front. No orchestration, no registry, no YAML — just git.</p>
+        <pre><code># One-time host setup (manual, documented in learnings)
+dokku apps:create agent-land
+dokku docker-options:add agent-land deploy \
+  "-v /var/run/docker.sock:/var/run/docker.sock"
+dokku http-auth:enable agent-land
+
+# Deploy — every push to main
+git push dokku main:master</code></pre>
+        <footer><small>Deploy workflow: <code>.github/workflows/deploy.yml</code></small></footer>
+      </article>
+
+      <article class="card">
+        <header><strong>Local dev — docker compose</strong></header>
+        <p>Single-service compose file. The orchestrator mounts the Docker socket, <code>secrets/</code>, and <code>data/</code>. No auth, no SSL — just <code>localhost:3000</code>.</p>
+        <pre><code>cp .env.example .env
+docker compose up --build -d
+open http://localhost:3000</code></pre>
+        <footer><small><code>docker-compose.yml</code> · local only</small></footer>
+      </article>
+    </div>
+
+    <table>
+      <thead><tr><th>Env var</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>PORT</code></td><td>listen port (default 3000)</td></tr>
+        <tr><td><code>SESSION_SECRET</code></td><td>random 32+ chars; required in production</td></tr>
+        <tr><td><code>OPENCODE_API_KEY</code></td><td>default LLM provider key</td></tr>
+        <tr><td><code>DEFAULT_MODEL</code></td><td>fallback model (default deepseek-v4-pro)</td></tr>
+        <tr><td><code>SECRETS_DIR</code> · <code>DATA_DIR</code></td><td>paths for SOPS files + session data</td></tr>
+        <tr><td><code>AGE_KEY_FILE</code></td><td>age private key for SOPS</td></tr>
+        <tr><td><code>AGENT_IMAGE</code></td><td>agent container image (default agent-land-pi:latest)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Architecture — one diagram</h2>
+
+    <pre class="mermaid">
+graph TB
+    subgraph usecase["USE-CASE LAYER — recipes, NOT agent-land"]
+        direction LR
+        project["Project<br/>mount + recipe"]:::outside
+        workflow["Workflow<br/>session sequences"]:::outside
+        pack["Connector Pack<br/>schema + skill"]:::outside
+        preset["Provider Preset<br/>base url + login"]:::outside
+    end
+
+    subgraph core["AGENT-LAND CORE — the session engine"]
+        direction TB
+
+        subgraph registries["3 Registries — independent catalogs"]
+            direction LR
+            connector["CONNECTOR<br/>named sealed env bag<br/>credentials → env vars"]:::core
+            provider["PROVIDER<br/>LLM backend config<br/>generic record"]:::core
+            mount["MOUNT<br/>named durable folder<br/>M:N attach · exclusive live"]:::core
+        end
+
+        session["SESSION<br/>agent lifecycle · pi · container<br/>permission policy auto/manual"]:::core
+
+        events["EVENT STREAM<br/>sequenced SSE<br/>observation + composition channel"]:::core
+    end
+
+    subgraph infra["SUBSTRATE"]
+        direction LR
+        docker["Docker<br/>containers · volumes"]:::substrate
+        sops["SOPS/Age<br/>secrets at rest"]:::substrate
+        json["Flat JSON<br/>storage"]:::substrate
+    end
+
+    connector -->|"M:N"| session
+    provider  -->|"N:1"| session
+    mount     -->|"M:N"| session
+    session   -->|"1:1"| events
+
+    events    -->|"consumed by"| workflow
+    workflow  -->|"creates"| session
+    project   -->|"uses"| mount
+    pack      -->|"informs"| connector
+    preset    -->|"informs"| provider
+
+    docker -.->|"hosts"| session
+    docker -.->|"hosts"| mount
+    sops   -.->|"seals"| connector
+    sops   -.->|"seals"| provider
+    json   -.->|"persists"| session
+
+    classDef core fill:#1b5e20,stroke:#4caf50,color:#e8f5e9
+    classDef substrate fill:#37474f,stroke:#90a4ae,color:#eceff1
+    classDef outside fill:#e65100,stroke:#ff9800,color:#fff3e0
+    </pre>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Base components — explained</h2>
+
+    <div class="grid">
+
+      <article class="card">
+        <header><span class="tag tag-core">core</span> <strong>Session</strong></header>
+        <p>The agent process itself — one <code>pi --mode rpc</code> agent in one Docker container.
+        It is the atom of the platform; everything else exists to serve it.</p>
+        <ul>
+          <li><strong>Lifecycle:</strong> <code>idle</code> → <code>running</code> → <code>waiting_for_input</code> → back; <code>stopped</code> is terminal</li>
+          <li><strong>Permission policy:</strong> <code>auto</code> (unattended) or <code>manual</code> (dialogs routed to a human)</li>
+          <li><strong>Durable:</strong> survives orchestrator restarts; <code>recover()</code> re-attaches live containers</li>
+          <li><strong>Fixed at creation:</strong> model, provider, connectors, mounts — never reconfigured live</li>
+        </ul>
+        <footer><small>Operations: create · prompt · respond · abort · kill · remove</small></footer>
+      </article>
+
+      <article class="card">
+        <header><span class="tag tag-core">core</span> <strong>Connector</strong></header>
+        <p>A named, sealed envelope of credentials — <strong>the WHO axis.</strong>
+        Literal <code>KEY: value</code> pairs encrypted with SOPS/Age; injected as environment variables at session launch.</p>
+        <ul>
+          <li>No type enum — fully generic. The platform never synthesizes variables.</li>
+          <li>Keys are public (listed, never exposed); values are sealed (decrypted in-memory, only at launch)</li>
+          <li>Field schemas, validation, and skills live <strong>outside</strong> — in connector packs</li>
+        </ul>
+        <footer><small>Shape: <code>{ name, url?, env: sealed{KEY: value} }</code></small></footer>
+      </article>
+
+      <article class="card">
+        <header><span class="tag tag-core">core</span> <strong>Provider</strong></header>
+        <p>An LLM backend definition — <strong>the BRAIN axis.</strong>
+        One generic record shape: <code>id</code>, <code>baseUrl</code>, <code>api</code> (dialect),
+        <code>models</code>, <code>defaultModel</code>, and a sealed credential payload.</p>
+        <ul>
+          <li>No vendor catalog in-core — preset values live in the CLI/packs</li>
+          <li>OAuth device flows (Copilot) run <strong>client-side</strong>; the sever only stores the resulting tokens</li>
+          <li>Model resolution: explicit session model → provider default → platform default</li>
+        </ul>
+        <footer><small>Kinds: key-based or oauth token payload — same generic record</small></footer>
+      </article>
+
+      <article class="card">
+        <header><span class="tag tag-core">core</span> <strong>Mount</strong></header>
+        <p>A named, durable folder attached to a session container — <strong>the MATTER axis.</strong>
+        Realized as a Docker volume with a label; outlives any session.</p>
+        <ul>
+          <li><strong>Attach at creation:</strong> <code>mounts: {"/workspace": "proj-x"}</code> — M:N</li>
+          <li><strong>Exclusive live attach:</strong> at most one running session per mount; conflict returns the holder's session id</li>
+          <li><strong>Carries:</strong> repo checkouts, warm node_modules, skill files, tooling dirs — the platform is content-agnostic</li>
+          <li>No mounts → auto-ephemeral per-session volume, removed on delete</li>
+        </ul>
+        <footer><small>Roadmap: fork (volume copy for parallel tracks)</small></footer>
+      </article>
+
+      <article class="card" style="grid-column: span 2;">
+        <header><span class="tag tag-core">core</span> <strong>Event Stream</strong></header>
+        <p>A session's sequenced, append-only record — <strong>the OBSERVATION + COMPOSITION channel.</strong>
+        Broadcast live over SSE, persisted as the event log. Nothing else leaves the session.</p>
+        <div class="grid">
+          <div>
+            <strong>Event vocabulary</strong> (agent-mechanical, never business-semantic):
+            <ul>
+              <li><code>status</code> — lifecycle change</li>
+              <li><code>turn_start</code> / <code>turn_end</code></li>
+              <li><code>message_delta</code> / <code>message_end</code> (errors ride here)</li>
+              <li><code>tool_start</code> / <code>tool_update</code> / <code>tool_end</code></li>
+              <li><code>agent_settled</code> — idle, final answer ready</li>
+              <li><code>waiting_for_input</code> / <code>input_received</code> — dialogs</li>
+            </ul>
+          </div>
+          <div>
+            <strong>Four consumer roles:</strong>
+            <ol>
+              <li>Rendering — web log renderer, CLI terminal</li>
+              <li>Settle detection — <code>al run</code>, <code>al watch</code></li>
+              <li>Machine consumption — extract final answer, detect errors</li>
+              <li>Cross-session observation — <strong>any</strong> client may read <strong>any</strong> session's stream</li>
+            </ol>
+          </div>
+        </div>
+        <footer><small>Properties: sequenced (dedupe), replayable (after=&hellip; cursor), capped (10k in-memory), durable until session removal</small></footer>
+      </article>
+
+      <article class="card" style="grid-column: span 2;">
+        <header><span class="tag tag-core">core</span> <strong>Platform Connector</strong></header>
+        <p>Every session is a first-class client of the platform. At creation, the engine self-injects two env vars: <code>AGENT_LAND_URL</code> and <code>AGENT_LAND_BASIC_AUTH</code>. The agent can then <code>curl</code> the API to create child sessions, prompt them, and watch their event streams — the foundation of multi-agent orchestration.</p>
+        <div class="grid">
+          <div>
+            <strong>What it unlocks:</strong>
+            <ul>
+              <li>An agent spawns sub-agents (planner → coder → reviewer)</li>
+              <li>An agent watches another session's event stream and reacts</li>
+              <li>No new platform features needed — the API is the composition surface</li>
+            </ul>
+          </div>
+          <div>
+            <strong>How it works:</strong>
+            <pre style="margin:0"><code># Inside the agent container — reach back to the platform
+curl -u "$AGENT_LAND_BASIC_AUTH" \
+  "$AGENT_LAND_URL/api/sessions"</code></pre>
+          </div>
+        </div>
+        <footer><small>Injected at session creation alongside connector env vars. The agent holds the same auth as the user who launched it.</small></footer>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Relationships</h2>
+
+    <table>
+      <thead>
+        <tr><th>Relation</th><th>Type</th><th>Cardinality</th><th>Lifecycle</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Session → Connector</td><td>reference (by name)</td><td>M:N</td><td>connector outlives session</td></tr>
+        <tr><td>Session → Provider</td><td>reference (by id)</td><td>N:1</td><td>provider outlives session</td></tr>
+        <tr><td>Session → Mount</td><td>attach (path:name)</td><td>M:N</td><td>≤1 live session per mount</td></tr>
+        <tr><td>Session → Event Stream</td><td>produces</td><td>1:1</td><td>deleted with session</td></tr>
+        <tr><td>Connector → Secret</td><td>owns</td><td>1:1</td><td>deleted with connector</td></tr>
+        <tr><td>Provider → Secret</td><td>owns</td><td>1:0..1</td><td>deleted with provider</td></tr>
+        <tr><td>Mount → Session</td><td>independent</td><td>—</td><td>outlives all sessions</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Key invariant:</strong> registries (Connector, Provider, Mount) are independent and outlive sessions.
+    Session is the only composition point — it references but never mutates the registries.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>How to use — a concrete walkthrough</h2>
+
+    <h3>1. Define a project</h3>
+    <p>A <em>project</em> is simply a named mount + a recipe of which connectors &amp; provider to use. The mount is the durable footprint.</p>
+    <pre><code># First session: clone the repo into the project mount
+al new --mount proj-agent-land:/workspace \
+      --connectors "GitHub Personal All Repos" \
+      --model deepseek-v4-pro
+
+# The agent clones the repo into /workspace (the mount).
+# Subsequent sessions skip the clone — state is warm.
+
+# Second session: instant warm start
+al new --mount proj-agent-land:/workspace \
+      --connectors "GitHub Personal All Repos" \
+      --model deepseek-v4-pro</code></pre>
+
+    <h3>2. One-shot task</h3>
+    <pre><code>al run "Extract formatAge into lib/format.ts and add tests" \
+      --mount proj-agent-land:/workspace \
+      --connectors "GitHub Personal All Repos" \
+      --model deepseek-v4-pro \
+      --verbose</code></pre>
+
+    <h3>3. Long-lived sidekick session</h3>
+    <pre><code># Create and attach interactively
+al new --mount proj-agent-land:/workspace \
+      --connectors "GitHub Personal All Repos" \
+      --model deepseek-v4-pro
+# &gt; chat prompt appears — type tasks, /quit to detach
+
+# Re-attach later from anywhere
+al chat &lt;session-id&gt;</code></pre>
+
+    <h3>4. Observe the event stream</h3>
+    <pre><code># Watch until settled
+al watch &lt;session-id&gt;
+
+# Replay the full history
+al log &lt;session-id&gt;
+
+# Replay as raw JSON (for automation)
+al log &lt;session-id&gt; --json</code></pre>
+
+    <h3>5. Compose a workflow (automation)</h3>
+    <pre><code># Shell script that creates, prompts, waits, and reacts
+SESSION=$(al new --mount proj-x:/workspace --connectors "GitHub" --model deepseek-v4-pro --json | jq -r .session.id)
+curl -s -u "$AUTH" -X POST "$URL/api/sessions/$SESSION/prompt" \
+  -H 'content-type: application/json' \
+  -d '{"message":"Implement the feature from the spec in /workspace/spec.md"}'
+al watch "$SESSION"                            # block until settled
+PR=$(al log "$SESSION" | grep -oE 'pull/[0-9]+' | tail -1)
+echo "PR opened: $PR"</code></pre>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Platform Connector — how agents reach back to the API</h2>
+
+    <p>For an agent session to <strong>spawn sub-agents and watch their results</strong>, it needs to reach the Agent Land API.
+    The platform self-injects its own URL and credentials at session creation — the agent becomes a first-class citizen of the platform.</p>
+
+    <div class="grid">
+      <article class="card">
+        <header><strong>What gets injected</strong></header>
+        <p>Every session receives two env vars automatically:</p>
+        <ul>
+          <li><code>AGENT_LAND_URL</code> — the API base URL (e.g. <code>https://agent-land.host.impromat.app</code>)</li>
+          <li><code>AGENT_LAND_BASIC_AUTH</code> — the same <code>user:password</code> that protects the API</li>
+        </ul>
+        <p>The agent is now a client of the platform that hosts it.</p>
+      </article>
+
+      <article class="card">
+        <header><strong>What the agent can do with it</strong></header>
+        <pre><code># Create a child session
+curl -s -u "$AGENT_LAND_BASIC_AUTH" \
+  -X POST "$AGENT_LAND_URL/api/sessions" \
+  -H 'content-type: application/json' \
+  -d '{"model":"deepseek-v4-pro","connectors":["GitHub"]}'
+
+# Prompt it
+curl -s -u "$AGENT_LAND_BASIC_AUTH" \
+  -X POST "$AGENT_LAND_URL/api/sessions/CHILD_ID/prompt" \
+  -H 'content-type: application/json' \
+  -d '{"message":"Research the login flow and write a spec"}'
+
+# Watch its event stream for the result
+curl -s -u "$AGENT_LAND_BASIC_AUTH" \
+  "$AGENT_LAND_URL/api/sessions/CHILD_ID/events"</code></pre>
+        <footer><small>Or use the <code>al</code> CLI inside the container if it's mounted.</small></footer>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Hello World — the composition loop</h2>
+
+    <p>The smallest orchestration that proves the platform: <strong>you chat with one agent, it spawns sub-agents, watches their results, and reports back.</strong> Like subagents — but each sub-agent is a full session with its own lifecycle, event stream, and capabilities.</p>
+
+    <pre class="mermaid">
+graph LR
+    subgraph you["You"]
+        human["👤 al chat"]
+    end
+
+    subgraph core["Agent Land"]
+        api["API"]
+        main["Orchestrator<br/>Session"]
+        child1["Child A<br/>planner"]
+        child2["Child B<br/>coder"]
+    end
+
+    human -->|"prompts"| main
+    main -->|"curl POST /api/sessions"| api
+    api --> child1
+    api --> child2
+    child1 -->|"SSE events"| api
+    child2 -->|"SSE events"| api
+    api -->|"watches"| main
+    main -->|"reports"| human
+    </pre>
+
+    <div class="grid">
+      <article class="card">
+        <header><strong>Step by step</strong></header>
+        <ol>
+          <li><strong>You attach:</strong> <code>al chat &lt;session&gt;</code> — interactive, from anywhere</li>
+          <li><strong>You ask:</strong> "Plan and implement the login rate-limiting feature"</li>
+          <li><strong>Agent spawns a planner:</strong> creates a child session, prompts it with the task, watches its SSE stream for the final answer</li>
+          <li><strong>Agent reads the plan:</strong> extracts the spec from the child's event stream</li>
+          <li><strong>Agent spawns a coder:</strong> creates another child session with the spec as the prompt, watches it to green PR</li>
+          <li><strong>Agent reports:</strong> "Done — PR #42 is green. Here's the plan and the diff."</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <header><strong>Why this is the platform's "hello world"</strong></header>
+        <ul>
+          <li>It exercises <strong>every base component</strong>: Session, Connector, Provider, Mount, Event Stream</li>
+          <li>It proves the <strong>composition loop</strong>: Session → Event Stream → (agent) → new Session</li>
+          <li>It needs <strong>zero new platform features</strong> — just the API that already exists + the self-injected auth</li>
+          <li>It's the seed of every larger pattern: workflows, scheduled tasks, multi-agent review, gated deploys</li>
+        </ul>
+      </article>
+    </div>
+
+    <p>The next step after the hello world: <strong>the agent itself watches child sessions and reacts</strong> — on red CI, it re-prompts the coder; on green, it opens a review session. That's the orchestration loop, built entirely from the base components and the API.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>What lives outside (composition layer)</h2>
+
+    <p>Everything that is <em>not</em> the session engine is a use-case recipe — built from the five base components, not inside them.</p>
+
+    <table>
+      <thead><tr><th>Concept</th><th>What it is</th><th>Where it lives</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Project</strong></td><td>a named mount + a recipe (connectors, provider, model, playbook)</td><td>CLI flags, a script, or a profile file</td></tr>
+        <tr><td><strong>Workflow</strong></td><td>a sequence of session / prompt / respond calls; driven by event stream reactions</td><td>automation script, orchestration layer</td></tr>
+        <tr><td><strong>Connector Pack</strong></td><td>field schema + skill files for one external system (GitHub, Jira, …)</td><td>mounts of skill files; CLI wizard presets</td></tr>
+        <tr><td><strong>Provider Preset</strong></td><td>base URL, API dialect, default model for a known vendor</td><td>CLI preset table; device flows in the CLI</td></tr>
+        <tr><td><strong>Scheduler</strong></td><td>cron / trigger that calls the API</td><td>external (cron, CI, webhook)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="flow">
+      <div class="flow-box"><span class="tag tag-core">core</span><br><strong>Session Engine</strong></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><span class="tag tag-core">core</span><br><strong>Event Stream</strong></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><span class="tag tag-outside">outside</span><br><strong>Use Case</strong><br>(watches → reacts)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><span class="tag tag-core">core</span><br><strong>New Session</strong></div>
+    </div>
+    <p><small>The composition loop: <strong>Session → Event Stream → (use case) → new Session.</strong> That feedback loop, not anything in the base, is where orchestration and workflows live.</small></p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>How it compares</h2>
+
+    <p>Agent Land occupies a narrow space that no other tool fills: <strong>self-hosted, minimal-core, multi-agent session engine with git-push deploy.</strong> Every alternative either bundles more opinions, requires a heavier host, or is SaaS.</p>
+
+    <div class="overflow-auto">
+    <table style="font-size:0.82rem">
+      <thead>
+        <tr>
+          <th></th>
+          <th><span class="tag tag-core">Agent Land</span></th>
+          <th>Claude Code / opencode</th>
+          <th>LangChain / LangGraph</th>
+          <th>OpenHands</th>
+          <th>CrewAI</th>
+          <th>Dify / n8n</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Self-hosted</strong></td>
+          <td>✅ yes — Dokku or docker compose</td>
+          <td>✅ local machine only</td>
+          <td>✅ yes — usually k8s or cloud</td>
+          <td>✅ yes — Docker</td>
+          <td>✅ yes</td>
+          <td>✅ yes</td>
+        </tr>
+        <tr>
+          <td><strong>Agent model</strong></td>
+          <td>Sessions — long-lived, durable, re-attachable</td>
+          <td>One-shot or interactive terminal session</td>
+          <td>Graph of nodes (invocations)</td>
+          <td>Sessions — web-based, ephemeral</td>
+          <td>Tasks — one-shot goal-driven</td>
+          <td>Workflow steps — visual or code</td>
+        </tr>
+        <tr>
+          <td><strong>Multi-agent</strong></td>
+          <td>✅ agents spawn agents via the API</td>
+          <td>❌ single agent</td>
+          <td>✅ agent graphs, tool routing</td>
+          <td>❌ single agent</td>
+          <td>✅ crew of agents, sequential or hierarchical</td>
+          <td>✅ generic workflow composition</td>
+        </tr>
+        <tr>
+          <td><strong>Deploy</strong></td>
+          <td><code>git push</code> → Dokku</td>
+          <td><code>npm install</code> on laptop</td>
+          <td>pip install + cloud infra or k8s</td>
+          <td>Docker compose or k8s</td>
+          <td>pip install</td>
+          <td>Docker compose / cloud</td>
+        </tr>
+        <tr>
+          <td><strong>Secrets</strong></td>
+          <td>SOPS/Age — encrypted at rest, decrypted in-memory at launch</td>
+          <td>Env vars / keychain</td>
+          <td>Env vars / cloud secrets</td>
+          <td>Env vars / .env</td>
+          <td>Env vars</td>
+          <td>Env vars / cloud secrets</td>
+        </tr>
+        <tr>
+          <td><strong>Container isolation</strong></td>
+          <td>✅ per-session Docker container, cap-dropped, no socket</td>
+          <td>❌ host process</td>
+          <td>❌ host process (or user-managed)</td>
+          <td>✅ per-session Docker container</td>
+          <td>❌ host process</td>
+          <td>❌ host process (or user-managed)</td>
+        </tr>
+        <tr>
+          <td><strong>API surface</strong></td>
+          <td>JSON/SSE — no SDK, no vendor lock-in</td>
+          <td>CLI only</td>
+          <td>Python SDK</td>
+          <td>REST + WebSocket</td>
+          <td>Python SDK</td>
+          <td>REST + visual builder</td>
+        </tr>
+        <tr>
+          <td><strong>Core philosophy</strong></td>
+          <td>Minimal — 6 primitives, no workflow engine, no vendor knowledge</td>
+          <td>Minimal — terminal agent</td>
+          <td>Batteries-included — chains, agents, tools, retrievers, callbacks</td>
+          <td>Batteries-included — web UI, agent loop, sandbox</td>
+          <td>Opinionated — roles, tasks, crews, processes</td>
+          <td>Batteries-included — visual builder, connectors, triggers</td>
+        </tr>
+        <tr>
+          <td><strong>Web UI</strong></td>
+          <td>✅ lightweight (EJS + HTMX)</td>
+          <td>❌</td>
+          <td>❌ (LangSmith is SaaS)</td>
+          <td>✅ full web app</td>
+          <td>❌ CLI + Python</td>
+          <td>✅ full web app</td>
+        </tr>
+        <tr>
+          <td><strong>CLI</strong></td>
+          <td>✅ <code>al</code> — zero-dependency Node client</td>
+          <td>✅ native</td>
+          <td>✅ Python</td>
+          <td>❌ web only</td>
+          <td>✅ Python</td>
+          <td>❌ web only (n8n) or REST (Dify)</td>
+        </tr>
+        <tr>
+          <td><strong>No vendor lock-in connectors</strong></td>
+          <td>✅ generic sealed env bags — no type enum</td>
+          <td>N/A (no connectors)</td>
+          <td>❌ typed integrations per SDK</td>
+          <td>❌ typed integrations</td>
+          <td>❌ typed tools</td>
+          <td>❌ typed connector nodes</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Where Agent Land is different</h3>
+
+    <div class="grid">
+      <article class="card">
+        <header><strong>No workflow engine in the core</strong></header>
+        <p>LangChain, CrewAI, and Dify all ship a workflow/routing/graph engine inside the platform. Agent Land has none — the composition loop (<code>Session → Event Stream → new Session</code>) is the only primitive. Workflows are recipes (prompts, scripts, YAML) that the <em>agent</em> interprets, not the platform.</p>
+      </article>
+
+      <article class="card">
+        <header><strong>Git-push deploy, not k8s</strong></header>
+        <p>Every other self-hosted platform requires Docker Compose at minimum, typically k8s or a cloud VM with a complex setup. Agent Land is a single <code>Dockerfile</code> — Dokku builds it, provisions SSL, and places nginx in front. One <code>git push</code>.</p>
+      </article>
+
+      <article class="card">
+        <header><strong>Sessions are atoms, not invocations</strong></header>
+        <p>LangGraph sees the world as a graph of function invocations. Agent Land sees the world as <strong>sessions</strong> — long-lived agent processes that survive restarts, can be re-attached from anywhere, and spawn child sessions. A session keeps its context across turns; a graph node is stateless.</p>
+      </article>
+
+      <article class="card">
+        <header><strong>No vendor knowledge in the platform</strong></header>
+        <p>Connectors are literal sealed env bags — no type enum, no field schemas, no typed integrations. Providers are generic records — no catalog, no device-flow machinery in-core. LangChain's integration catalog, Dify's connector nodes, and CrewAI's typed tools all bake vendor knowledge into the platform. Agent Land pushes it out to packs and presets.</p>
+      </article>
+
+      <article class="card">
+        <header><strong>SOPS/Age, not env vars</strong></header>
+        <p>Every other tool stores secrets as plain environment variables or cloud secrets. Agent Land encrypts them at rest with SOPS/Age — decrypted in-memory, only at agent launch, only for the connectors and providers that session selected. The decrypted values never touch disk.</p>
+      </article>
+
+      <article class="card">
+        <header><strong>JSON/SSE API, no SDK</strong></header>
+        <p>LangChain, CrewAI, and Dify each have their own SDK. Agent Land has a JSON/SSE API — the <code>al</code> CLI is a thin client, and any language can drive it. The platform connector (self-injected auth) means agents themselves are API clients — no SDK needed inside the agent either.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Design invariants</h2>
+
+    <ol>
+      <li><strong>Registries are independent and outlive sessions.</strong> Connectors, Providers, and Mounts are catalogs; sessions are transient compositions.</li>
+      <li><strong>Create-time is resolution-time.</strong> Env, engine config, and mount binds are fixed when the session starts. Changing a connector affects the next session.</li>
+      <li><strong>The platform observes, never interprets.</strong> Everything it knows about agent behavior comes from the event stream — the vocabulary is agent-mechanical, never business-semantic.</li>
+      <li><strong>No technology baked into containers.</strong> The agent image is node + pi + git + curl. Skills, tooling, dependency caches — everything else is a mount or a pack, owned by the use case.</li>
+      <li><strong>Every session is a platform client.</strong> The engine self-injects <code>AGENT_LAND_URL</code> + <code>AGENT_LAND_BASIC_AUTH</code> at creation. Any agent can spawn sub-agents and watch their event streams — multi-agent composition needs no new primitives.</li>
+      <li><strong>Everything above is composition.</strong> Projects, workflows, schedules, gates — built from the base components, never inside them.</li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <footer>
+    <small>Agent Land · v2 architecture · <code>docs/architecture.html</code></small>
+  </footer>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: {
+    fontSize: '14px',
+    primaryColor: '#1b5e20',
+    primaryTextColor: '#e8f5e9',
+    primaryBorderColor: '#4caf50',
+    secondaryColor: '#37474f',
+    secondaryTextColor: '#eceff1',
+    secondaryBorderColor: '#90a4ae',
+    tertiaryColor: '#e65100',
+    tertiaryTextColor: '#fff3e0',
+    tertiaryBorderColor: '#ff9800',
+  }});
+</script>
+
+</body>
+</html>

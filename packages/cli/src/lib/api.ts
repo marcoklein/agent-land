@@ -6,12 +6,9 @@ import type {
   DeletedEnvelope,
   ConnectorEnvelope,
   ConnectorListEnvelope,
-  ConnectorFieldsEnvelope,
   ProviderEnvelope,
   ProviderListEnvelope,
   ModelsEnvelope,
-  CopilotStartEnvelope,
-  CopilotPollEnvelope,
 } from "./types.js";
 
 type RequestOptions = Record<string, unknown>;
@@ -74,13 +71,7 @@ export function createApiClient({ url, authHeader }: Config) {
       request("POST", "/api/providers", opts),
     deleteProvider: (id: string): Promise<DeletedEnvelope> =>
       request("DELETE", `/api/providers/${encodeURIComponent(id)}`),
-    startCopilotLogin: (): Promise<CopilotStartEnvelope> =>
-      request("POST", "/api/providers/copilot/start"),
-    pollCopilotLogin: (deviceCode: string): Promise<CopilotPollEnvelope> =>
-      request("POST", "/api/providers/copilot/poll", { deviceCode }),
     listConnectors: (): Promise<ConnectorListEnvelope> => request("GET", "/api/connectors"),
-    connectorFields: (type: string): Promise<ConnectorFieldsEnvelope> =>
-      request("GET", `/api/connectors/fields?type=${encodeURIComponent(type)}`),
     createConnector: (opts: RequestOptions): Promise<ConnectorEnvelope> =>
       request("POST", "/api/connectors", opts),
     deleteConnector: (name: string): Promise<DeletedEnvelope> =>

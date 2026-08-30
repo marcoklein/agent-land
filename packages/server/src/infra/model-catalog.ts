@@ -2,18 +2,21 @@ import type { SecretsPort } from "../core/ports.js";
 import type { ProviderConfig } from "../core/types.js";
 import { DEFAULT_PROVIDER_ID } from "../core/types.js";
 import type { ProviderService } from "../core/provider-service.js";
-import { customProviderEnvVar } from "../core/provider-service.js";
-import { getCatalogEntry, PROVIDER_CATALOG, type CatalogEntry } from "../core/provider-catalog.js";
 import { parseSecretYaml } from "./sops.js";
-import {
-  copilotApiBaseUrl,
-  parseCopilotModelList,
-  COPILOT_HEADERS,
-  COPILOT_API_VERSION,
-} from "./copilot-auth.js";
 
 const CACHE_TTL_MS = 3600_000;
 const FETCH_TIMEOUT_MS = 5000;
+
+const DEFAULT_MODELS = [
+  "deepseek-v4-pro",
+  "deepseek-chat",
+  "claude-sonnet-4-5",
+  "claude-haiku-4.5",
+  "gpt-5",
+  "mistral-large-latest",
+  "llama-3.3-70b-versatile",
+  "grok-4",
+];
 
 interface CacheEntry {
   models: string[];
@@ -65,93 +68,43 @@ export class ModelCatalog {
 
   private async discover(providerId: string): Promise<string[]> {
     const provider = await this.providers.get(providerId);
+
     if (provider) {
-      return this.discoverFromProvider(provider);
+      if (provider.models && provider.models.length > 0) {
+        return [...provider.models];
+      }
+
+      if (provider.baseUrl && provider.api) {
+        return this.discoverFromProvider(provider);
+      }
+
+      return [];
     }
-    const catalog = getCatalogEntry(providerId);
-    if (catalog) {
-      return this.discoverFromCatalog(catalog, null);
+
+    if (providerId === DEFAULT_PROVIDER_ID) {
+      return [...DEFAULT_MODELS];
     }
+
     return [];
   }
 
   private async discoverFromProvider(provider: ProviderConfig): Promise<string[]> {
-    if (provider.models && provider.models.length > 0) {
-      return [...provider.models];
-    }
-
-    if (provider.kind === "builtin") {
-      const catalog = getCatalogEntry(provider.id);
-      if (catalog) {
-        return this.discoverFromCatalog(catalog, provider);
-      }
-    }
-
-    if (provider.kind === "oauth") {
-      return this.discoverCopilot(provider);
-    }
-
-    return this.discoverCustom(provider);
-  }
-
-  private async discoverCopilot(provider: ProviderConfig): Promise<string[]> {
-    if (!provider.secretFile) return [];
-
-    const token = await this.readSecretVar(provider.secretFile, "access");
-    if (!token) return [];
-
-    const baseUrl = copilotApiBaseUrl(token);
-    try {
-      const body = await this.httpGet(`${baseUrl}/models`, {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        ...COPILOT_HEADERS,
-        "X-GitHub-Api-Version": COPILOT_API_VERSION,
-      });
-      return parseCopilotModelList(body);
-    } catch (err) {
-      console.warn(`Copilot model discovery failed: ${errMessage(err)}`);
-      return [];
-    }
-  }
-
-  private async discoverFromCatalog(catalog: CatalogEntry, provider: ProviderConfig | null): Promise<string[]> {
-    if (!catalog.modelsApi) {
-      return [];
-    }
-    const { url, auth } = catalog.modelsApi;
-
-    const headers: Record<string, string> = {};
-    if (auth === "bearer" || auth === "x-api-key") {
-      const key = await this.resolveKey(provider, catalog);
-      if (!key) return [];
-      if (auth === "bearer") headers.Authorization = `Bearer ${key}`;
-      else headers["x-api-key"] = key;
-    }
-
-    const body = await this.httpGet(url, headers);
-    return parseModelList(body);
-  }
-
-  private async discoverCustom(provider: ProviderConfig): Promise<string[]> {
-    if (!provider.baseUrl) return provider.models ?? [];
-
-    const key = await this.resolveCustomKey(provider);
+    const key = await this.resolveProviderKey(provider);
     const headers: Record<string, string> = {};
     let url: string;
 
     switch (provider.api) {
       case "anthropic-messages":
-        url = `${trimSlash(provider.baseUrl)}/models`;
+        url = `${trimSlash(provider.baseUrl!)}/models`;
         if (key) headers["x-api-key"] = key;
         break;
       case "google-generative-ai":
-        url = `${trimSlash(provider.baseUrl)}/models${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+        url = `${trimSlash(provider.baseUrl!)}/models${key ? `?key=${encodeURIComponent(key)}` : ""}`;
         break;
       case "openai-completions":
       case "openai-responses":
       default:
-        url = `${trimSlash(provider.baseUrl)}/models`;
+        url = `${trimSlash(provider.baseUrl!)}/models`;
         if (key) headers.Authorization = `Bearer ${key}`;
         break;
     }
@@ -161,39 +114,24 @@ export class ModelCatalog {
       const models = parseModelList(body);
       if (models.length > 0) return models;
     } catch (err) {
-      console.warn(`Custom provider "${provider.id}" discovery failed: ${errMessage(err)}; using static list`);
+      console.warn(`Provider "${provider.id}" discovery failed: ${errMessage(err)}; using static list`);
     }
     return provider.models ?? [];
   }
 
-  private async resolveKey(provider: ProviderConfig | null, catalog: CatalogEntry): Promise<string | null> {
-    if (!provider?.secretFile) return null;
-    const envVar = this.builtinKeyEnvVar(catalog);
-    return this.readSecretVar(provider.secretFile, envVar);
-  }
-
-  private async resolveCustomKey(provider: ProviderConfig): Promise<string | null> {
+  private async resolveProviderKey(provider: ProviderConfig): Promise<string | null> {
     if (!provider.secretFile) return null;
-    return this.readSecretVar(provider.secretFile, customProviderEnvVar(provider.id));
-  }
-
-  private async readSecretVar(secretFile: string, envVar: string): Promise<string | null> {
-    if (!envVar) return null;
-    const name = secretFile.replace(/\.(ya?ml)$/, "");
+    const name = provider.secretFile.replace(/\.(ya?ml)$/, "");
     const exists = await this.secrets.secretExists(name).catch(() => false);
     if (!exists) return null;
     try {
-      const { content } = await this.secrets.decrypt(secretFile);
+      const { content } = await this.secrets.decrypt(provider.secretFile);
       const envMap = parseSecretYaml(content);
-      return envMap.get(envVar) ?? null;
+      const keyVar = `${provider.id.toUpperCase()}_API_KEY`;
+      return envMap.get(keyVar) ?? null;
     } catch {
       return null;
     }
-  }
-
-  private builtinKeyEnvVar(catalog: CatalogEntry): string {
-    const vars = catalog.authEnvVars ?? [];
-    return vars.find((v) => v.endsWith("_API_KEY")) ?? vars[0] ?? "";
   }
 
   private async httpGet(url: string, headers: Record<string, string>): Promise<unknown> {
@@ -246,8 +184,4 @@ function extractIds(items: unknown[]): string[] {
     }
   }
   return ids;
-}
-
-export function listCatalogProviders(): CatalogEntry[] {
-  return PROVIDER_CATALOG;
 }

@@ -72,7 +72,7 @@ export class SessionService {
     await this.injectProviderEnv(envVarsMap, resolvedProviderId);
 
     for (const conn of selected) {
-      if (conn.url) envVarsMap.set(`${conn.type.toUpperCase()}_URL`, conn.url);
+      if (conn.url) envVarsMap.set(`${conn.name.toUpperCase()}_URL`, conn.url);
     }
 
     return envVarsMap;

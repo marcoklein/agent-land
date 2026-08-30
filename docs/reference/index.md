@@ -4,6 +4,7 @@ okf_version: "0.2"
 
 # Reference
 
+* [Engine](engine.md) — the purest form: six primitives, three substrates, one engine opinion
 * [CLI (`al`)](cli.md) — install, configure, and drive agent-land from the terminal
 * [Providers](providers/) — LLM backends: API behaviors, model discovery, auth
 * [Learnings](learnings/) — operational gotchas: pi exec-stream lifecycle, hosted SSE, redeploy resilience

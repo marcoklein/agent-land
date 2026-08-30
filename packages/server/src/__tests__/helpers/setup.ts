@@ -1,9 +1,5 @@
-import express from "express";
-import session from "express-session";
-import flash from "connect-flash";
-import cookieParser from "cookie-parser";
 import path from "path";
-import { fileURLToPath } from "url";
+import express from "express";
 import { mkdir, rm, writeFile, readFile, stat } from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -24,64 +20,14 @@ import type { DockerPort } from "../../core/ports.js";
 import type { AgentHarness, AgentHandle, EventStream } from "../../core/harness.js";
 import type { SessionEvent } from "../../core/events.js";
 import type { AgentSession } from "../../core/types.js";
-import { connectorsRouter } from "../../routes/connectors.js";
-import { agentsRouter } from "../../routes/agents.js";
 import { sessionsApiRouter } from "../../presentation/http/api-sessions.js";
 import { connectorsApiRouter } from "../../presentation/http/api-connectors.js";
 import { providersApiRouter } from "../../presentation/http/api-providers.js";
-import { copilotApiRouter } from "../../presentation/http/api-copilot.js";
 import { modelsApiRouter } from "../../presentation/http/api-models.js";
 import { getConfig } from "../../config.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const testConfig = getConfig();
 const execFileAsync = promisify(execFile);
-
-function baseApp() {
-  const app = express();
-
-  app.set("view engine", "ejs");
-  app.set("views", path.join(__dirname, "..", "..", "views"));
-
-  app.use(express.static(path.join(__dirname, "..", "..", "..", "public")));
-  app.use(express.urlencoded({ extended: true }));
-  app.use(express.json());
-  app.use(cookieParser());
-  app.use(
-    session({
-      secret: "test-secret",
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(flash());
-
-  app.use((req, res, next) => {
-    res.locals.flashMessages = req.flash();
-    res.locals.appName = "Agent Land";
-    res.locals.formatDuration = (sec: number) => {
-      const s = Math.round(sec);
-      if (s < 60) return `${s}s`;
-      const m = Math.floor(s / 60);
-      const rs = s % 60;
-      return rs > 0 ? `${m}m ${rs}s` : `${m}m`;
-    };
-    next();
-  });
-
-  return app;
-}
-
-export function createTestApp() {
-  const app = baseApp();
-
-  const sops = new SopsService(testConfig.secretsDir, testConfig.ageKeyFile);
-  const connectorRepository = new JsonConnectorRepository(testConfig.dataDir);
-  const connectorService = new ConnectorService(connectorRepository, sops);
-  app.use("/connectors", connectorsRouter(connectorService));
-
-  return app;
-}
+const testConfig = getConfig();
 
 export class MockDockerPort implements DockerPort {
   created: {
@@ -215,10 +161,13 @@ export interface AgentTestApp {
   mockDocker: MockDockerPort;
   fakeHarness: FakeHarness;
   sessionService: SessionService;
+  connectorService: ConnectorService;
+  providerService: ProviderService;
 }
 
 export function createAgentTestApp(): AgentTestApp {
-  const app = baseApp();
+  const app = express();
+  app.use(express.json());
 
   const sops = new SopsService(testConfig.secretsDir, testConfig.ageKeyFile);
   const sessionRepository = new JsonSessionRepository(testConfig.dataDir);
@@ -247,14 +196,12 @@ export function createAgentTestApp(): AgentTestApp {
     20
   );
 
-  app.use("/agents", agentsRouter(sessionService, connectorService, providerService, modelCatalog));
   app.use("/api/sessions", sessionsApiRouter(sessionService, testConfig));
   app.use("/api/connectors", connectorsApiRouter(connectorService));
-  app.use("/api/providers/copilot", copilotApiRouter(providerService));
   app.use("/api/providers", providersApiRouter(providerService));
   app.use("/api/models", modelsApiRouter(modelCatalog));
 
-  return { app, mockDocker, fakeHarness, sessionService };
+  return { app, mockDocker, fakeHarness, sessionService, connectorService, providerService };
 }
 
 export async function setupDataDir() {

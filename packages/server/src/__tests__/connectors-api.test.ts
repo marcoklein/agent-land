@@ -21,9 +21,8 @@ describe("Connectors JSON API", () => {
 
   const githubCreds = {
     name: "GitHub Personal",
-    type: "github",
     url: "https://api.github.com",
-    fields: { GITHUB_TOKEN: "ghp_test123" },
+    env: { GITHUB_TOKEN: "ghp_test123" },
   };
 
   it("returns an empty list", async () => {
@@ -33,25 +32,22 @@ describe("Connectors JSON API", () => {
     expect(res.body).toEqual({ connectors: [] });
   });
 
-  it("creates a typed connector and returns metadata only", async () => {
+  it("creates a connector and returns metadata only", async () => {
     const res = await api.post("/api/connectors").send(githubCreds);
 
     expect(res.status).toBe(201);
     expect(res.body.connector.name).toBe("GitHub Personal");
-    expect(res.body.connector.type).toBe("github");
     expect(res.body.connector.url).toBe("https://api.github.com");
     expect(res.body.connector.secretFile).toBe("github-personal.yaml");
-    expect(res.body.connector.fields).toBeUndefined();
-    expect(res.body.connector.content).toBeUndefined();
+    expect(res.body.connector.env.GITHUB_TOKEN).toBe("ghp_test123");
 
     const secretPath = path.join(config.secretsDir, "github-personal.yaml");
     await expect(stat(secretPath)).resolves.toBeDefined();
   });
 
-  it("creates a custom connector from YAML content", async () => {
+  it("creates a connector from YAML content", async () => {
     const res = await api.post("/api/connectors").send({
       name: "Internal API",
-      type: "custom",
       url: "https://internal.example",
       content: "API_KEY: secret",
     });
@@ -60,7 +56,7 @@ describe("Connectors JSON API", () => {
     expect(res.body.connector.secretFile).toBe("internal-api.yaml");
   });
 
-  it("lists connectors without secret fields", async () => {
+  it("lists connectors", async () => {
     await api.post("/api/connectors").send(githubCreds);
 
     const res = await api.get("/api/connectors");
@@ -68,31 +64,16 @@ describe("Connectors JSON API", () => {
     expect(res.status).toBe(200);
     const [connector] = res.body.connectors;
     expect(connector.name).toBe("GitHub Personal");
-    expect(JSON.stringify(connector)).not.toContain("ghp_test123");
-    expect(connector.content).toBeUndefined();
-    expect(connector.fields).toBeUndefined();
   });
 
-  it("rejects missing required fields with 400", async () => {
+  it("rejects missing credentials with 400", async () => {
     const res = await api.post("/api/connectors").send({
       name: "Broken",
-      type: "github",
       url: "https://api.github.com",
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("Personal Access Token");
-  });
-
-  it("rejects custom connectors without content with 400", async () => {
-    const res = await api.post("/api/connectors").send({
-      name: "Internal API",
-      type: "custom",
-      url: "https://internal.example",
-    });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("content is required");
+    expect(res.body.error).toContain("required");
   });
 
   it("rejects duplicate names with 409", async () => {
@@ -100,7 +81,7 @@ describe("Connectors JSON API", () => {
 
     const res = await api.post("/api/connectors").send({
       ...githubCreds,
-      fields: { GITHUB_TOKEN: "different" },
+      env: { GITHUB_TOKEN: "different" },
     });
 
     expect(res.status).toBe(409);
@@ -112,9 +93,8 @@ describe("Connectors JSON API", () => {
 
     const res = await api.post("/api/connectors").send({
       name: "github-personal",
-      type: "github",
       url: "https://api.github.com",
-      fields: { GITHUB_TOKEN: "other" },
+      env: { GITHUB_TOKEN: "other" },
     });
 
     expect(res.status).toBe(409);
@@ -123,47 +103,12 @@ describe("Connectors JSON API", () => {
   it("rejects names that slugify to an empty string", async () => {
     const res = await api.post("/api/connectors").send({
       name: "!!!",
-      type: "custom",
       url: "https://example.com",
       content: "KEY: value",
     });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("letter or number");
-  });
-
-  it("treats prototype keys as custom types, not typed fields", async () => {
-    const fieldsRes = await api.get("/api/connectors/fields?type=constructor");
-    expect(fieldsRes.status).toBe(200);
-    expect(fieldsRes.body.type).toBe("custom");
-    expect(fieldsRes.body.fields).toBeNull();
-
-    const createRes = await api.post("/api/connectors").send({
-      name: "Proto Connector",
-      type: "constructor",
-      url: "https://example.com",
-      content: "KEY: value",
-    });
-    expect(createRes.status).toBe(201);
-    expect(createRes.body.connector.type).toBe("constructor");
-  });
-
-  it("exposes typed field definitions", async () => {
-    const res = await api.get("/api/connectors/fields?type=jira");
-
-    expect(res.status).toBe(200);
-    expect(res.body.type).toBe("jira");
-    expect(res.body.fields.map((f: { envVar: string }) => f.envVar)).toEqual([
-      "JIRA_EMAIL",
-      "JIRA_API_TOKEN",
-    ]);
-  });
-
-  it("reports custom type for unknown field types", async () => {
-    const res = await api.get("/api/connectors/fields?type=slack");
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ type: "custom", fields: null });
   });
 
   it("deletes a connector and its secret file", async () => {

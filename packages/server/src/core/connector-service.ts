@@ -1,34 +1,11 @@
 import type { Connector } from "./types.js";
 import type { SecretsPort, ConnectorRepository } from "./ports.js";
 
-export interface FieldDef {
-  envVar: string;
-  label: string;
-  placeholder: string;
-}
-
-export const CONNECTOR_FIELDS: Record<string, FieldDef[]> = {
-  github: [{ envVar: "GITHUB_TOKEN", label: "Personal Access Token", placeholder: "ghp_..." }],
-  jira: [
-    { envVar: "JIRA_EMAIL", label: "Email", placeholder: "you@example.com" },
-    { envVar: "JIRA_API_TOKEN", label: "API Token", placeholder: "..." },
-  ],
-  gmail: [
-    { envVar: "GMAIL_CLIENT_ID", label: "Client ID", placeholder: "..." },
-    { envVar: "GMAIL_CLIENT_SECRET", label: "Client Secret", placeholder: "..." },
-    { envVar: "GMAIL_REFRESH_TOKEN", label: "Refresh Token", placeholder: "..." },
-  ],
-};
-
 export function slugify(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-export function getConnectorFields(type: string): FieldDef[] | undefined {
-  return Object.hasOwn(CONNECTOR_FIELDS, type) ? CONNECTOR_FIELDS[type] : undefined;
 }
 
 export class DuplicateConnectorError extends Error {
@@ -40,10 +17,9 @@ export class DuplicateConnectorError extends Error {
 
 export interface CreateConnectorInput {
   name: string;
-  type: string;
-  url: string;
+  url?: string;
   content?: string;
-  fields?: Record<string, string>;
+  env?: Record<string, string>;
 }
 
 export class ConnectorService {
@@ -76,10 +52,10 @@ export class ConnectorService {
   }
 
   private async doCreate(input: CreateConnectorInput): Promise<Connector> {
-    const { name, type, url } = input;
+    const { name, url } = input;
 
-    if (!name || !type || !url) {
-      throw new Error("Name, type, and URL are required.");
+    if (!name) {
+      throw new Error("Name is required.");
     }
 
     const slug = slugify(name);
@@ -87,19 +63,11 @@ export class ConnectorService {
       throw new Error("Connector name must contain at least one letter or number.");
     }
 
-    const fields = getConnectorFields(type);
-    const isCustom = !fields;
+    const env = input.env ?? {};
+    const content = input.content;
 
-    if (isCustom && !input.content) {
-      throw new Error("Credentials are required.");
-    }
-
-    if (!isCustom) {
-      for (const f of fields) {
-        if (!input.fields?.[f.envVar]) {
-          throw new Error(`${f.label} is required.`);
-        }
-      }
+    if (!content && Object.keys(env).length === 0) {
+      throw new Error("Credentials are required (env or content).");
     }
 
     const connectors = await this.repository.list();
@@ -107,7 +75,7 @@ export class ConnectorService {
       throw new DuplicateConnectorError(name);
     }
 
-    const yamlContent = buildYamlFromFields(type, input);
+    const yamlContent = content ?? buildYamlFromEnv(env);
 
     const secretFile = `${slug}.yaml`;
     await this.secrets.saveEncrypted(secretFile.replace(/\.(ya?ml)$/, ""), yamlContent);
@@ -115,8 +83,8 @@ export class ConnectorService {
     const now = new Date().toISOString();
     const connector: Connector = {
       name,
-      type: type as Connector["type"],
       url,
+      env,
       secretFile,
       createdAt: now,
       updatedAt: now,
@@ -139,8 +107,8 @@ export class ConnectorService {
   }
 }
 
-function buildYamlFromFields(type: string, input: CreateConnectorInput): string {
-  const fields = getConnectorFields(type);
-  if (!fields) return input.content || "";
-  return fields.map((f) => `${f.envVar}: ${input.fields?.[f.envVar] || ""}`).join("\n");
+function buildYamlFromEnv(env: Record<string, string>): string {
+  return Object.entries(env)
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join("\n") + (Object.keys(env).length > 0 ? "\n" : "");
 }
