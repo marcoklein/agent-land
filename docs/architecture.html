@@ -163,6 +163,49 @@ graph LR
 
   <!-- ============================================================ -->
   <section>
+    <h2>The code — packages and domains</h2>
+
+    <pre class="mermaid">
+graph TB
+    subgraph contracts["packages/contracts — the canonical API surface"]
+        schemas["zod schemas + endpoint defs<br/>session · connector · provider · event · routes"]:::contract
+    end
+
+    subgraph server["packages/server — the orchestrator"]
+        direction TB
+        http["presentation/http<br/>REST + SSE routers"]:::core
+        core["core<br/>session · connector · provider<br/>prompt · ports · events · harness"]:::core
+        infra["infra<br/>docker · sops · repositories<br/>pi-rpc-harness · pi-config · model-catalog"]:::core
+        http --> core
+        core --> infra
+    end
+
+    subgraph cli["packages/cli — the al client (zero runtime deps)"]
+        direction TB
+        bin["agent-land.ts<br/>command surface"]:::core
+        lib["lib<br/>api · sse · render · ops<br/>wizard · args · dialogs · config"]:::core
+        bin --> lib
+    end
+
+    image["agent-image/<br/>pi runtime + skills"]:::substrate
+
+    http -.->|"imports"| schemas
+    lib -.->|"imports"| schemas
+    lib -->|"HTTP + SSE"| http
+    infra -->|"docker socket — runs"| image
+
+    classDef contract fill:#1a3a5c,stroke:#4c8ac2,color:#dcecfa
+    classDef core fill:#1b5e20,stroke:#4caf50,color:#e8f5e9
+    classDef substrate fill:#37474f,stroke:#90a4ae,color:#eceff1
+    </pre>
+
+    <p style="text-align:center; opacity:0.7"><small>Contracts is the single source of truth for the wire format — server and CLI both import it.
+    The server layers adapters → domain services → infrastructure; the CLI is a thin projector/controller.
+    <code>server.ts</code> composes the adapters, services, and infra into one Express app.</small></p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
     <h2>The six primitives</h2>
 
     <div class="overflow-auto" style="overflow-x:auto">
