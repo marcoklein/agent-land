@@ -22,33 +22,45 @@ docker build -t agent-land-pi:latest ./agent-image
 
 # 5. Start
 docker compose up --build -d
-# Open http://localhost:3000
 ```
 
 ## Usage
 
-1. **Secrets** — add encrypted API tokens (e.g. Jira PAT, GitHub token)
-2. **Connectors** — create named pointers to those secrets
-3. **Sessions** — write a prompt, select connectors, launch
+Everything is driven through the JSON/SSE API — the CLI (`al`) is the primary client:
+
+```bash
+# configure CLI against the server
+export AGENT_LAND_URL=http://localhost:3000
+
+# register a connector (generic env bag, encrypted at rest)
+al connectors add --name github --url https://api.github.com --field GITHUB_TOKEN=ghp-xxx
+
+# run a one-shot agent session
+al run "Summarize the README of this repo" --model deepseek-v4-pro --rm
+
+# or start an interactive chat
+al new --connectors github
+```
 
 Agent output streams in real-time via SSE. Each session persists its record to `data/sessions/`.
 
 ## Features
 
-- **SOPS/Age secrets** — encrypted at rest, decrypted in-memory only at launch
-- **Live log streaming** via SSE — styled agent output in real-time
-- **Connector abstraction** — point at encrypted secrets, select at launch time
+- **SOPS/Age secrets** — encrypted at rest, decrypted in-memory only at launch; values never exposed over the API
+- **Live log streaming** via SSE — agent events rendered in real-time
+- **Connector abstraction** — generic sealed env bags, selected at launch time
+- **Provider records** — generic LLM backend configs (base URL, API dialect, models, credentials)
 - **RPC-driven sessions** — every session is a running pi agent (`--mode rpc`) with `auto`/`manual` permission policies
 - **Session recovery** — durable event log, graceful drain, and re-attach on redeploy
 - **Terminal client (`al`)** — zero-dependency CLI to create, chat, watch, and script sessions
 - **Pre-baked agent tools** — git, curl, jq, gh ready in the container
-- **Agent skills** — each connector type teaches the agent how to use the API
+- **Agent skills** — bundled skill files teach the agent common APIs (github, jira, gmail)
 - **No database** — flat JSON files on mounted volumes
 - **Runs on Dokku** — single Dockerfile, no orchestration
 
 ## API
 
-The JSON HTTP + SSE API (sessions, connectors, models, providers, Copilot) is defined once in `packages/contracts/src/routes.ts`. See the [documentation](docs/README.md) for reference and operational learnings.
+The JSON HTTP + SSE API (sessions, connectors, models, providers) is defined once in `packages/contracts/src/routes.ts`. See the [documentation](docs/README.md) for reference and operational learnings.
 
 ## Docs
 

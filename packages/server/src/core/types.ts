@@ -1,9 +1,6 @@
 import type {
   PermissionPolicy,
   SessionStatus,
-  ProviderKind,
-  ProviderApiType,
-  ConnectorType,
   Session,
   Connector,
   Provider,
@@ -12,9 +9,6 @@ import type {
 export type {
   PermissionPolicy,
   SessionStatus,
-  ProviderKind,
-  ProviderApiType,
-  ConnectorType,
   Connector,
 };
 

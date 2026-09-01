@@ -2,7 +2,6 @@ import path from "path";
 
 export interface Config {
   port: number;
-  sessionSecret: string;
   secretsDir: string;
   dataDir: string;
   agentImage: string;
@@ -24,20 +23,8 @@ export function getConfig(): Config {
     throw new Error(`Invalid SSE_HEARTBEAT_MS: ${process.env.SSE_HEARTBEAT_MS} (expected a positive number)`);
   }
 
-  const isProd = process.env.NODE_ENV === "production";
-  const sessionSecret = process.env.SESSION_SECRET ?? "";
-  if (isProd && (!sessionSecret || sessionSecret.length < 32)) {
-    throw new Error(
-      "SESSION_SECRET must be set to a random value of at least 32 characters in production"
-    );
-  }
-  if (!isProd && !sessionSecret) {
-    console.warn("SESSION_SECRET is not set; using insecure development fallback");
-  }
-
   return {
     port,
-    sessionSecret: sessionSecret || "dev-secret-change-me",
     secretsDir: path.resolve(process.env.SECRETS_DIR || "./secrets"),
     dataDir: path.resolve(process.env.DATA_DIR || "./data"),
     agentImage: process.env.AGENT_IMAGE || "agent-land-pi:latest",

@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import * as cheerio from "cheerio";
 import request from "supertest";
 import type { Express } from "express";
 import { createAgentTestApp, MockDockerPort, setupDataDir, cleanupDataDir } from "./helpers/setup.js";
@@ -21,10 +20,9 @@ describe("Providers — API and launch flow", () => {
     await cleanupDataDir();
   });
 
-  it("creates a custom provider and lists it", async () => {
+  it("creates a provider and lists it", async () => {
     const create = await agent.post("/api/providers").send({
       id: "qwencloud",
-      kind: "custom",
       baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
       api: "anthropic-messages",
       models: ["qwen3.8-max", "deepseek-v4-pro"],
@@ -32,17 +30,15 @@ describe("Providers — API and launch flow", () => {
     });
     expect(create.status).toBe(201);
     expect(create.body.provider.id).toBe("qwencloud");
-    expect(create.body.provider.kind).toBe("custom");
 
     const list = await agent.get("/api/providers");
     expect(list.status).toBe(200);
     expect(list.body.providers.map((p: { id: string }) => p.id)).toContain("qwencloud");
   });
 
-  it("returns static models for a custom provider", async () => {
+  it("returns static models for a provider", async () => {
     await agent.post("/api/providers").send({
       id: "qwencloud",
-      kind: "custom",
       baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
       api: "anthropic-messages",
       models: ["qwen3.8-max", "deepseek-v4-pro"],
@@ -56,17 +52,17 @@ describe("Providers — API and launch flow", () => {
   it("rejects a duplicate provider with 409", async () => {
     await agent
       .post("/api/providers")
-      .send({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk" } });
+      .send({ id: "mistral", secretFields: { MISTRAL_API_KEY: "sk" } });
     const dup = await agent
       .post("/api/providers")
-      .send({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk" } });
+      .send({ id: "mistral", secretFields: { MISTRAL_API_KEY: "sk" } });
     expect(dup.status).toBe(409);
   });
 
   it("deletes a provider and 404s on a missing one", async () => {
     await agent
       .post("/api/providers")
-      .send({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk" } });
+      .send({ id: "mistral", secretFields: { MISTRAL_API_KEY: "sk" } });
 
     const del = await agent.delete("/api/providers/mistral");
     expect(del.status).toBe(200);
@@ -83,7 +79,7 @@ describe("Providers — API and launch flow", () => {
   it("injects the provider secret into the session container env", async () => {
     await agent
       .post("/api/providers")
-      .send({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk-test-key" } });
+      .send({ id: "mistral", secretFields: { MISTRAL_API_KEY: "sk-test-key" } });
 
     const create = await agent
       .post("/api/sessions")
@@ -102,10 +98,9 @@ describe("Providers — API and launch flow", () => {
     expect(created.envVars.OPENCODE_API_KEY).toBe("test-key");
   });
 
-  it("writes models.json for a custom provider session", async () => {
+  it("writes models.json for a provider session", async () => {
     await agent.post("/api/providers").send({
       id: "qwencloud",
-      kind: "custom",
       baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
       api: "anthropic-messages",
       models: ["qwen3.8-max"],
@@ -121,39 +116,16 @@ describe("Providers — API and launch flow", () => {
     expect(json.providers.qwencloud.models).toEqual([{ id: "qwen3.8-max" }]);
   });
 
-  it("renders the provider select and model-options fragment", async () => {
-    await agent.post("/api/providers").send({
-      id: "qwencloud",
-      kind: "custom",
-      baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
-      api: "anthropic-messages",
-      models: ["qwen3.8-max"],
-    });
+  it("removes the container and workspace volume when a session is deleted", async () => {
+    const create = await agent.post("/api/sessions").send({});
+    expect(create.status).toBe(201);
+    const { id } = create.body.session;
+    const created = mockDocker.created[0];
 
-    const newPage = await agent.get("/agents/new");
-    expect(newPage.status).toBe(200);
-    const $ = cheerio.load(newPage.text);
-    expect($("select#provider").length).toBe(1);
-    expect($("select#model").length).toBe(1);
+    const del = await agent.delete(`/api/sessions/${id}`);
+    expect(del.status).toBe(200);
 
-    const fragment = await agent.get("/agents/model-options?provider=qwencloud");
-    expect(fragment.status).toBe(200);
-    expect(fragment.text).toContain("qwen3.8-max");
-    expect(fragment.text).toContain('name="model"');
-  });
-
-  it("launches a session with a provider via the form", async () => {
-    await agent
-      .post("/api/providers")
-      .send({ id: "mistral", kind: "builtin", secretFields: { MISTRAL_API_KEY: "sk" } });
-
-    const launch = await agent
-      .post("/agents/run")
-      .send({ task: "hi", provider: "mistral", model: "mistral-large-latest" });
-    expect(launch.status).toBe(302);
-
-    const id = (launch.headers.location as string).match(/\/agents\/([^/]+)/)![1];
-    const detail = await agent.get(`/agents/${id}`);
-    expect(detail.text).toContain("mistral");
+    expect(mockDocker.removed).toContain(`mock-${id}`);
+    expect(mockDocker.removedVolumes).toContain(created.workspaceVolume);
   });
 });

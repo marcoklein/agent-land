@@ -42,6 +42,10 @@ interface SessionServiceDeps {
 
 const HISTORY_CAP = 10_000;
 
+function workspaceVolumeName(id: string): string {
+  return `agent-land-ws-${id}`;
+}
+
 export class SessionNotFoundError extends Error {
   constructor(id: string) {
     super(`Session ${id} not found`);
@@ -72,7 +76,7 @@ export class SessionService {
     await this.injectProviderEnv(envVarsMap, resolvedProviderId);
 
     for (const conn of selected) {
-      if (conn.url) envVarsMap.set(`${conn.type.toUpperCase()}_URL`, conn.url);
+      if (conn.url) envVarsMap.set(`${conn.name.toUpperCase()}_URL`, conn.url);
     }
 
     return envVarsMap;
@@ -123,7 +127,7 @@ export class SessionService {
     const model = options.model || providerRecord?.defaultModel || this.deps.config.defaultModel;
 
     const id = randomUUID().slice(0, 8);
-    const workspaceVolume = `agent-land-ws-${id}`;
+    const workspaceVolume = workspaceVolumeName(id);
 
     await this.deps.docker.ensureAgentImage(this.deps.config.agentImage);
 
@@ -253,6 +257,7 @@ export class SessionService {
       if (session.status !== "stopped") {
         await this.markStopped(session);
       }
+      await this.deps.docker.removeVolume(workspaceVolumeName(id)).catch(() => {});
       return;
     }
 
@@ -265,6 +270,7 @@ export class SessionService {
     try {
       await this.deps.docker.removeContainer(handle.containerId);
     } catch {}
+    await this.deps.docker.removeVolume(workspaceVolumeName(id)).catch(() => {});
 
     handle.subscribers.clear();
     this.setStatus(handle, "stopped");

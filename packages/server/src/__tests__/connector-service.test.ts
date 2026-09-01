@@ -25,7 +25,6 @@ describe("ConnectorService", () => {
       Array.from({ length: 10 }, (_, i) =>
         service.create({
           name: `Connector ${i}`,
-          type: "custom",
           url: "https://example.com",
           content: "KEY: value",
         })

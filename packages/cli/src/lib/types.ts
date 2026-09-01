@@ -3,12 +3,7 @@ import type {
   SessionStatus,
   PermissionPolicy,
   Connector,
-  ConnectorType,
-  ConnectorFieldDef,
   Provider,
-  ProviderKind,
-  ProviderApiType,
-  ProviderCatalogItem,
   SessionEvent,
   SsePayload,
   Message,
@@ -17,15 +12,11 @@ import type {
   SessionListEnvelope,
   ConnectorEnvelope,
   ConnectorListEnvelope,
-  ConnectorFieldsEnvelope,
   ProviderEnvelope,
   ProviderListEnvelope,
-  ProviderCatalogEnvelope,
   ModelsEnvelope,
   AcceptedEnvelope,
   DeletedEnvelope,
-  CopilotStartEnvelope,
-  CopilotPollEnvelope,
   CreateSessionInput,
   CreateConnectorInput,
 } from "@agent-land/contracts";
@@ -35,12 +26,7 @@ export type {
   SessionStatus,
   PermissionPolicy,
   Connector,
-  ConnectorType,
-  ConnectorFieldDef,
   Provider,
-  ProviderKind,
-  ProviderApiType,
-  ProviderCatalogItem,
   SessionEvent,
   SsePayload,
   Message,
@@ -49,15 +35,11 @@ export type {
   SessionListEnvelope,
   ConnectorEnvelope,
   ConnectorListEnvelope,
-  ConnectorFieldsEnvelope,
   ProviderEnvelope,
   ProviderListEnvelope,
-  ProviderCatalogEnvelope,
   ModelsEnvelope,
   AcceptedEnvelope,
   DeletedEnvelope,
-  CopilotStartEnvelope,
-  CopilotPollEnvelope,
   CreateSessionInput,
   CreateConnectorInput,
 };
@@ -66,10 +48,10 @@ export type SessionSummary = Pick<
   Session,
   "id" | "status" | "createdAt" | "model" | "provider" | "connectors"
 >;
-export type ConnectorSummary = Pick<Connector, "name" | "type" | "url">;
+export type ConnectorSummary = Pick<Connector, "name" | "url">;
 export type ProviderSummary = Pick<
   Provider,
-  "id" | "kind" | "label" | "api" | "enabled" | "defaultModel"
+  "id" | "label" | "api" | "enabled" | "defaultModel"
 >;
 export type AgentEvent = SsePayload;
 export type WaitingForInput = Extract<SessionEvent, { type: "waiting_for_input" }>;

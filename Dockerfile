@@ -30,8 +30,6 @@ RUN pnpm install --frozen-lockfile --prod --filter "@agent-land/server..."
 
 COPY --from=build /app/packages/server/dist/ ./packages/server/dist/
 COPY --from=build /app/packages/contracts/dist/ ./packages/contracts/dist/
-COPY packages/server/src/views/ ./packages/server/dist/views/
-COPY packages/server/public/ ./packages/server/public/
 COPY agent-image/ /agent-image/
 
 ENV NODE_ENV=production

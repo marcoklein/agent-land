@@ -94,7 +94,6 @@ describe("createApiClient", () => {
   it("creates a provider with the given payload", async () => {
     const client = createApiClient({ url: baseUrl });
     await client.createProvider({
-      kind: "custom",
       id: "qwencloud",
       baseUrl: "https://x",
       api: "anthropic-messages",
@@ -104,7 +103,6 @@ describe("createApiClient", () => {
     expect(r.method).toBe("POST");
     expect(r.url).toBe("/api/providers");
     expect(r.body).toEqual({
-      kind: "custom",
       id: "qwencloud",
       baseUrl: "https://x",
       api: "anthropic-messages",
@@ -118,17 +116,6 @@ describe("createApiClient", () => {
     expect(requests.at(-1)!.url).toBe("/api/providers/my%20provider");
   });
 
-  it("starts and polls a copilot login", async () => {
-    const client = createApiClient({ url: baseUrl });
-    await client.startCopilotLogin();
-    expect(requests.at(-1)!.method).toBe("POST");
-    expect(requests.at(-1)!.url).toBe("/api/providers/copilot/start");
-
-    await client.pollCopilotLogin("dc123");
-    expect(requests.at(-1)!.url).toBe("/api/providers/copilot/poll");
-    expect(requests.at(-1)!.body).toEqual({ deviceCode: "dc123" });
-  });
-
   it("lists connectors", async () => {
     const client = createApiClient({ url: baseUrl });
     await client.listConnectors();
@@ -137,28 +124,20 @@ describe("createApiClient", () => {
     expect(r.url).toBe("/api/connectors");
   });
 
-  it("fetches connector field definitions URL-encoded", async () => {
-    const client = createApiClient({ url: baseUrl });
-    await client.connectorFields("my type");
-    expect(requests.at(-1)!.url).toBe("/api/connectors/fields?type=my%20type");
-  });
-
   it("creates a connector with the given payload", async () => {
     const client = createApiClient({ url: baseUrl });
     await client.createConnector({
       name: "GitHub",
-      type: "github",
       url: "https://api.github.com",
-      fields: { GITHUB_TOKEN: "ghp_x" },
+      env: { GITHUB_TOKEN: "ghp_x" },
     });
     const r = requests.at(-1)!;
     expect(r.method).toBe("POST");
     expect(r.url).toBe("/api/connectors");
     expect(r.body).toEqual({
       name: "GitHub",
-      type: "github",
       url: "https://api.github.com",
-      fields: { GITHUB_TOKEN: "ghp_x" },
+      env: { GITHUB_TOKEN: "ghp_x" },
     });
   });
 

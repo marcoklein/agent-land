@@ -35,25 +35,22 @@ Usage:
       list available models (defaults to the default provider)
 
   al providers [--json]
-      list configured providers (id, kind, api, enabled)
+      list configured providers (id, label, api, enabled)
 
-  al providers add --kind <builtin|custom|oauth> --id <slug> [--label <l>] [--base-url <u>]
+  al providers add --id <slug> [--label <l>] [--base-url <u>]
                    [--api <type>] [--default-model <m>] [--models a,b,c]
                    [--field KEY=VALUE ...] [--content <yaml>]
-      create a provider; builtins take --field ENV_VAR=value (e.g. MISTRAL_API_KEY=...),
-      custom takes --field <ID>_API_KEY=value, oauth takes --content (access/refresh/expires)
+                   [--api-key <key>]
+      create a provider with optional credentials
 
   al providers rm <id> [-y|--yes]
       delete a provider (prompts y/N)
 
-  al providers login
-      start the GitHub Copilot device flow, then poll until authorized
-
   al connectors ls
-      list connectors (name, type, url — never secrets)
+      list connectors (name, url — never secrets)
 
-  al connectors add --name <n> --type <type> --url <u> [--field KEY=VALUE ...] [--content <yaml>]
-      create a connector; typed connectors take --field, custom types take --content
+  al connectors add --name <n> [--url <u>] [--field KEY=VALUE ...] [--content <yaml>]
+      create a connector with environment variables
 
   al connectors rm <name> [-y|--yes]
       delete a connector (prompts y/N)
@@ -201,9 +198,8 @@ async function listConnectors(client: ApiClient): Promise<void> {
     return;
   }
   const nameWidth = Math.max(6, ...connectors.map((x) => x.name.length));
-  const typeWidth = Math.max(4, ...connectors.map((x) => x.type.length));
   for (const x of connectors) {
-    process.stdout.write(`${x.name.padEnd(nameWidth)}  ${x.type.padEnd(typeWidth)}  ${x.url}\n`);
+    process.stdout.write(`${x.name.padEnd(nameWidth)}  ${x.url ?? "-"}\n`);
   }
 }
 
@@ -218,41 +214,29 @@ async function listProviders(client: ApiClient, { json }: { json?: boolean } = {
     return;
   }
   const idWidth = Math.max(6, ...providers.map((x) => x.id.length));
-  const kindWidth = Math.max(4, ...providers.map((x) => x.kind.length));
   for (const x of providers) {
     const state = x.enabled ? "" : dim(" [disabled]");
     process.stdout.write(
-      `${x.id.padEnd(idWidth)}  ${x.kind.padEnd(kindWidth)}  ${x.api ?? "-"}${state}\n`
+      `${x.id.padEnd(idWidth)}  ${x.label ?? ""}${state}\n`
     );
   }
 }
 
 async function addConnector(client: ApiClient, opts: ParsedArgs["opts"]): Promise<void> {
-  const { name, type, url, content } = opts;
-  if (!name || !type || !url) fail("connectors add requires --name, --type and --url");
+  const { name, url, content } = opts;
+  if (!name) fail("connectors add requires --name");
 
-  const { fields } = await client.connectorFields(type);
-  const payload: Record<string, unknown> = { name, type, url };
+  const payload: Record<string, unknown> = { name };
+  if (url) payload.url = url;
 
-  if (fields) {
-    const provided: Record<string, string> = {};
-    for (const f of opts.fields || []) {
-      const eq = f.indexOf("=");
-      if (eq === -1) fail(`--field expects KEY=VALUE, got "${f}"`);
-      provided[f.slice(0, eq).trim()] = f.slice(eq + 1);
-    }
-    for (const def of fields) {
-      if (!provided[def.envVar]) fail(`missing --field ${def.envVar} (${def.label})`);
-    }
-    payload.fields = provided;
-  } else if (content) {
-    payload.content = content;
-  } else {
-    fail(`type "${type}" is custom: provide --content "<yaml>"`);
-  }
+  const env = parseFieldPairs(opts.fields);
+  if (env) payload.env = env;
+  if (content) payload.content = content;
+
+  if (!env && !content) fail("provide --field KEY=VALUE ... or --content <yaml>");
 
   const { connector } = await client.createConnector(payload);
-  process.stdout.write(`created connector "${connector.name}" (${connector.type})\n`);
+  process.stdout.write(`created connector "${connector.name}"\n`);
 }
 
 function parseFieldPairs(fields: string[] | undefined): Record<string, string> | undefined {
@@ -267,17 +251,15 @@ function parseFieldPairs(fields: string[] | undefined): Record<string, string> |
 }
 
 async function addProvider(client: ApiClient, opts: ParsedArgs["opts"]): Promise<void> {
-  const { kind, id } = opts;
-  if (!kind || !id) fail("providers add requires --kind and --id");
-  if (kind !== "builtin" && kind !== "custom" && kind !== "oauth") {
-    fail(`providers add: --kind must be builtin, custom, or oauth (got "${kind}")`);
-  }
+  const { id } = opts;
+  if (!id) fail("providers add requires --id");
 
-  const payload: Record<string, unknown> = { kind, id };
+  const payload: Record<string, unknown> = { id };
   if (opts.label) payload.label = opts.label;
   if (opts.baseUrl) payload.baseUrl = opts.baseUrl;
   if (opts.api) payload.api = opts.api;
   if (opts.defaultModel) payload.defaultModel = opts.defaultModel;
+  if (opts.apiKey) payload.apiKey = opts.apiKey;
 
   if (typeof opts.models === "string" && opts.models.trim()) {
     const models = opts.models
@@ -292,7 +274,7 @@ async function addProvider(client: ApiClient, opts: ParsedArgs["opts"]): Promise
   if (opts.content) payload.secretContent = opts.content;
 
   const { provider } = await client.createProvider(payload);
-  process.stdout.write(`created provider "${provider.id}" (${provider.kind})\n`);
+  process.stdout.write(`created provider "${provider.id}"\n`);
 }
 
 async function resolveProviderForModel(
@@ -311,43 +293,6 @@ async function resolveProviderForModel(
     if (pm.includes(model)) return p.id;
   }
   return undefined;
-}
-
-async function loginProvider(client: ApiClient): Promise<void> {
-  const flow = await client.startCopilotLogin();
-  const intervalSec = typeof flow.interval === "number" ? flow.interval : 5;
-  const expiresInSec = typeof flow.expiresIn === "number" ? flow.expiresIn : 900;
-
-  process.stdout.write(
-    `\n1. Open ${flow.verificationUri}\n` +
-      `2. Enter code: ${flow.userCode}\n\n` +
-      `Waiting for authorization (Ctrl-C to cancel)...\n`
-  );
-
-  const deadline = Date.now() + expiresInSec * 1000;
-  let delayMs = Math.max(5000, intervalSec * 1000);
-
-  while (Date.now() < deadline) {
-    await sleep(delayMs);
-    let result: any;
-    try {
-      result = await client.pollCopilotLogin(flow.deviceCode);
-    } catch (err) {
-      fail(`copilot login failed: ${(err as Error).message}`);
-    }
-    if (result.status === "authorized") {
-      process.stdout.write(
-        `\ncreated provider "${result.provider.id}" (${result.provider.kind})\n`
-      );
-      return;
-    }
-    if (result.status === "expired") fail("authorization expired");
-    if (result.status === "denied") fail("authorization denied");
-    if (result.status === "failed") fail(`device flow failed: ${result.message}`);
-    if (result.status === "slow_down") delayMs += 5000;
-  }
-
-  fail("device flow timed out");
 }
 
 async function logSession(
@@ -828,8 +773,6 @@ async function main() {
         await listProviders(client, { json: opts.json });
       } else if (sub === "add") {
         await addProvider(client, opts);
-      } else if (sub === "login") {
-        await loginProvider(client);
       } else if (sub === "rm") {
         const id = positional[1];
         if (!id) fail("providers rm requires an id");

@@ -56,9 +56,14 @@ al chat <session-id>            attach (history replays, then live events)
 al ls [--json]                  list sessions with status, age, model, connectors
 al rm <session-id> [-y|--yes]   delete a session (prompts y/N while running)
 al log <session-id> [--follow] [--json]
-al models                       list available models
-al connectors ls                list connectors (name, type, url — never secrets)
-al connectors add --name <n> --type <type> --url <u> [--field K=V ...] [--content <yaml>]
+al models [--provider <id>]     list available models
+al providers [--json]           list configured providers (id, label, enabled)
+al providers add --id <slug> [--label <l>] [--base-url <u>] [--api <type>]
+                 [--default-model <m>] [--models a,b,c] [--field K=V ...]
+                 [--content <yaml>] [--api-key <key>]
+al providers rm <id> [-y|--yes]
+al connectors ls                list connectors (name, url — never secrets)
+al connectors add --name <n> [--url <u>] [--field K=V ...] [--content <yaml>]
 al connectors rm <name> [-y|--yes]
 al run <message> [new-flags] [--rm] [--timeout <s>] [--verbose]
                                 one-shot: create → prompt → wait for settle → print final answer

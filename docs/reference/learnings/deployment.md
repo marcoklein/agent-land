@@ -23,7 +23,6 @@ sources:
 
 # Build & runtime image
 
-- **Compiled views must be copied to `dist/views/`.** After `tsc`, `__dirname` is `dist/`, so the EJS `views` dir is resolved from there. The Dockerfile copies `packages/server/src/views/` into `dist/views/`.[^dockerfile]
 - **Alpine images don't ship the `docker` CLI.** The orchestrator mounts the host docker socket to spawn sibling agent containers, so the runtime image installs it explicitly (`apk add --no-cache sops age docker`).[^dockerfile]
 
 # Dokku host setup

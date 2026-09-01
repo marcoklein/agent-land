@@ -11,7 +11,7 @@ function catalogWith(get: (id: string) => Promise<ProviderConfig | null>) {
 }
 
 function customProvider(models?: string[]): ProviderConfig {
-  return { id: "p", kind: "custom", piProvider: "p", enabled: true, models };
+  return { id: "p", enabled: true, models };
 }
 
 describe("ModelCatalog caching", () => {

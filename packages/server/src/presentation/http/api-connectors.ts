@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { ConnectorService } from "../../core/connector-service.js";
-import { getConnectorFields, DuplicateConnectorError } from "../../core/connector-service.js";
+import { DuplicateConnectorError } from "../../core/connector-service.js";
 import { createConnectorInputSchema } from "@agent-land/contracts";
 import { parseInput } from "./validate.js";
 import { errorMessage } from "./errors.js";
@@ -17,31 +17,17 @@ export function connectorsApiRouter(connectorService: ConnectorService) {
     }
   });
 
-  router.get("/fields", (req, res) => {
-    const type = typeof req.query.type === "string" ? req.query.type : "";
-    const fields = getConnectorFields(type);
-    res.json({ type: fields ? type : "custom", fields: fields ?? null });
-  });
-
   router.post("/", async (req, res) => {
     const parsed = parseInput(createConnectorInputSchema, req.body);
     if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-    const { name, type, url, content, fields } = parsed.data;
+    const { name, url, env, content } = parsed.data;
 
-    const fieldDefs = getConnectorFields(type);
-    if (fieldDefs) {
-      for (const f of fieldDefs) {
-        const value = fields?.[f.envVar];
-        if (typeof value !== "string" || value.trim().length === 0) {
-          return res.status(400).json({ error: `${f.label} is required` });
-        }
-      }
-    } else if (typeof content !== "string" || content.trim().length === 0) {
-      return res.status(400).json({ error: "content is required for custom connector types" });
+    if (!content && (!env || Object.keys(env).length === 0)) {
+      return res.status(400).json({ error: "env or content is required" });
     }
 
     try {
-      const connector = await connectorService.create({ name, type, url, content, fields });
+      const connector = await connectorService.create({ name, url, env, content });
       res.status(201).json({ connector });
     } catch (err) {
       const status = err instanceof DuplicateConnectorError ? 409 : 400;

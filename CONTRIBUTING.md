@@ -24,16 +24,15 @@ pnpm dev
 
 This is a pnpm monorepo:
 
-- `packages/server/` — Express 5 orchestrator (TypeScript)
-  - routes in `src/routes/`, services in `src/core/`, infrastructure in `src/infra/`
-  - EJS templates in `src/views/`, static assets in `public/`
+- `packages/server/` — Express 5 orchestrator exposing a JSON/SSE API (TypeScript)
+  - HTTP adapters in `src/presentation/http/`, domain services in `src/core/`, infrastructure in `src/infra/`
 - `packages/cli/` — the `al` terminal client (TypeScript, zero runtime deps)
 - `agent-image/` — the agent container build context (pi, git, gh, SOPS, Age)
 
 ## Code Style
 
 - TypeScript with strict mode
-- Keep it minimal — no ORM, no database, no build step for frontend
+- Keep it minimal — no ORM, no database
 
 ## Architecture Decisions
 

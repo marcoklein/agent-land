@@ -1,7 +1,6 @@
 import { Router } from "express";
 import type { ProviderService } from "../../core/provider-service.js";
 import { DuplicateProviderError } from "../../core/provider-service.js";
-import { PROVIDER_CATALOG } from "../../core/provider-catalog.js";
 import { errorMessage } from "./errors.js";
 import { createProviderInputSchema } from "@agent-land/contracts";
 import { parseInput } from "./validate.js";
@@ -18,37 +17,24 @@ export function providersApiRouter(providerService: ProviderService) {
     }
   });
 
-  router.get("/catalog", async (_req, res) => {
-    const stored = await providerService.list().catch(() => []);
-    const storedIds = new Set(stored.map((p) => p.id));
-    const available = PROVIDER_CATALOG.filter((entry) => !storedIds.has(entry.id)).map((entry) => ({
-      id: entry.id,
-      kind: entry.kind,
-      label: entry.label,
-      authEnvVars: entry.authEnvVars ?? null,
-      defaultModel: entry.defaultModel ?? null,
-    }));
-    res.json({ catalog: available });
-  });
-
   router.post("/", async (req, res) => {
     const parsed = parseInput(createProviderInputSchema, req.body);
     if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-    const { id, kind, baseUrl, api, models, defaultModel, label, enabled, secretFields, fields, secretContent } =
+    const { id, label, baseUrl, api, models, defaultModel, enabled, secretFields, fields, secretContent, apiKey } =
       parsed.data;
 
     try {
       const provider = await providerService.create({
         id,
-        kind,
+        label,
         baseUrl,
         api,
         models,
         defaultModel,
-        label,
         enabled,
         secretFields: secretFields ?? fields,
         secretContent,
+        apiKey,
       });
       res.status(201).json({ provider });
     } catch (err) {
