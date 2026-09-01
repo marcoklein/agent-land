@@ -6,3 +6,4 @@ Operational and empirical findings that live here because the code can't express
 * [SSE over the hosted edge proxy](hosted-sse.md) — proxy buffering, heartbeats, and gapless replay/dedupe
 * [Session lifecycle & redeploy resilience](session-lifecycle.md) — what survives a redeploy and how sessions recover
 * [Deployment gotchas](deployment.md) — Dokku + SOPS build-time and host-setup bugs
+* [Inspiration from Archon](archon-inspiration.md) — what to borrow from Archon's workflow-engine approach, and what to refuse
