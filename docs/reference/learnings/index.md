@@ -7,3 +7,4 @@ Operational and empirical findings that live here because the code can't express
 * [Session lifecycle & redeploy resilience](session-lifecycle.md) — what survives a redeploy and how sessions recover
 * [Deployment gotchas](deployment.md) — Dokku + SOPS build-time and host-setup bugs
 * [Inspiration from Archon](archon-inspiration.md) — what to borrow from Archon's workflow-engine approach, and what to refuse
+* [Agent Land and Archon — how they compose](archon-composition.md) — recipe layer vs runtime, and where they overlap
