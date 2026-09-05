@@ -121,7 +121,7 @@ A `plan.json` with a fixed schema. The orchestrator emits it, validates it, post
   "edges": [["refine", "design"], ["design", "critic"]],
   "parallelGroups": [],
   "gates": ["plan", "outcome", "design"],
-  "aggregateBudget": { "timeoutSec": 6600, "maxTokens": 580000, "maxCost": 5.40 },
+  "aggregateBudget": { "timeoutSec": 6600, "maxTokens": 540000, "maxCost": 5.40 },
   "deviations": [
     { "default": "research", "actual": "skip", "reason": "issue body already specifies the outcome; policy allows skip-research for well-specified issues" }
   ]
@@ -237,7 +237,7 @@ invariants:
 
 The `decisions` block is what makes the planner **governed, not improvised**. The planner may only deviate along the enumerated axes — skip-research, deepen-research, and parallel fan-out — each with explicit trigger conditions, forbid lists, and effects. Everything else is **residual planner judgment**, bounded by exactly two things: (1) **Gate 0** — the human sees the full plan and can veto or amend it before any child spawns; and (2) the **plan validator invariant** — gates may never be removed/merged/bypassed, and every stage must be a declared stage kind whose connectors and mounts resolve by exact name. The planner cannot invent a new stage kind, a new connector, or a new budget shape.
 
-Tool scoping is prompt-level only: the platform has no tool vocabulary to enforce (ADR 016), and the only real per-child scoping the platform offers is connector selection[^boundary]. The `connectors`/`mounts` fields are the enforceable scope; what the child *may do with its tools* is stated in its stage prompt, not enforced by the server.
+Tool scoping is prompt-level only: the platform has no tool vocabulary to enforce, and the only real per-child scoping the platform offers is connector selection[^boundary]. The `connectors`/`mounts` fields are the enforceable scope; what the child *may do with its tools* is stated in its stage prompt, not enforced by the server.
 
 ### 3. API / CLI surface
 
@@ -287,7 +287,7 @@ No new endpoints, no new engine concepts, and **no server code**. Everything thi
 - **Plan gate adds a human touchpoint / latency.** Mitigation: the gate is lightweight (approve or amend once, pre-execution) and is the entire point of "inspect before execute"; it can later default-approve for trusted issue types, but never silently skip.
 - **Fan-out spend explosion.** Mitigation: per-child orchestrator-enforced budgets plus the orchestrator's aggregate budget with refuse-to-spawn accounting; escalation when the ceiling is reached.
 - **Soft budgets are not hard stops.** The orchestrator can only `DELETE` a child after it observes usage, so a child that races past a limit mid-turn is bounded by the watch/poll interval, not mid-execution. Mitigation: accept this for this change; hard server-side kill-switch enforcement is ADR 011 future work and stays explicitly out of scope[^kill-switch].
-- **Orphaned full-clone volumes.** Each parallel child clones into its own `agent-land-<stage>-<runId>` Mount; if the orchestrator crashes between settle and cleanup, the volume leaks. Mitigation: `DELETE /api/mounts/<name>` runs in a finally/cleanup step per child; on resume the orchestrator lists mounts and deletes any `agent-land-<runId>-*` volume no longer bound to a live child.
+- **Orphaned full-clone volumes.** Each parallel child clones into its own `agent-land-<stage>-<runId>` Mount; if the orchestrator crashes between settle and cleanup, the volume leaks. Mitigation: `DELETE /api/mounts/<name>` runs in a finally/cleanup step per child; on resume the orchestrator lists mounts and deletes any `agent-land-*-<runId>` volume no longer bound to a live child.
 - **Parallel git reconciliation conflicts.** Mitigation: one Mount per child with independent clones and per-child branches, non-overlapping concerns by construction, PR-to-main reconciliation; conflicts surface in review, never as concurrent writers[^mount-design].
 - **Planner composes a bad graph.** Mitigation: the plan validator (schema + gate invariant + budgets ≤ aggregate) plus the Gate 0 human veto, and the planner may only pick from stage kinds and decision axes declared in the policy (§Interfaces 2).
 - **Silent model fallback.** Mitigation: preflight + a one-line issue note on every substitution, so model drift is visible (§Q5).
