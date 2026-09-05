@@ -14,7 +14,7 @@ Record every architectural decision that affects the project's structure, depend
 
 ## Template
 
-Use the minimal template at `docs/adrs/template.md`:
+Use the minimal template at `docs/knowledge/adrs/template.md`:
 
 ```markdown
 ---
@@ -38,9 +38,9 @@ deciders: [agent]
 - **Status:** Start as `proposed`. Change to `accepted` once reviewed.
 - **Deciders:** Use `[agent]` if you made the decision autonomously. Add human names if they were consulted.
 - **Tags:** Use lowercase, kebab-case or single words. Keep it to 2-4 relevant tags.
-- **Filename:** `NNN-slug.md` — find the next number by checking `ls docs/adrs/`.
+- **Filename:** `NNN-slug.md` — find the next number by checking `ls docs/knowledge/adrs/`.
 - **Decision:** Must be one sentence. Be specific.
 - **Why:** Must be one sentence. Focus on the primary reason.
 - **Alternatives:** List at least one alternative and why it was rejected.
 
-Write ADRs in `docs/adrs/`. Update the status to `accepted` after implementation.
+Write ADRs in `docs/knowledge/adrs/`. Update the status to `accepted` after implementation.

@@ -18,7 +18,7 @@ pnpm build          # tsc (all packages)
 - Conventional commits (`type(scope): description`, imperative, no period)
 - Never commit secrets, `.env`, `.age-key`, or `secrets/*.yaml` (gitignored)
 - `thoughts/` stays untracked
-- Docs follow the existing `docs/` style: `docs/README.md` index, reference docs in OKF under `docs/reference/`, and ADRs under `docs/adrs/`
+- Docs follow the existing `docs/` style: everything lives in the OKF knowledge bundle under `docs/knowledge/` (reference, product, learnings, and ADRs under `docs/knowledge/adrs/`)
 
 ## Development loop
 
