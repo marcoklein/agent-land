@@ -14,12 +14,7 @@ description: The agent-land development loop — how an agent must drive a chang
   git push https://x-access-token:${GITHUB_TOKEN}@github.com/marcoklein/agent-land.git HEAD
   ```
 
-- Set git identity before the first commit:
-
-  ```bash
-  git config user.name "$GIT_USER_NAME"
-  git config user.email "$GIT_USER_EMAIL"
-  ```
+- Git identity is injected by the platform as `GIT_USER_NAME` / `GIT_USER_EMAIL`, so `git config user.name "$GIT_USER_NAME"` and `git config user.email "$GIT_USER_EMAIL"` work out of the box. If they are unset, ask the operator in the prompt before the first commit.
 
 ## Loop
 

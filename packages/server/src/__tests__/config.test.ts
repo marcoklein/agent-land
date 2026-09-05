@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { getConfig } from "../config.js";
 
-const ENV_KEYS = ["PORT", "SSE_HEARTBEAT_MS"] as const;
+const ENV_KEYS = ["PORT", "SSE_HEARTBEAT_MS", "GIT_USER_NAME", "GIT_USER_EMAIL"] as const;
 const saved: Record<string, string | undefined> = {};
 
 function setEnv(key: string, value: string | undefined) {
@@ -28,5 +28,21 @@ describe("getConfig", () => {
     stash();
     setEnv("SSE_HEARTBEAT_MS", "-5");
     expect(() => getConfig()).toThrow(/Invalid SSE_HEARTBEAT_MS/);
+  });
+
+  it("reads git identity from env", () => {
+    stash();
+    setEnv("GIT_USER_NAME", "Jane Doe");
+    setEnv("GIT_USER_EMAIL", "jane@example.com");
+    expect(getConfig().gitUserName).toBe("Jane Doe");
+    expect(getConfig().gitUserEmail).toBe("jane@example.com");
+  });
+
+  it("defaults git identity to an empty string when unset", () => {
+    stash();
+    setEnv("GIT_USER_NAME", undefined);
+    setEnv("GIT_USER_EMAIL", undefined);
+    expect(getConfig().gitUserName).toBe("");
+    expect(getConfig().gitUserEmail).toBe("");
   });
 });
