@@ -177,6 +177,18 @@ describe("Platform Connector — API auth middleware", () => {
       .expect(200);
   });
 
+  it("passes through reverse-proxy-forwarded credentials when no operator credential is configured", async () => {
+    // Regression: behind nginx (ADR 009 trusted network), the proxy terminates
+    // operator basic-auth and forwards the Authorization header. With no
+    // operatorBasicAuth on the server, any forwarded header must not 401.
+    const app = authApp(getConfig());
+
+    await request(app)
+      .get("/api/probe")
+      .set("Authorization", "Basic " + Buffer.from("operator:secret").toString("base64"))
+      .expect(200);
+  });
+
   it("rejects an unknown or wrong session credential", async () => {
     const config: Config = { ...getConfig(), operatorBasicAuth: { user: "op", password: "pw" } };
     const app = authApp(config);

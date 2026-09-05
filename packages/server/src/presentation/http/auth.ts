@@ -33,26 +33,26 @@ export function parseAuthorizationHeader(header: string | undefined): BasicCrede
  *  - the operator basic-auth credential (when configured on the server), and
  *  - a per-session platform credential of the form `session-<id>:<token>`.
  *
- * When no operator credential is configured, requests without an Authorization
- * header still pass through (trusted-network deployment, ADR 009) — but session
- * credentials are accepted either way, so the Platform Connector loopback works
- * even without an operator credential on the server.
+ * When no operator credential is configured, the deployment is trusted-network
+ * or reverse-proxy-fronted (ADR 009): nginx terminates basic auth and forwards
+ * the Authorization header, so every request passes through — header present or
+ * not. Session credentials are validated whenever they are presented, so the
+ * Platform Connector loopback works in both modes.
  */
 export function createApiAuthMiddleware(sessionService: SessionService, config: Config) {
   return async function apiAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
     const creds = parseAuthorizationHeader(req.headers.authorization);
 
+    if (!config.operatorBasicAuth) return next();
+
     if (!creds) {
-      if (!config.operatorBasicAuth) return next();
       res.status(401).json({ error: "unauthorized" });
       return;
     }
 
-    if (config.operatorBasicAuth) {
-      const operator = config.operatorBasicAuth;
-      if (safeEqual(creds.user, operator.user) && safeEqual(creds.password, operator.password)) {
-        return next();
-      }
+    const operator = config.operatorBasicAuth;
+    if (safeEqual(creds.user, operator.user) && safeEqual(creds.password, operator.password)) {
+      return next();
     }
 
     if (creds.user.startsWith(PLATFORM_SESSION_PREFIX)) {
