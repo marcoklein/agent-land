@@ -46,7 +46,7 @@ Two consequences you must obey:
 1. **Fixed stage list.** Never add, remove, reorder, parallelise, or loop stages on your own judgment. The list above is the recipe.
 2. **Sequential only.** One child at a time. Watch it settle → collect its result → `DELETE` it → then create the next child.
 3. **Children are platform-blind.** Create every child with `"platform": false` and `"parentSessionId": "<your session id>"`. Omit `platform`/set it `false` unless nested orchestration is intended — nested orchestration is not part of this recipe.
-4. **Connectors limited to the stage's need.** Every stage here needs only `["github"]` — never pass the full connector set.
+4. **Connectors limited to the stage's need.** Every stage here needs only the GitHub connector — never pass the full connector set. Connectors resolve by **exact name**, so discover it in preflight (`GH_CONNECTOR`) instead of hardcoding a guess.
 5. **One progress comment per stage transition** on the issue (see each stage below). Never comment twice for the same transition.
 6. **Gates are parks.** At a gate, end your turn with a summary and exactly one question. Do **not** create more children until a human re-prompts with the gate outcome.
 7. **Deterministic steps run as commands.** `curl`, `jq`, `gh`, `git` steps are plain commands; you apply judgment only when composing stage prompts and summarising results.
@@ -64,13 +64,14 @@ REPO_NAME="agent-land"
 REPO="$REPO_OWNER/$REPO_NAME"
 MOUNT_NAME="agent-land"           # the Mount registered on the platform
 MOUNT_TARGET="/data/agent-land"   # path the child binds it at
+GH_CONNECTOR="<set in preflight>" # exact name of the GitHub connector (see Preflight)
 
 spawn_child() {
   curl -sS -u "$AGENT_LAND_BASIC_AUTH" \
     -X POST "$AGENT_LAND_URL/api/sessions" \
     -H 'Content-Type: application/json' \
     -d '{
-      "connectors": ["github"],
+      "connectors": ["'"$GH_CONNECTOR"'"],
       "mounts": [{ "source": "'"$MOUNT_NAME"'", "target": "'"$MOUNT_TARGET"'" }],
       "platform": false,
       "parentSessionId": "'"$MY_SESSION_ID"'"
@@ -180,8 +181,11 @@ gh auth status
 # Confirm the mount exists and is free:
 curl -sS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/mounts" | jq -r '.mounts[].name'
 
-# Confirm the github connector exists:
-curl -sS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/connectors" | jq -r '.connectors[].name'
+# Confirm the github connector exists and capture its EXACT name — connectors
+# resolve by exact name, so "github" would silently match nothing:
+GH_CONNECTOR="$(curl -sS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/connectors" \
+  | jq -er '[.connectors[] | select(.envKeys | index("GITHUB_TOKEN")) | .name][0]')"
+echo "GitHub connector: $GH_CONNECTOR"
 ```
 
 If the Mount is missing, report that the operator must create it (`al mounts add agent-land`) and stop. If the Mount is not yet seeded with a checkout, the research stage seeds it (see its prompt).
@@ -477,5 +481,5 @@ Same fixed stage list, same prompts, same comments — only the child-spawning m
 - **Mount ownership (documented decision).** The issue text says "orchestrator with a Mount holding the repo checkout", but the server hard-enforces at most one live session per Mount. Binding the checkout to the orchestrator would make every child create fail. The working design: the orchestrator binds **no** Mount; each stage child binds the repo Mount in turn and is `DELETE`d before the next child. This is the only layout consistent with the enforced invariant.
 - **Lineage tradeoff.** Children are deleted after use to release the Mount, so `al ls --tree` shows only the currently-running child under you, not the whole finished run. The durable trail is the issue comments + the PRs. Keep children alive only if a future phase adds per-child worktree mounts (parallelism is explicitly out of scope here).
 - **Model.** Child create omits `model`/`provider`, so children inherit the platform default (`deepseek-v4-pro` unless the operator overrides `DEFAULT_MODEL`). Per-stage model choice is Phase 4, not this recipe.
-- **Connector scope.** Every stage gets exactly `["github"]` and nothing else. Do not widen this.
+- **Connector scope.** Every stage gets exactly the discovered GitHub connector (`GH_CONNECTOR`) and nothing else. Do not widen this. Names must match exactly — an unknown connector name resolves to *no* connectors, silently.
 - **SSE frame format.** Events arrive as `data: {…}` lines, not bare JSON — always strip the `data: ` prefix before `fromjson`. The bundled `agent-land-api` skill's watch examples show this.
