@@ -22,11 +22,15 @@ All calls below use `curl -u "$AGENT_LAND_BASIC_AUTH"` (basic auth) and return J
 ## Create a child session
 
 ```bash
+# Connectors resolve by EXACT name — discover it instead of guessing:
+GH_CONNECTOR="$(curl -sS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/connectors" \
+  | jq -er '[.connectors[] | select(.envKeys | index("GITHUB_TOKEN")) | .name][0]')"
+
 curl -sS -u "$AGENT_LAND_BASIC_AUTH" \
   -X POST "$AGENT_LAND_URL/api/sessions" \
   -H 'Content-Type: application/json' \
   -d '{
-    "connectors": ["github"],
+    "connectors": ["'"$GH_CONNECTOR"'"],
     "model": "deepseek-v4-pro",
     "platform": true,
     "parentSessionId": "'"$MY_SESSION_ID"'"

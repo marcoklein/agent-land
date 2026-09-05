@@ -1,0 +1,68 @@
+name: Pipeline trigger
+
+on:
+  schedule:
+    - cron: "0 * * * *" # hourly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Spawn orchestrator sessions for unstarted pipeline-ready issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENT_LAND_URL: ${{ secrets.AGENT_LAND_URL }}
+          AGENT_LAND_BASIC_AUTH: ${{ secrets.AGENT_LAND_BASIC_AUTH }}
+        run: |
+          set -euo pipefail
+
+          REPO="marcoklein/agent-land"
+          # The orchestrator posts this marker as its first issue comment (see
+          # agent-image/skills/orchestrator/SKILL.md). It is the idempotency guard:
+          # an issue that already carries it has been started, so it must not be
+          # spawned again.
+          START_MARKER="Orchestrator started"
+
+          : "${AGENT_LAND_URL:?AGENT_LAND_URL secret is not set}"
+          : "${AGENT_LAND_BASIC_AUTH:?AGENT_LAND_BASIC_AUTH secret is not set}"
+
+          # Connector resolution is by exact name, so discover the GitHub
+          # connector (the one injecting GITHUB_TOKEN) instead of hardcoding.
+          gh_connector="$(curl -fsS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/connectors" \
+            | jq -er '[.connectors[] | select(.envKeys | index("GITHUB_TOKEN")) | .name][0]')"
+
+          issues="$(gh issue list --repo "$REPO" --label pipeline-ready --state open --json number --jq '.[].number')"
+
+          if [ -z "$issues" ]; then
+            echo "No open pipeline-ready issues; nothing to do."
+            exit 0
+          fi
+
+          for n in $issues; do
+            if gh issue view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$START_MARKER"; then
+              echo "issue #$n already has the orchestrator start marker; skipping"
+              continue
+            fi
+
+            echo "issue #$n is pipeline-ready and unstarted; spawning an orchestrator session"
+
+            session_id="$(curl -fsS -u "$AGENT_LAND_BASIC_AUTH" \
+              -X POST "$AGENT_LAND_URL/api/sessions" \
+              -H 'Content-Type: application/json' \
+              -d "$(jq -n --arg c "$gh_connector" '{connectors:[$c],platform:true}')" \
+              | jq -er '.session.id')"
+
+            prompt="You are the agent-land product-pipeline orchestrator. Run the pipeline on issue #$n in $REPO. Your recipe is the orchestrator skill at agent-image/skills/orchestrator/SKILL.md (branch main) — read it and follow it exactly: research → refine (spec PR) → design (design PR) → critic review, the sequential child lifecycle, and the gate discipline. Proceed now; do not wait for confirmation."
+
+            curl -fsS -u "$AGENT_LAND_BASIC_AUTH" \
+              -X POST "$AGENT_LAND_URL/api/sessions/$session_id/prompt" \
+              -H 'Content-Type: application/json' \
+              -d "$(jq -n --arg m "$prompt" '{message: $m}')" >/dev/null
+
+            echo "spawned session $session_id for issue #$n"
+          done
