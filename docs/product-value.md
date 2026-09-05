@@ -1,5 +1,7 @@
 # Agent Land — Product & Value
 
+> ⚠️ **Superseded.** This page predates the #38 strip of the web UI and vendor knowledge, and has been superseded by the OKF [product vision](reference/product/goals/product-vision.md), [domain boundary](reference/product/goals/boundaries.md), and [product pipeline](reference/product/pipeline.md). Kept only to avoid breaking historical references; treat the OKF notes as authoritative.
+
 **One-liner:** Agent Land is my self-hosted home for AI coding agents — long-lived sessions on my server, encrypted secrets, and step by step, orchestratable workflows I can trigger by hand or on a schedule.
 
 ## Why Agent Land exists

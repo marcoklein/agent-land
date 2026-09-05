@@ -79,7 +79,7 @@ The agent reads PR review comments (`gh api`), addresses them, replies, and requ
 
 ### Phase 4 — Scheduled maintenance
 
-Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [product-value.md](product-value.md#today-vs-roadmap).
+Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [the product vision](reference/product/goals/product-vision.md).
 
 - **Deliverable:** a cron workflow that opens a maintenance PR every week without being asked.
 
