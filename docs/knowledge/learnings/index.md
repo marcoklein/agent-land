@@ -13,3 +13,4 @@ Operational and empirical findings that live here because the code can't express
 * [Agent image staleness on deploy](agent-image-staleness.md) — deployed hosts keep the once-built agent image; skill changes don't reach sessions until it is rebuilt
 * [Self-deploy hazard](self-deploy-hazard.md) — merges restart the platform your `al` runs live on; symptom, diagnosis, and resume-not-restart
 * [Mount operations](mount-operations.md) — durable-checkout discipline: auto-created targets, single-writer guard in anger, sync-to-main rule
+* [First loopback run](first-loopback-run.md) — Platform Connector live on the host: nginx auth blocks loopback, the localhost footgun, tag-bump image rebuilds, and SSE streams that never close
