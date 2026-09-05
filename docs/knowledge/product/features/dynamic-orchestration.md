@@ -2,9 +2,10 @@
 type: Feature
 title: Dynamic Orchestration
 description: The orchestrator becomes a planner — it composes a per-task stage graph from prompt-level policy instead of running the fixed research → refine → design → critic script.
-status: draft
+status: stable
 tags: [orchestration, multi-agent, pipeline, composition, dogfooding, roadmap]
 generated: { by: pi/deepseek-v4-pro, at: 2026-09-05T17:21:18Z }
+verified: { by: human:marcoklein, at: 2026-09-06T00:00:00Z }
 sources:
   - id: roadmap
     resource: /multi-agent-workflow.md
@@ -73,7 +74,7 @@ The static orchestrator treats every task identically: it always researches, alw
 - Each of **skip-research, deepen-research, parallel fan-out, retry-with-adjusted-prompt, adversarial-review, and per-stage model choice** is reachable from prompt-level policy in the orchestrator recipe — not hard-coded control flow — and can be observed in a real run.
 - **No engine change**: the delivered change composes [Sessions, Mounts, Providers, and the Platform Connector](/engine.md) and adds no DAG/workflow executor, no in-core workflow vocabulary, and no vendor catalog (fails the fit-check otherwise)[^boundary].
 - **Gate discipline holds**: the three human gates remain `waiting_for_input` parks; a dynamic graph may reorder or reshape stages but may not remove, merge, or bypass a gate[^pipeline].
-- **Budgets bound the fan-out**: each stage/child carries a per-run [kill switch](/adrs/011-kill-switch.md) budget and the orchestrator holds an aggregate run budget, so retries and parallelism don't multiply spend without limit.
+- **Budgets bound the fan-out**: each stage/child carries a per-run [kill switch](/adrs/011-kill-switch.md) budget and the orchestrator holds an aggregate run budget, so retries and parallelism don't multiply spend without limit. Per the design (PR #67): budgets are orchestrator-side soft budgets — the orchestrator reads usage from each child's message_end events and DELETEs over-budget children; hard server-side kill-switch enforcement remains ADR 011 future work.
 - **Deliverable**: a dogfood task on this repo whose executed stage graph **visibly differs from the static default** (e.g. research skipped, or a parallel implementation split, or an adversarial reviewer added) **and** whose artifacts still clear the three human gates with **no more human correction than the static baseline** — measured against the [dogfooding success signals](/dogfooding.md).
 
 ## Open questions
