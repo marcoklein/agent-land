@@ -78,7 +78,7 @@ Minimal middleware on `/api/*` accepting two identities:
 - the operator basic-auth credential, when configured, and
 - a session credential `session-<id>:<token>`, verified against the session record's `platformToken`.
 
-Comparisons are constant-time. **Tradeoff (documented per the issue):** HTTP auth previously terminated at nginx only (ADR 009 — trusted network)[^adr-009]. This adds application-level auth for the JSON/SSE API. When `operatorBasicAuth` is **unset**, requests without an `Authorization` header still pass through (preserving the trusted-network deployment), but session credentials are accepted either way — so the loopback works even on an unauthenticated dev server. When set, the header becomes mandatory and must be operator or session. The tradeoff is that the token must be compared in Node (not nginx), which is why the comparison is constant-time and the middleware is deliberately tiny.
+Comparisons are constant-time. **Tradeoff (documented per the issue):** HTTP auth previously terminated at nginx only (ADR 009 — trusted network)[^adr-009]. This adds application-level auth for the JSON/SSE API. When `operatorBasicAuth` is **unset**, every request passes through regardless of any forwarded `Authorization` header — this preserves the reverse-proxy deployment, where nginx terminates operator basic-auth and forwards the header to the app (learned the hard way: rejecting forwarded headers took the hosted deploy down with 401s). When set, the header becomes mandatory and must be operator or session. The tradeoff is that the token must be compared in Node (not nginx), which is why the comparison is constant-time and the middleware is deliberately tiny.
 
 **Session service** (`packages/server/src/core/session-service.ts`):
 
