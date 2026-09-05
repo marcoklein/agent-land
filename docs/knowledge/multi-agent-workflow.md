@@ -60,7 +60,7 @@ A long-lived `al new` session with the GitHub connector and the bundled `product
 - **Exercises:** dogfooding Phase 1 (multi-turn session durability).
 - **Depends on:** nothing — works today.
 
-### Phase 1 — Platform Connector (the keystone)
+### Phase 1 — Platform Connector (the keystone) — landed 2026-09-05
 
 Implement [Platform Connector](/product/features/platform-connector.md): the engine injects `AGENT_LAND_URL` and scoped `AGENT_LAND_BASIC_AUTH` into session containers, so any agent can create, prompt, and watch child sessions through the existing JSON/SSE API.
 
@@ -71,23 +71,23 @@ Decisions taken for the roadmap (to be confirmed in the feature's design note):
 - **Lineage** — session records gain `parent_session_id`, surfaced as `al ls --tree`, so a run reads as a tree of sessions, not a flat list.
 - **Ergonomics** — a bundled skill teaches sessions the API (create → prompt → watch SSE → react to `agent_settled`).
 
-- **Deliverable:** an orchestrator session that spawns a child, prompts it, and reports its result — on the platform, unprompted by a human mid-flight.
-- **Dogfooded:** Phase 0's intake flow produces this feature's spec and design PRs.
+- **Deliverable:** an orchestrator session that spawns a child, prompts it, and reports its result — on the platform, unprompted by a human mid-flight. **Achieved:** PR #58 (+ hotfix #59); live smoke test on the host — session credential auth, child create with lineage, prompt, `CHILD-OK`, delete. See [first loopback run](/learnings/first-loopback-run.md).
+- **Dogfooded:** built *by* a platform session; its spec/design flow ran through the intake pattern (issue #54 → PR).
 
-### Phase 2 — Static orchestrator recipe
+### Phase 2 — Static orchestrator recipe — landed 2026-09-05
 
 A platform-enabled orchestrator session runs the pipeline as a **fixed, deterministic stage list**: research → refine (spec PR) → design (design PR) → self-review (a reviewer child critiques before the human sees it). Stages run **sequentially**, each a fresh child session with a stage-specific prompt; the orchestrator only decides *content*, never *control flow*[^archon]. Gates are `waiting_for_input`: the orchestrator parks until the human re-prompts with the gate outcome.
 
 Sequential stages respect the Mount single-writer invariant: the server hard-enforces at most one live session per Mount, so the repo checkout Mount is bound by **one stage child at a time** (the orchestrator itself binds no Mount — it coordinates via the JSON/SSE API), and each child is deleted before the next starts.
 
 - **Deliverable:** one prompt ("run the pipeline on issue #N") → two open PRs (spec + design) plus a review summary from the critic child.
-- **Recipe home:** the orchestrator's stage list lives as a skill in the agent image — `agent-image/skills/orchestrator/SKILL.md` — not in the server. The skill is the canonical Phase 2 recipe (stage prompts, exact `curl`/`jq` loops, gate mechanics, and a no-platform-injection fallback).
+- **Recipe home:** the orchestrator's stage list lives as a skill in the agent image — `agent-image/skills/orchestrator/SKILL.md` — not in the server. The skill is the canonical Phase 2 recipe (stage prompts, exact `curl`/`jq` loops, gate mechanics, and a no-platform-injection fallback). **Achieved:** PR #62, built by a platform session. End-to-end pipeline run (issue → spec PR + design PR) is the next proof.
 
-### Phase 3 — Scheduled trigger (cron first, webhooks later)
+### Phase 3 — Scheduled trigger (cron first, webhooks later) — landed 2026-09-05
 
 Remove the human nudge that *starts* and *resumes* the pipeline. The cheap first step needs no engine change: a **scheduled GitHub Actions workflow** (or host cron) runs a polling session that scans for issues labeled `pipeline-ready` and orchestrators parked at a cleared gate, and advances them. Once the polling loop proves the value, a follow-up may replace it with a **webhook endpoint** on the server (issue labeled → session created; PR reviewed → orchestrator re-prompted).
 
-- **Deliverable:** label an issue → spec and design PRs appear with nobody at a terminal; review feedback on a design PR → revised design on the next poll.
+- **Deliverable:** label an issue → spec and design PRs appear with nobody at a terminal; review feedback on a design PR → revised design on the next poll. **Achieved:** PR #63 — `.github/workflows/pipeline-trigger.yml` (hourly + dispatch), `pipeline-ready` label, secrets set, dispatch verified green. See [scheduled pipeline trigger](/learnings/scheduled-pipeline-trigger.md).
 - **Maps to:** dogfooding Phase 4 (scheduled maintenance).
 
 ### Phase 4 — Dynamic orchestration

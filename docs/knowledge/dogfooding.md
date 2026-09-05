@@ -55,8 +55,8 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Branch / commit / push / open PR | ✅ Works — `gh` + the GitHub connector's `GITHUB_TOKEN` | — |
 | Watch CI, react to red | ✅ Works — `gh pr checks` / `gh run watch` | A checked-in playbook so it's automatic, not ad-hoc |
 | Respond to review comments | ✅ Works — `gh api` to read + reply | A trigger loop; today the human re-prompts |
-| Split work across agents | ❌ Gap | [Platform Connector](product/features/platform-connector.md) + the [multi-agent roadmap](/multi-agent-workflow.md) |
-| Recurring maintenance (release notes, deps) | ❌ Gap | Scheduled workflows (cron) — [multi-agent roadmap Phase 3](/multi-agent-workflow.md) |
+| Split work across agents | ✅ Works (2026-09-05) | [Platform Connector](product/features/platform-connector.md) live: `platform: true` sessions spawn children via the API; see [first loopback run](learnings/first-loopback-run.md) and the [multi-agent roadmap](/multi-agent-workflow.md) |
+| Recurring maintenance (release notes, deps) | ⚠️ Partial | [Pipeline trigger](learnings/scheduled-pipeline-trigger.md) runs hourly for `pipeline-ready` issues; generic maintenance crons still open — [multi-agent roadmap Phase 3](/multi-agent-workflow.md) |
 | Merge after green CI + approval | ⚠️ Works (`gh pr merge`) but ungated | Keep human-gated until trust is earned |
 | Deploy + verify live | ✅ Works — CI on merge to `main` pushes to Dokku and health-checks ([deploy.yml](../../../.github/workflows/deploy.yml)) | Merge stays human-gated |
 | Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](learnings/agent-image-staleness.md) |
