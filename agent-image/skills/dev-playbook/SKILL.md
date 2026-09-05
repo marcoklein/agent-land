@@ -23,7 +23,7 @@ description: The agent-land development loop — how an agent must drive a chang
 
 ## Loop
 
-1. **Clone** the repo fresh (or reuse the session working directory if already cloned).
+1. **Get the checkout** — clone the repo fresh, or reuse a mounted checkout. On a mount (e.g. `/data/agent-land`), sync first: `git fetch origin && git checkout main && git reset --hard origin/main` — the mount is a cache of main, not a source of truth.
 2. **Branch** off `main`: `fix/…`, `feat/…`, `docs/…`, `refactor/…`, `chore/…`.
 3. **Change** — make the edit.
 4. **Verify** — `pnpm typecheck` and `pnpm test`; fix failures until both pass.

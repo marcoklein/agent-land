@@ -21,5 +21,7 @@ sources:
 
 **Candidate fix (future feature):** stamp built images with a content hash of `/agent-image` (label), and have `ensureAgentImage` rebuild when the label mismatches. Until then, updating skills or the agent Dockerfile on a deployed host requires manually removing the old image (host access).
 
+**Confirmed in practice (2026-09-05):** the first on-platform implementation run had to carry its dev-playbook inline in the prompt — the session launched from an image built before the skills were bundled, so `dev-playbook`/`product`/`okf`/`adr` were not present in it. Until the rebuild fix lands, treat image-bundled skills as absent on deployed hosts and inline any playbook the prompt depends on.
+
 [^docker]: `packages/server/src/infra/docker.ts`, `ensureAgentImage()`
 [^dockerfile]: `Dockerfile`, runtime stage
