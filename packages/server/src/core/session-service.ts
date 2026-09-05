@@ -82,6 +82,13 @@ export class SessionService {
       if (conn.url) envVarsMap.set(`${conn.name.toUpperCase()}_URL`, conn.url);
     }
 
+    if (!envVarsMap.has("GIT_USER_NAME") && this.deps.config.gitUserName) {
+      envVarsMap.set("GIT_USER_NAME", this.deps.config.gitUserName);
+    }
+    if (!envVarsMap.has("GIT_USER_EMAIL") && this.deps.config.gitUserEmail) {
+      envVarsMap.set("GIT_USER_EMAIL", this.deps.config.gitUserEmail);
+    }
+
     return envVarsMap;
   }
 

@@ -10,6 +10,8 @@ export interface Config {
   opencodeGoUrl: string;
   defaultModel: string;
   sseHeartbeatMs: number;
+  gitUserName: string;
+  gitUserEmail: string;
 }
 
 export function getConfig(): Config {
@@ -33,5 +35,7 @@ export function getConfig(): Config {
     opencodeGoApiKey: process.env.OPENCODE_API_KEY || "",
     defaultModel: process.env.DEFAULT_MODEL || "deepseek-v4-pro",
     sseHeartbeatMs,
+    gitUserName: process.env.GIT_USER_NAME ?? "",
+    gitUserEmail: process.env.GIT_USER_EMAIL ?? "",
   };
 }

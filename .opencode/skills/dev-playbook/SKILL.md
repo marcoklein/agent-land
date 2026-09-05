@@ -18,12 +18,7 @@ The contract every agent-land session must follow when making a change here. It 
 
   Or set the remote once: `git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/marcoklein/agent-land.git`.
 
-- Set git identity before the first commit:
-
-  ```bash
-  git config user.name "$GIT_USER_NAME"
-  git config user.email "$GIT_USER_EMAIL"
-  ```
+- Git identity arrives in your environment as `GIT_USER_NAME` / `GIT_USER_EMAIL` — from the GitHub connector bound to the session (per-account) or the platform default — so `git config user.name "$GIT_USER_NAME"` and `git config user.email "$GIT_USER_EMAIL"` work out of the box. If they are unset, ask the operator in the prompt before the first commit.
 
 ## Loop
 
