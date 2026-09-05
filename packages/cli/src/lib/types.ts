@@ -4,6 +4,7 @@ import type {
   PermissionPolicy,
   Connector,
   Provider,
+  Mount,
   SessionEvent,
   SsePayload,
   Message,
@@ -19,6 +20,8 @@ import type {
   DeletedEnvelope,
   CreateSessionInput,
   CreateConnectorInput,
+  MountEnvelope,
+  MountListEnvelope,
 } from "@agent-land/contracts";
 
 export type {
@@ -27,6 +30,7 @@ export type {
   PermissionPolicy,
   Connector,
   Provider,
+  Mount,
   SessionEvent,
   SsePayload,
   Message,
@@ -42,6 +46,8 @@ export type {
   DeletedEnvelope,
   CreateSessionInput,
   CreateConnectorInput,
+  MountEnvelope,
+  MountListEnvelope,
 };
 
 export type SessionSummary = Pick<
@@ -49,6 +55,7 @@ export type SessionSummary = Pick<
   "id" | "status" | "createdAt" | "model" | "provider" | "connectors"
 >;
 export type ConnectorSummary = Pick<Connector, "name" | "url">;
+export type MountSummary = Pick<Mount, "name">;
 export type ProviderSummary = Pick<
   Provider,
   "id" | "label" | "api" | "enabled" | "defaultModel"

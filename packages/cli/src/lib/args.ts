@@ -1,4 +1,4 @@
-const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "models", "connectors", "providers", "run", "watch"]);
+const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "models", "connectors", "providers", "mounts", "run", "watch"]);
 
 interface FlagSpec {
   key: string;
@@ -21,7 +21,7 @@ const FLAGS: Record<string, FlagSpec> = {
   "--timeout": { key: "timeout", type: "value" },
   "--name": { key: "name", type: "value" },
   "--url": { key: "url", type: "value" },
-  "--content": { key: "content", type: "value" },
+  "--mount": { key: "mount", type: "value", multiple: true },  "--content": { key: "content", type: "value" },
   "--field": { key: "field", type: "value", multiple: true },
   "--id": { key: "id", type: "value" },
   "--api-key": { key: "apiKey", type: "value" },
@@ -33,7 +33,7 @@ const FLAGS: Record<string, FlagSpec> = {
 };
 
 const COMMAND_FLAGS: Record<string, string[]> = {
-  new: ["--connectors", "--model", "--provider", "--manual"],
+  new: ["--connectors", "--model", "--provider", "--manual", "--mount"],
   chat: [],
   ls: ["--json"],
   rm: ["--yes", "-y"],
@@ -41,7 +41,8 @@ const COMMAND_FLAGS: Record<string, string[]> = {
   models: ["--provider"],
   connectors: ["--yes", "-y", "--name", "--url", "--field", "--content"],
   providers: ["--json", "--yes", "-y", "--id", "--label", "--base-url", "--api", "--api-key", "--models", "--default-model", "--field", "--content"],
-  run: ["--connectors", "--model", "--provider", "--manual", "--rm", "--timeout", "--verbose"],
+  mounts: ["--yes", "-y", "--name"],
+  run: ["--connectors", "--model", "--provider", "--manual", "--rm", "--timeout", "--verbose", "--mount"],
   watch: ["--all"],
 };
 
@@ -50,6 +51,7 @@ export interface ParsedArgs {
   opts: {
     connectors: string[];
     fields: string[];
+    mounts: string[];
     [key: string]: any;
   };
   positional: string[];
@@ -72,7 +74,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
   }
 
-  const opts: ParsedArgs["opts"] = { connectors: [], fields: [] };
+  const opts: ParsedArgs["opts"] = { connectors: [], fields: [], mounts: [] };
   const positional: string[] = [];
   let help = false;
 
@@ -111,8 +113,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
         throw new UsageError(`flag "${a}" requires a value`);
       }
       i += 1;
-      if (spec.multiple) opts.fields.push(value);
-      else if (spec.key === "connectors") opts.connectors = value.split(",").filter(Boolean);
+      if (spec.key === "connectors") opts.connectors = value.split(",").filter(Boolean);
+      else if (spec.key === "mount") opts.mounts.push(value);
+      else if (spec.multiple) opts.fields.push(value);
       else opts[spec.key] = value;
       continue;
     }

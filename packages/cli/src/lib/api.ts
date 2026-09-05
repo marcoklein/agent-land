@@ -9,6 +9,8 @@ import type {
   ProviderEnvelope,
   ProviderListEnvelope,
   ModelsEnvelope,
+  MountEnvelope,
+  MountListEnvelope,
 } from "./types.js";
 
 type RequestOptions = Record<string, unknown>;
@@ -76,6 +78,11 @@ export function createApiClient({ url, authHeader }: Config) {
       request("POST", "/api/connectors", opts),
     deleteConnector: (name: string): Promise<DeletedEnvelope> =>
       request("DELETE", `/api/connectors/${encodeURIComponent(name)}`),
+    listMounts: (): Promise<MountListEnvelope> => request("GET", "/api/mounts"),
+    createMount: (opts: RequestOptions): Promise<MountEnvelope> =>
+      request("POST", "/api/mounts", opts),
+    deleteMount: (name: string): Promise<DeletedEnvelope> =>
+      request("DELETE", `/api/mounts/${encodeURIComponent(name)}`),
     eventsUrl: (id: string) => `${url}/api/sessions/${id}/events`,
   };
 }

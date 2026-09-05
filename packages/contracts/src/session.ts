@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mountBindSchema } from "./mount.js";
 
 export const permissionPolicySchema = z
   .enum(["auto", "manual"])
@@ -17,6 +18,7 @@ export const sessionSchema = z
     permissionPolicy: permissionPolicySchema,
     sessionDir: z.string().describe("On-disk directory holding the pi transcript for this session."),
     connectors: z.array(z.string()).describe("Connector names whose secrets are injected into the session."),
+    mounts: z.array(mountBindSchema).optional().describe("Mounts bound to the session at creation."),
     model: z.string().describe("LLM model the session runs on."),
     provider: z.string().optional().describe("Provider id; omitted means the default provider."),
     createdAt: z.string().describe("ISO timestamp of creation."),
@@ -38,6 +40,7 @@ export type Session = z.infer<typeof sessionSchema>;
 export const createSessionInputSchema = z
   .object({
     connectors: z.array(z.string()).optional(),
+    mounts: z.array(mountBindSchema).optional(),
     permissionPolicy: z.string().optional(),
     model: z.string().optional(),
     provider: z.string().optional(),

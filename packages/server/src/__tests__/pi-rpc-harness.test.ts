@@ -25,6 +25,7 @@ function harnessWithStream(stream: PassThrough) {
     execCommand: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     removeContainer: async () => {},
     removeVolume: async () => {},
+    createVolume: async () => {},
     ensureAgentImage: async () => {},
     containerExists: async () => false,
     writeFile: async () => {},

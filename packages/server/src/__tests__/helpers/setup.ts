@@ -10,9 +10,11 @@ import {
   JsonSessionRepository,
   JsonSessionEventLog,
   JsonProviderRepository,
+  JsonMountRepository,
 } from "../../infra/repositories.js";
 import { ConnectorService } from "../../core/connector-service.js";
 import { ProviderService } from "../../core/provider-service.js";
+import { MountService } from "../../core/mount-service.js";
 import { ModelCatalog } from "../../infra/model-catalog.js";
 import { PiConfigProvisioner } from "../../infra/pi-config-provisioner.js";
 import { SessionService } from "../../core/session-service.js";
@@ -24,6 +26,7 @@ import { sessionsApiRouter } from "../../presentation/http/api-sessions.js";
 import { connectorsApiRouter } from "../../presentation/http/api-connectors.js";
 import { providersApiRouter } from "../../presentation/http/api-providers.js";
 import { modelsApiRouter } from "../../presentation/http/api-models.js";
+import { mountsApiRouter } from "../../presentation/http/api-mounts.js";
 import { getConfig } from "../../config.js";
 
 const execFileAsync = promisify(execFile);
@@ -35,9 +38,11 @@ export class MockDockerPort implements DockerPort {
     envVars: Record<string, string>;
     image: string;
     workspaceVolume: string;
+    extraBinds?: string[];
   }[] = [];
   removed: string[] = [];
   removedVolumes: string[] = [];
+  createdVolumes: { name: string; labels: Record<string, string> }[] = [];
   execs: { containerId: string; args: string[] }[] = [];
   containers = new Set<string>();
   execCommandImpl?: (args: string[]) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
@@ -47,6 +52,7 @@ export class MockDockerPort implements DockerPort {
     this.created = [];
     this.removed = [];
     this.removedVolumes = [];
+    this.createdVolumes = [];
     this.execs = [];
     this.containers = new Set();
     this.execCommandImpl = undefined;
@@ -59,12 +65,14 @@ export class MockDockerPort implements DockerPort {
     image: string;
     sessionVolume: string;
     workspaceVolume: string;
+    extraBinds?: string[];
   }) {
     this.created.push({
       id: opts.id,
       envVars: opts.envVars,
       image: opts.image,
       workspaceVolume: opts.workspaceVolume,
+      extraBinds: opts.extraBinds,
     });
     this.containers.add(`agent-land-pi-${opts.id}`);
     return { id: `mock-${opts.id}` } as any;
@@ -86,6 +94,10 @@ export class MockDockerPort implements DockerPort {
 
   async removeVolume(name: string) {
     this.removedVolumes.push(name);
+  }
+
+  async createVolume(name: string, labels: Record<string, string>) {
+    this.createdVolumes.push({ name, labels });
   }
 
   async ensureAgentImage(_image: string) {}
@@ -163,6 +175,7 @@ export interface AgentTestApp {
   sessionService: SessionService;
   connectorService: ConnectorService;
   providerService: ProviderService;
+  mountService: MountService;
 }
 
 export function createAgentTestApp(): AgentTestApp {
@@ -173,6 +186,7 @@ export function createAgentTestApp(): AgentTestApp {
   const sessionRepository = new JsonSessionRepository(testConfig.dataDir);
   const connectorRepository = new JsonConnectorRepository(testConfig.dataDir);
   const providerRepository = new JsonProviderRepository(testConfig.dataDir);
+  const mountRepository = new JsonMountRepository(testConfig.dataDir);
   const eventLog = new JsonSessionEventLog(testConfig.dataDir);
   const connectorService = new ConnectorService(connectorRepository, sops);
   const providerService = new ProviderService(providerRepository, sops);
@@ -180,6 +194,7 @@ export function createAgentTestApp(): AgentTestApp {
 
   const mockDocker = new MockDockerPort();
   const fakeHarness = new FakeHarness();
+  const mountService = new MountService(mountRepository, mockDocker, sessionRepository);
   const piConfigProvisioner = new PiConfigProvisioner(mockDocker, providerRepository, sops);
   const sessionService = new SessionService(
     {
@@ -188,6 +203,7 @@ export function createAgentTestApp(): AgentTestApp {
       sessions: sessionRepository,
       connectors: connectorRepository,
       providers: providerRepository,
+      mounts: mountRepository,
       harness: fakeHarness,
       eventLog,
       config: testConfig,
@@ -200,8 +216,9 @@ export function createAgentTestApp(): AgentTestApp {
   app.use("/api/connectors", connectorsApiRouter(connectorService));
   app.use("/api/providers", providersApiRouter(providerService));
   app.use("/api/models", modelsApiRouter(modelCatalog));
+  app.use("/api/mounts", mountsApiRouter(mountService));
 
-  return { app, mockDocker, fakeHarness, sessionService, connectorService, providerService };
+  return { app, mockDocker, fakeHarness, sessionService, connectorService, providerService, mountService };
 }
 
 export async function setupDataDir() {
@@ -209,6 +226,7 @@ export async function setupDataDir() {
   await mkdir(testConfig.dataDir, { recursive: true });
   await emptyConnectors();
   await emptyProviders();
+  await emptyMounts();
 }
 
 async function ensureTestFixtures(): Promise<void> {
@@ -254,6 +272,11 @@ async function emptyConnectors() {
 async function emptyProviders() {
   const providerPath = path.join(testConfig.dataDir, "providers.json");
   await writeFile(providerPath, "[]");
+}
+
+async function emptyMounts() {
+  const mountPath = path.join(testConfig.dataDir, "mounts.json");
+  await writeFile(mountPath, "[]");
 }
 
 export function getDataDir() {

@@ -1,5 +1,5 @@
 import type Docker from "dockerode";
-import type { AgentSession, Connector, DecryptedSecret, ProviderConfig, SecretInfo } from "./types.js";
+import type { AgentSession, Connector, DecryptedSecret, MountRecord, ProviderConfig, SecretInfo } from "./types.js";
 import type { SessionEvent } from "./events.js";
 
 export interface InteractiveExec {
@@ -20,11 +20,13 @@ export interface DockerPort {
     image: string;
     sessionVolume: string;
     workspaceVolume: string;
+    extraBinds?: string[];
   }): Promise<Docker.Container>;
   execInteractive(containerId: string, args: string[], tty: boolean): Promise<InteractiveExec>;
   execCommand(containerId: string, args: string[]): Promise<ExecResult>;
   removeContainer(id: string): Promise<void>;
   removeVolume(name: string): Promise<void>;
+  createVolume(name: string, labels: Record<string, string>): Promise<void>;
   ensureAgentImage(image: string): Promise<void>;
   containerExists(id: string): Promise<boolean>;
   writeFile(containerId: string, destPath: string, content: string, mode?: number): Promise<void>;
@@ -62,4 +64,9 @@ export interface ProviderRepository {
   list(): Promise<ProviderConfig[]>;
   get(id: string): Promise<ProviderConfig | null>;
   save(list: ProviderConfig[]): Promise<void>;
+}
+
+export interface MountRepository {
+  list(): Promise<MountRecord[]>;
+  save(list: MountRecord[]): Promise<void>;
 }
