@@ -30,6 +30,8 @@ The agent ran the whole loop autonomously: clone → set git identity → branch
 
 2. **Git identity is not injected.** `resolveAgentEnv`[^session-service] injects connector and provider secrets, but not `user.name`/`user.email`, so the agent only commits after being explicitly told to `git config`. Candidate: inject `GIT_USER_NAME`/`GIT_USER_EMAIL` from server config at session creation, or make the dev playbook set it as a first step.
 
+3. **No secret scanning inside the agent container.** The repo's `pre-commit` gitleaks hook lives in the source tree (`.git/hooks/`), which a fresh clone does not carry, and `gitleaks` is not installed in the agent image. The agent pushes via `https://x-access-token:${GITHUB_TOKEN}@…` with no local hook to stop it. This is acceptable today because GitHub **push protection** (enabled on the repo) still rejects the push server-side before anything lands; the agent just gets the rejection mid-flight rather than up front. Making prevention in-agent (pre-bake gitleaks + a global `core.hooksPath`) is a real image change to schedule, not a gap in the platform's security posture.
+
 [^dogfooding]: [Dogfooding strategy](/dogfooding.md)
 [^session-service]: `packages/server/src/core/session-service.ts`, `resolveAgentEnv()`
 [^first-pr]: PR #43
