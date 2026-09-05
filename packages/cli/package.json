@@ -18,6 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
   "devDependencies": {
     "@agent-land/contracts": "workspace:*",
     "@types/node": "^26.1.2",
