@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import "dotenv/config";
 import process from "node:process";
 import readline from "node:readline";
 import { loadConfig } from "./lib/config.js";
