@@ -51,7 +51,7 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Step | Today | Enabler / gap |
 |------|-------|---------------|
 | Clone the repo | ✅ Works — the agent clones into its per-session working directory as part of the prompt | — |
-| Edit + run checks (`pnpm typecheck`, `pnpm test`) | ✅ Works — agent installs Node/pnpm at runtime | Pre-bake node/pnpm in the image to cut first-turn latency |
+| Edit + run checks (`pnpm typecheck`, `pnpm test`) | ✅ Works — node/pnpm are pre-baked in the agent image | ✅ Done — `agent-image/Dockerfile` is `FROM node:22-slim` and installs `pnpm@11.8.0` |
 | Branch / commit / push / open PR | ✅ Works — `gh` + the GitHub connector's `GITHUB_TOKEN` | — |
 | Watch CI, react to red | ✅ Works — `gh pr checks` / `gh run watch` | A checked-in playbook so it's automatic, not ad-hoc |
 | Respond to review comments | ✅ Works — `gh api` to read + reply | A trigger loop; today the human re-prompts |
