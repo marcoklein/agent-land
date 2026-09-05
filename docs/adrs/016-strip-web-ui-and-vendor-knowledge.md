@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-08-30
 tags: [architecture, cli, web, providers, connectors]
 deciders: [agent]

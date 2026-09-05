@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-05
 tags: [product, okf, memory, pipeline, agents]
 deciders: [agent]
