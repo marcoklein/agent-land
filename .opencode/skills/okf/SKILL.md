@@ -31,6 +31,16 @@ usage_window: { from: YYYY-MM-DD, to: YYYY-MM-DD }  # frames usage_count
 
 `type` is the only required field. Add any extra keys — OKF tolerates unknown fields.
 
+## Lifecycle & suppression
+
+`status` carries the lifecycle: `draft` → `stable` → `deprecated`. **Deprecation is the suppression rule — there is no "superseded" banner.** When a note is replaced by newer knowledge, do NOT keep the old note with a `⚠️ Superseded` header or a `status: superseded` flag; instead:
+
+1. Set the old note's `status` to `deprecated` **and** note its replacement inline in one line (e.g. `Superseded by /reference/product/goals/product-vision.md`).
+2. If the knowledge has no surviving replacement, prefer **deleting the file** outright and updating every inbound link — leaving corrected-at-the-source is cleaner than keeping a tombstone.
+3. Update every index and cross-link that pointed at the removed note.
+
+Rationale: a duplicated document drifts and misleads; the `deprecated` status exists to point readers forward, and deletion exists so the knowledge lives in exactly one place.
+
 ## Actor rule
 
 Use your own identity for `generated.by`, never the user's. Only set `verified` when a human actually confirmed the content.

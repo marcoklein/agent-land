@@ -8,9 +8,6 @@ sources:
   - id: engine
     resource: /reference/engine.md
     title: Agent Land engine — the purest form
-  - id: product-value
-    resource: docs/product-value.md
-    title: Agent Land — Product & Value (superseded prose)
   - id: strip-adr
     resource: /adrs/016-strip-web-ui-and-vendor-knowledge.md
     title: Strip Web UI and Vendor Knowledge from Server
