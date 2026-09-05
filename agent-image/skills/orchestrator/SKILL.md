@@ -66,16 +66,20 @@ MOUNT_NAME="agent-land"           # the Mount registered on the platform
 MOUNT_TARGET="/data/agent-land"   # path the child binds it at
 GH_CONNECTOR="<set in preflight>" # exact name of the GitHub connector (see Preflight)
 
+# Build the create JSON with jq -n — never with string concatenation. A live run
+# shipped the literal "$CONNECTOR_NAME" as the connector name; unknown names
+# resolve to NO env silently, so the child had no GITHUB_TOKEN.
 spawn_child() {
   curl -sS -u "$AGENT_LAND_BASIC_AUTH" \
     -X POST "$AGENT_LAND_URL/api/sessions" \
     -H 'Content-Type: application/json' \
-    -d '{
-      "connectors": ["'"$GH_CONNECTOR"'"],
-      "mounts": [{ "source": "'"$MOUNT_NAME"'", "target": "'"$MOUNT_TARGET"'" }],
-      "platform": false,
-      "parentSessionId": "'"$MY_SESSION_ID"'"
-    }' | jq -r '.session.id'
+    -d "$(jq -n \
+      --arg c "$GH_CONNECTOR" \
+      --arg m "$MOUNT_NAME" \
+      --arg t "$MOUNT_TARGET" \
+      --arg p "$MY_SESSION_ID" \
+      '{connectors:[$c], mounts:[{source:$m, target:$t}], platform:false, parentSessionId:$p}')" \
+    | jq -r '.session.id'
 }
 
 prompt_child() {
@@ -88,22 +92,24 @@ prompt_child() {
 
 # GOTCHA: GET /api/sessions/:id/events?live=1 NEVER closes on `agent_settled` —
 # it only closes when the session is STOPPED. A bare `curl -N` hangs forever.
-# Always break on the settle marker instead of waiting for the stream to end.
+# GOTCHA 2: a `curl | jq | while read` pipeline that `break`s on the marker still
+# hangs — curl only dies on SIGPIPE, which needs a *write*, and a settled child
+# writes nothing more. Capture in the background and poll the file instead, then
+# kill curl explicitly. (Both hangs observed live on 2026-09-05.)
 watch_child() {
   child_id="$1"; out="/tmp/${child_id}.sse"
   : > "$out"
   curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
-    "$AGENT_LAND_URL/api/sessions/$child_id/events?live=1" \
-  | tee -a "$out" \
-  | jq --unbuffered -R -c '
-      select(startswith("data: ")) | .[6:] | fromjson |
-      select(.type == "agent_settled" or (.type == "status" and .status == "stopped")) |
-      "SETTLED"' \
-  | { while IFS= read -r marker; do
-        case "$marker" in
-          '"SETTLED"') break ;;
-        esac
-      done; }
+    "$AGENT_LAND_URL/api/sessions/$child_id/events?live=1" >> "$out" 2>/dev/null &
+  local curl_pid=$!
+  while kill -0 "$curl_pid" 2>/dev/null; do
+    if grep -q '"type":"agent_settled"' "$out" || grep -q '"status":"stopped"' "$out"; then
+      break
+    fi
+    sleep 5
+  done
+  kill "$curl_pid" 2>/dev/null
+  wait "$curl_pid" 2>/dev/null || true
 }
 
 # Extract the last assistant message from the captured SSE frames.
@@ -175,7 +181,9 @@ The non-`live` events endpoint replays the persisted event log (including the fi
 ## Preflight (once per run)
 
 ```bash
-# You need gh; it reads GITHUB_TOKEN from the environment. Never run `gh auth login`.
+# You need gh. In the agent image gh does not pick up GITHUB_TOKEN automatically —
+# export GH_TOKEN first. Never run `gh auth login`.
+export GH_TOKEN="$GITHUB_TOKEN"
 gh auth status
 
 # Confirm the mount exists and is free:
@@ -279,6 +287,7 @@ Step 0 — sync and set identity:
   cd $MOUNT_TARGET && git fetch origin && git checkout main && git reset --hard origin/main
   git config user.name "\$GIT_USER_NAME"
   git config user.email "\$GIT_USER_EMAIL"
+  export GH_TOKEN="\$GITHUB_TOKEN"   # gh in the agent image needs GH_TOKEN; GITHUB_TOKEN alone left it unauthenticated in a live run
 
 Step 1 — branch:
   git checkout -b feat/$SPEC_SLUG-spec
@@ -344,6 +353,7 @@ Step 0 — sync and set identity:
   cd $MOUNT_TARGET && git fetch origin && git checkout main && git reset --hard origin/main
   git config user.name "\$GIT_USER_NAME"
   git config user.email "\$GIT_USER_EMAIL"
+  export GH_TOKEN="\$GITHUB_TOKEN"   # gh in the agent image needs GH_TOKEN; GITHUB_TOKEN alone left it unauthenticated in a live run
 
 Step 1 — read the feature note from the spec PR (do not assume it is on main):
   gh pr view $SPEC_PR_NUMBER --repo $REPO --json title,body
