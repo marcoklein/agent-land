@@ -1,11 +1,13 @@
 ---
-status: accepted
+status: deprecated
 date: 2026-07-31
 tags: [ui, htmx, sse, real-time, architecture]
 deciders: [marcoklein]
 ---
 
 # Real-Time Agent UI with HTMX v4 SSE
+
+> **Superseded by [016 — Strip Web UI and Vendor Knowledge](016-strip-web-ui-and-vendor-knowledge.md)** — the HTMX UI was removed. The SSE transport itself survives (see [014](014-json-api-canonical-machine-interface.md)). Retained for decision history only.
 
 **Decision:** The agent detail page uses three distinct mechanisms — SSE for log streaming, polling for stats, and a full card refresh on agent completion — rather than a single unified approach. The server is always authoritative; the client re-renders state rather than patching individual DOM elements.
 

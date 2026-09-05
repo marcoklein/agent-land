@@ -14,7 +14,3 @@ The single home for documentation and reference — every note is OKF with `stat
 * [Learnings](learnings/) — operational gotchas and empirical findings
 * [Dogfooding](dogfooding.md) — developing agent-land on agent-land
 * [Decisions](adrs/) — architecture decision records
-
-## Testing
-
-Tests use vitest + supertest with a page object pattern. No mocks for SOPS — a dedicated test age key encrypts fixtures at runtime. See `packages/server/src/__tests__/` for the test suite.

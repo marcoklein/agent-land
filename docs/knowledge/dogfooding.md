@@ -1,15 +1,15 @@
 ---
-type: Reference
+type: Strategy
 title: Dogfooding — developing agent-land on agent-land
 description: The strategy for building Agent Land with Agent Land: a phased, trust-earned loop from task to merged change, and the gaps that remain.
-status: stable
+status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: product-vision
-    resource: /knowledge/product/goals/product-vision.md
+    resource: /product/goals/product-vision.md
     title: Agent Land product vision
   - id: pipeline
-    resource: /knowledge/product/pipeline.md
+    resource: /product/pipeline.md
     title: The product pipeline
 ---
 

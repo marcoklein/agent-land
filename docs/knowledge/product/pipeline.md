@@ -1,15 +1,15 @@
 ---
-type: Reference
+type: Process
 title: The product pipeline
 description: How an outcome becomes shipped code — from a stated goal through design review to a green PR — and where the human gates sit.
-status: stable
+status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: adr
     resource: /adrs/017-product-layer-okf-memory.md
     title: Build a Product Layer on OKF Memory with an Agentic Pipeline
   - id: archon-inspiration
-    resource: /knowledge/learnings/archon-inspiration.md
+    resource: /learnings/archon-inspiration.md
     title: Inspiration from Archon
 ---
 
@@ -57,6 +57,6 @@ flowchart LR
 
 ## The future: agent-land-native
 
-The same recipe ports to agent-land sessions once [Platform Connector](/knowledge/product/features/platform-connector.md) and [Mount](/knowledge/product/features/mount.md) land — an orchestrator session runs the pipeline on the platform and spawns the build session as a child. The human gates become `waiting_for_input` states. Until then, opencode skills exercise the same flow and teach us what the recipe needs.
+The same recipe ports to agent-land sessions once [Platform Connector](/product/features/platform-connector.md) and [Mount](/product/features/mount.md) land — an orchestrator session runs the pipeline on the platform and spawns the build session as a child. The human gates become `waiting_for_input` states. Until then, opencode skills exercise the same flow and teach us what the recipe needs.
 
-[^archon]: [Inspiration from Archon](/knowledge/learnings/archon-inspiration.md) — recipe outside the engine, deterministic steps between AI nodes
+[^archon]: [Inspiration from Archon](/learnings/archon-inspiration.md) — recipe outside the engine, deterministic steps between AI nodes

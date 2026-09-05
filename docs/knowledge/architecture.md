@@ -2,17 +2,17 @@
 type: Reference
 title: Agent Land architecture — the zoom ladder
 description: The six primitives and three substrates, shown as a ladder of diagrams from one turn up to the deployed platform.
-status: stable
+status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /knowledge/engine.md
+    resource: /engine.md
     title: Agent Land engine — the purest form
 ---
 
 # Agent Land architecture — the zoom ladder
 
-The same system at six scales. Everything here is a projection of the [engine](/knowledge/engine.md) — six primitives, three substrates, one opinion.
+The same system at six scales. Everything here is a projection of the [engine](/engine.md) — six primitives, three substrates, one opinion.
 
 ## Zoom in — one turn, concretely
 

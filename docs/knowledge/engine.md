@@ -4,9 +4,10 @@ title: Agent Land engine — the purest form
 description: The minimal core of the agent-land platform. Six primitives, three substrates, one engine opinion. Everything else is composition.
 status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-29T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: architecture
-    resource: /knowledge/architecture.md
+    resource: /architecture.md
     title: Architecture — the zoom ladder
   - id: session-service
     resource: packages/server/src/core/session-service.ts

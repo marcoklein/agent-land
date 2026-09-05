@@ -1,11 +1,13 @@
 ---
-status: accepted
+status: deprecated
 date: 2026-07-31
 tags: [ui, styling, css, frontend]
 deciders: [marcoklein]
 ---
 
 # Pico CSS with No Inline Styles
+
+> **Superseded by [016 — Strip Web UI and Vendor Knowledge](016-strip-web-ui-and-vendor-knowledge.md)** — the styling guide (and the `.opencode/skills/styling` skill) were removed with the web UI. Retained for decision history only.
 
 **Decision:** All styling goes through CSS classes defined in `src/views/layout.ejs` and Pico CSS utility classes. No `style="..."` attributes in templates. Custom colors (e.g., red for destructive actions) use Pico CSS variable overrides on named classes.
 

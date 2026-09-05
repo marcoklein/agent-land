@@ -7,10 +7,10 @@ tags: [engine, storage, isolation, worktree]
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /knowledge/engine.md
+    resource: /engine.md
     title: Agent Land engine — the purest form
   - id: archon-inspiration
-    resource: /knowledge/learnings/archon-inspiration.md
+    resource: /learnings/archon-inspiration.md
     title: Inspiration from Archon
 ---
 
@@ -34,11 +34,11 @@ Long-lived development needs durable state: the repo checkout, warm caches, skil
 - A session can bind one or more mounts at chosen container paths at creation time (M:N attach).
 - At most one live session binds a given mount at once.
 - The mount is content-agnostic — the platform never inspects or interprets its contents.
-- See [engine.md](/knowledge/engine.md#capabilities-injected-at-session-creation) for the primitive spec.
+- See [engine.md](/engine.md#capabilities-injected-at-session-creation) for the primitive spec.
 
 ## Open questions
 
 - Is "at most one live session per mount" a hard invariant or a soft policy with a force override?
 - Do mounts need size/cleanup tooling (`al mounts prune`) at first ship, or is manual cleanup enough?
 
-[^archon]: [Inspiration from Archon](/knowledge/learnings/archon-inspiration.md) — idea #1, worktree isolation feeding Mount design
+[^archon]: [Inspiration from Archon](/learnings/archon-inspiration.md) — idea #1, worktree isolation feeding Mount design

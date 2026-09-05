@@ -2,11 +2,11 @@
 type: ProductGoal
 title: Agent Land product vision
 description: Agent Land is a self-hosted home for long-lived AI coding agents — durable sessions, sealed secrets, and orchestratable workflows, driven from the CLI and a JSON/SSE API.
-status: stable
+status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /knowledge/engine.md
+    resource: /engine.md
     title: Agent Land engine — the purest form
   - id: strip-adr
     resource: /adrs/016-strip-web-ui-and-vendor-knowledge.md
@@ -54,4 +54,4 @@ The engine is six primitives, three substrates, one opinion — everything else 
 - **API-first.** No vendor catalog, no web UI in-core — presentation and preset knowledge live in the CLI[^strip-adr].
 
 [^strip-adr]: [Strip Web UI and Vendor Knowledge from Server](/adrs/016-strip-web-ui-and-vendor-knowledge.md)
-[^engine]: [Agent Land engine](/knowledge/engine.md)
+[^engine]: [Agent Land engine](/engine.md)

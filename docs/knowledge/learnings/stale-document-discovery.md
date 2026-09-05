@@ -6,7 +6,7 @@ status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: okf-skill
-    resource: /opencode/skills/okf/SKILL.md
+    resource: ../../../.opencode/skills/okf/SKILL.md
     title: OKF skill — lifecycle and suppression rule
 ---
 
@@ -27,7 +27,7 @@ Observation: a knowledge base drifts unless staleness is *looked for* mechanical
 
 Classes 1, 2, 3, 5, 6 are **mechanical** — resolvable by a deterministic lint pass over the bundle: check links and `resource:` targets, age `proposed` ADRs, find unlinked notes, validate index bullets. Class 4 (duplicate provenance) is **semantic** — it needs the "one home" convention, not a regex.
 
-Order: cheap mechanical checks first (links, sources, indexes, orphans), then the aged-`proposed` ADR flag. Each hit remediates per the [OKF suppression rule](/opencode/skills/okf/SKILL.md): deprecate-with-pointer or delete-and-fix-links — never a tombstone banner.
+Order: cheap mechanical checks first (links, sources, indexes, orphans), then the aged-`proposed` ADR flag. Each hit remediates per the [OKF suppression rule](.opencode/skills/okf/SKILL.md): deprecate-with-pointer or delete-and-fix-links — never a tombstone banner.
 
 ## Why it matters
 

@@ -103,7 +103,7 @@ Zen's unified chat endpoint. Requires API key (format `sk-...`).
 
 Both Zen and Go model listing endpoints are public — no SOPS decryption needed for model fetching.
 
-Agent Land currently uses `opencode-go` (Go subscription). The model dropdown in the launch form fetches from `GET https://opencode.ai/zen/go/v1/models` at page render time and caches the result.
+Agent Land currently uses `opencode-go` (Go subscription). Model discovery is server-side: `ModelCatalog` fetches `GET https://opencode.ai/zen/go/v1/models`, and the CLI surfaces the result via `al models [--provider <id>]` (`GET /api/models`).
 
 ## Provider wiring
 

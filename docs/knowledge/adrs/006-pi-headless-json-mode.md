@@ -7,7 +7,7 @@ deciders: [marcoklein]
 
 # Pi Headless via --mode json --print
 
-> **Superseded by [/knowledge/engine.md](/knowledge/engine.md)** — the engine now runs pi as `pi --mode rpc` (one engine opinion), not `--mode json --print`. Retained for decision history only.
+> **Superseded by [the engine](/engine.md)** — the engine now runs pi as `pi --mode rpc` (one engine opinion), not `--mode json --print`. Retained for decision history only.
 
 **Decision:** Run pi as `pi --mode json --print --provider opencode-go` for headless operation.
 

@@ -60,11 +60,11 @@ Agent output streams in real-time via SSE. Each session persists its record to `
 
 ## API
 
-The JSON HTTP + SSE API (sessions, connectors, models, providers) is defined once in `packages/contracts/src/routes.ts`. See the [documentation](docs/README.md) for reference and operational learnings.
+The JSON HTTP + SSE API (sessions, connectors, models, providers) is defined once in `packages/contracts/src/routes.ts`. See the [knowledge bundle](docs/knowledge/index.md) for reference and operational learnings.
 
 ## Docs
 
-- [Documentation](docs/README.md) — the knowledge bundle: engine, product, learnings, and decisions
+- [Knowledge bundle](docs/knowledge/index.md) — engine, architecture, product, learnings, and decisions
 - [Architecture Decision Records](docs/knowledge/adrs/)
 - [Contributing](CONTRIBUTING.md)
 

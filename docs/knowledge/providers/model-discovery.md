@@ -1,13 +1,13 @@
 ---
 type: Reference
 title: Model Discovery
-description: How model listing works across pi, provider HTTP APIs, and the launch form UX.
+description: How model listing works across pi, provider HTTP APIs, and the CLI (`al models`).
 status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-07-31T00:00:00Z }
 updated: { by: opencode/qwen3.8-max, at: 2026-08-30T00:00:00Z }
 sources:
   - id: opencode-api
-    resource: /knowledge/providers/opencode-api.md
+    resource: /providers/opencode-api.md
     title: OpenCode API reference
   - id: pi-dockerfile
     resource: agent-image/Dockerfile

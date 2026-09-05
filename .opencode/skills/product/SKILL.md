@@ -32,7 +32,7 @@ Then write `docs/knowledge/product/features/<slug>.md` as an OKF note (`type: Fe
 - **Acceptance criteria** — concrete, testable.
 - **Open questions** — decisions the design gate must answer.
 
-Cross-link the underlying engine primitives from `/knowledge/engine.md`. Present the note for the outcome gate; do not proceed until the human confirms it captured intent.
+Cross-link the underlying engine primitives from `/engine.md`. Present the note for the outcome gate; do not proceed until the human confirms it captured intent.
 
 ### 2. Design (Feature → Design note)
 
@@ -41,7 +41,7 @@ After the outcome gate passes, write `docs/knowledge/product/designs/<slug>-desi
 - **Approach** — the shape of the change.
 - **Interfaces** — contracts, routes, env, CLI surface that change.
 - **Risks & mitigations**.
-- **ADR pointers** — link or flag a new `docs/adrs/NNN-*.md` if the change is architecturally significant.
+- **ADR pointers** — link or flag a new `docs/knowledge/adrs/NNN-*.md` if the change is architecturally significant.
 - **Minimal change set** — files/packages touched.
 
 Answer the Feature note's open questions here, or mark them explicitly deferred.

@@ -15,7 +15,7 @@ sources:
     title: Archon docs — AI Assistants (Claude, Codex, OpenCode, Pi, Copilot)
     last_modified: 2026-09-01
   - id: engine
-    resource: /knowledge/engine.md
+    resource: /engine.md
     title: Agent Land engine — the purest form
 ---
 
