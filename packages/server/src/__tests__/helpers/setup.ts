@@ -27,6 +27,7 @@ import { connectorsApiRouter } from "../../presentation/http/api-connectors.js";
 import { providersApiRouter } from "../../presentation/http/api-providers.js";
 import { modelsApiRouter } from "../../presentation/http/api-models.js";
 import { mountsApiRouter } from "../../presentation/http/api-mounts.js";
+import { createApiAuthMiddleware } from "../../presentation/http/auth.js";
 import { getConfig } from "../../config.js";
 
 const execFileAsync = promisify(execFile);
@@ -212,6 +213,7 @@ export function createAgentTestApp(): AgentTestApp {
     20
   );
 
+  app.use("/api", createApiAuthMiddleware(sessionService, testConfig));
   app.use("/api/sessions", sessionsApiRouter(sessionService, testConfig));
   app.use("/api/connectors", connectorsApiRouter(connectorService));
   app.use("/api/providers", providersApiRouter(providerService));

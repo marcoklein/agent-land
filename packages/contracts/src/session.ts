@@ -32,6 +32,14 @@ export const sessionSchema = z
       })
       .optional()
       .describe("Pending permission dialog, when the session is waiting for input."),
+    platform: z
+      .boolean()
+      .optional()
+      .describe("True when the session was launched with platform loopback credentials injected."),
+    parentSessionId: z
+      .string()
+      .optional()
+      .describe("Id of the session that spawned this one, for lineage (absent for top-level sessions)."),
   })
   .describe("An agent session (the single entity of the platform).");
 
@@ -44,6 +52,14 @@ export const createSessionInputSchema = z
     permissionPolicy: z.string().optional(),
     model: z.string().optional(),
     provider: z.string().optional(),
+    platform: z
+      .boolean()
+      .optional()
+      .describe("Inject AGENT_LAND_URL and a scoped loopback credential (default false)."),
+    parentSessionId: z
+      .string()
+      .optional()
+      .describe("Id of the parent session, when this session is spawned by another session."),
   })
   .describe("Request body for POST /api/sessions.");
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;

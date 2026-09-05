@@ -52,7 +52,7 @@ export type {
 
 export type SessionSummary = Pick<
   Session,
-  "id" | "status" | "createdAt" | "model" | "provider" | "connectors"
+  "id" | "status" | "createdAt" | "model" | "provider" | "connectors" | "parentSessionId"
 >;
 export type ConnectorSummary = Pick<Connector, "name" | "url">;
 export type MountSummary = Pick<Mount, "name">;

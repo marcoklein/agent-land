@@ -22,6 +22,7 @@ import { connectorsApiRouter } from "./presentation/http/api-connectors.js";
 import { providersApiRouter } from "./presentation/http/api-providers.js";
 import { modelsApiRouter } from "./presentation/http/api-models.js";
 import { mountsApiRouter } from "./presentation/http/api-mounts.js";
+import { createApiAuthMiddleware } from "./presentation/http/auth.js";
 
 const config = getConfig();
 
@@ -55,6 +56,8 @@ const sessionService = new SessionService({
 const app = express();
 
 app.use(express.json());
+
+app.use("/api", createApiAuthMiddleware(sessionService, config));
 
 app.use("/api/sessions", sessionsApiRouter(sessionService, config));
 app.use("/api/connectors", connectorsApiRouter(connectorService));

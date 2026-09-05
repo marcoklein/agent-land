@@ -1,7 +1,16 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { getConfig } from "../config.js";
 
-const ENV_KEYS = ["PORT", "SSE_HEARTBEAT_MS", "GIT_USER_NAME", "GIT_USER_EMAIL"] as const;
+const ENV_KEYS = [
+  "PORT",
+  "SSE_HEARTBEAT_MS",
+  "GIT_USER_NAME",
+  "GIT_USER_EMAIL",
+  "AGENT_LAND_URL",
+  "AGENT_LAND_BASIC_AUTH",
+  "AGENT_LAND_AUTH_USER",
+  "AGENT_LAND_AUTH_PASSWORD",
+] as const;
 const saved: Record<string, string | undefined> = {};
 
 function setEnv(key: string, value: string | undefined) {
@@ -44,5 +53,40 @@ describe("getConfig", () => {
     setEnv("GIT_USER_EMAIL", undefined);
     expect(getConfig().gitUserName).toBe("");
     expect(getConfig().gitUserEmail).toBe("");
+  });
+
+  it("reads the loopback URL from AGENT_LAND_URL", () => {
+    stash();
+    setEnv("AGENT_LAND_URL", "https://agent-land.example/");
+    expect(getConfig().agentLandUrl).toBe("https://agent-land.example");
+  });
+
+  it("defaults the loopback URL to localhost with the port", () => {
+    stash();
+    setEnv("AGENT_LAND_URL", undefined);
+    setEnv("PORT", "4321");
+    expect(getConfig().agentLandUrl).toBe("http://localhost:4321");
+  });
+
+  it("reads the operator credential from AGENT_LAND_BASIC_AUTH", () => {
+    stash();
+    setEnv("AGENT_LAND_BASIC_AUTH", "op:secret");
+    expect(getConfig().operatorBasicAuth).toEqual({ user: "op", password: "secret" });
+  });
+
+  it("reads the operator credential from split auth vars", () => {
+    stash();
+    setEnv("AGENT_LAND_BASIC_AUTH", undefined);
+    setEnv("AGENT_LAND_AUTH_USER", "op");
+    setEnv("AGENT_LAND_AUTH_PASSWORD", "pw");
+    expect(getConfig().operatorBasicAuth).toEqual({ user: "op", password: "pw" });
+  });
+
+  it("leaves the operator credential unset when no auth env is present", () => {
+    stash();
+    setEnv("AGENT_LAND_BASIC_AUTH", undefined);
+    setEnv("AGENT_LAND_AUTH_USER", undefined);
+    setEnv("AGENT_LAND_AUTH_PASSWORD", undefined);
+    expect(getConfig().operatorBasicAuth).toBeUndefined();
   });
 });

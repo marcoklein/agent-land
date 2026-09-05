@@ -4,3 +4,4 @@ Approved technical designs — the handoff from product to implementation. Each 
 
 * [Mount](mount-design.md) — durable named folder, single-writer invariant, manual cleanup
 * [Git identity injection](git-identity-design.md) — server injects `GIT_USER_NAME`/`GIT_USER_EMAIL` so agents commit without being told
+* [Platform Connector](platform-connector-design.md) — per-session loopback credentials + lineage, so agents spawn and watch child sessions

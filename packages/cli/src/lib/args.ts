@@ -11,6 +11,8 @@ const FLAGS: Record<string, FlagSpec> = {
   "--model": { key: "model", type: "value" },
   "--provider": { key: "provider", type: "value" },
   "--manual": { key: "manual", type: "boolean" },
+  "--platform": { key: "platform", type: "boolean" },
+  "--tree": { key: "tree", type: "boolean" },
   "--yes": { key: "yes", type: "boolean" },
   "-y": { key: "yes", type: "boolean" },
   "--json": { key: "json", type: "boolean" },
@@ -33,16 +35,16 @@ const FLAGS: Record<string, FlagSpec> = {
 };
 
 const COMMAND_FLAGS: Record<string, string[]> = {
-  new: ["--connectors", "--model", "--provider", "--manual", "--mount"],
+  new: ["--connectors", "--model", "--provider", "--manual", "--platform", "--mount"],
   chat: [],
-  ls: ["--json"],
+  ls: ["--json", "--tree"],
   rm: ["--yes", "-y"],
   log: ["--follow", "--json"],
   models: ["--provider"],
   connectors: ["--yes", "-y", "--name", "--url", "--field", "--content"],
   providers: ["--json", "--yes", "-y", "--id", "--label", "--base-url", "--api", "--api-key", "--models", "--default-model", "--field", "--content"],
   mounts: ["--yes", "-y", "--name"],
-  run: ["--connectors", "--model", "--provider", "--manual", "--rm", "--timeout", "--verbose", "--mount"],
+  run: ["--connectors", "--model", "--provider", "--manual", "--platform", "--rm", "--timeout", "--verbose", "--mount"],
   watch: ["--all"],
 };
 

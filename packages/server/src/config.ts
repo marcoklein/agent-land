@@ -1,5 +1,10 @@
 import path from "path";
 
+export interface OperatorBasicAuth {
+  user: string;
+  password: string;
+}
+
 export interface Config {
   port: number;
   secretsDir: string;
@@ -12,6 +17,15 @@ export interface Config {
   sseHeartbeatMs: number;
   gitUserName: string;
   gitUserEmail: string;
+  agentLandUrl: string;
+  operatorBasicAuth?: OperatorBasicAuth;
+}
+
+/** Splits a "user:password" value at the first colon. */
+export function parseBasicAuthValue(value: string): OperatorBasicAuth | undefined {
+  const idx = value.indexOf(":");
+  if (idx <= 0) return undefined;
+  return { user: value.slice(0, idx), password: value.slice(idx + 1) };
 }
 
 export function getConfig(): Config {
@@ -23,6 +37,16 @@ export function getConfig(): Config {
   const sseHeartbeatMs = Number(process.env.SSE_HEARTBEAT_MS ?? "30000");
   if (!Number.isFinite(sseHeartbeatMs) || sseHeartbeatMs <= 0) {
     throw new Error(`Invalid SSE_HEARTBEAT_MS: ${process.env.SSE_HEARTBEAT_MS} (expected a positive number)`);
+  }
+
+  let operatorBasicAuth: OperatorBasicAuth | undefined;
+  if (process.env.AGENT_LAND_BASIC_AUTH) {
+    operatorBasicAuth = parseBasicAuthValue(process.env.AGENT_LAND_BASIC_AUTH);
+  } else if (process.env.AGENT_LAND_AUTH_USER && process.env.AGENT_LAND_AUTH_PASSWORD) {
+    operatorBasicAuth = {
+      user: process.env.AGENT_LAND_AUTH_USER,
+      password: process.env.AGENT_LAND_AUTH_PASSWORD,
+    };
   }
 
   return {
@@ -37,5 +61,7 @@ export function getConfig(): Config {
     sseHeartbeatMs,
     gitUserName: process.env.GIT_USER_NAME ?? "",
     gitUserEmail: process.env.GIT_USER_EMAIL ?? "",
+    agentLandUrl: (process.env.AGENT_LAND_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
+    operatorBasicAuth,
   };
 }

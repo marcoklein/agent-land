@@ -11,20 +11,22 @@ import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
 import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
 import { formatAge } from "./lib/format.js";
 import { gatherChoices, type SelectOption } from "./lib/new-wizard.js";
+import { buildSessionTree, renderSessionTree } from "./lib/tree.js";
 import type { AgentEvent, ConnectorSummary, MountSummary, ProviderSummary, RenderLine, SessionSummary, WaitingForInput } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
 
 Usage:
-  al new [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual]
+  al new [--connectors a,b,c] [--model <m>] [--provider <id>] [--manual] [--platform]
       create a session and enter the chat overlay
       (interactive: prompts for provider, model and connectors when flags are omitted)
 
   al chat <session-id>
       attach to an existing session (history replays, then live events)
 
-  al ls [--json]
+  al ls [--json] [--tree]
       list sessions with status, age, model and connectors
+      --tree groups children under their parent session
 
   al rm <session-id> [-y|--yes]
       delete a session (prompts y/N when it is still running)
@@ -65,7 +67,7 @@ Usage:
   al mounts rm <name> [-y|--yes]
       delete a mount (prompts y/N; fails while a live session binds it)
 
-  al run <message> [new-flags] [--rm] [--timeout <seconds>] [--verbose]
+  al run <message> [new-flags] [--platform] [--rm] [--timeout <seconds>] [--verbose]
       one-shot: create, prompt, wait for settle, print the final answer
       exits 0 on settle, 1 on stop/timeout; session is kept unless --rm
       (interactive: prompts for provider, model and connectors when flags are omitted)
@@ -120,15 +122,27 @@ function sessionLine(s: SessionSummary): string {
   return `${s.id}  ${statusColor(s.status)(status)}${formatAge(s.createdAt).padEnd(7)}${provider}${s.model}${connectors}`;
 }
 
-async function listSessions(client: ApiClient, { json }: { json?: boolean } = {}): Promise<void> {
+async function listSessions(
+  client: ApiClient,
+  { json, tree }: { json?: boolean; tree?: boolean } = {}
+): Promise<void> {
   const { sessions } = await client.listSessions();
   if (!sessions || sessions.length === 0) {
     process.stdout.write(json ? "[]\n" : "no sessions\n");
     return;
   }
-  const sorted = [...sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const sorted = [...sessions].sort((a, b) =>
+    tree ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt)
+  );
   if (json) {
     process.stdout.write(JSON.stringify(sorted, null, 2) + "\n");
+    return;
+  }
+  if (tree) {
+    const forest = buildSessionTree(sorted);
+    for (const line of renderSessionTree(forest, sessionLine)) {
+      process.stdout.write(line + "\n");
+    }
     return;
   }
   for (const s of sorted) process.stdout.write(sessionLine(s) + "\n");
@@ -728,6 +742,7 @@ async function main() {
     ...(connectors.length > 0 ? { connectors } : {}),
     ...(parsedMounts.length > 0 ? { mounts: parsedMounts } : {}),
     ...(opts.manual ? { permissionPolicy: "manual" } : {}),
+    ...(opts.platform ? { platform: true } : {}),
     ...(model ? { model } : {}),
     ...(provider ? { provider } : {}),
   };
@@ -766,7 +781,7 @@ async function main() {
     await chat(client, sessionId, { hintOnQuit: true });
   } else if (cmd === "ls") {
     try {
-      await listSessions(client, { json: opts.json });
+      await listSessions(client, { json: opts.json, tree: opts.tree });
     } catch (err) {
       fail(`list failed: ${(err as Error).message}`);
     }
