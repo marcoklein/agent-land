@@ -55,8 +55,8 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Branch / commit / push / open PR | ✅ Works — `gh` + the GitHub connector's `GITHUB_TOKEN` | — |
 | Watch CI, react to red | ✅ Works — `gh pr checks` / `gh run watch` | A checked-in playbook so it's automatic, not ad-hoc |
 | Respond to review comments | ✅ Works — `gh api` to read + reply | A trigger loop; today the human re-prompts |
-| Split work across agents | ❌ Gap | Agent→agent channel (orchestration milestone) |
-| Recurring maintenance (release notes, deps) | ❌ Gap | Scheduled workflows (cron) |
+| Split work across agents | ❌ Gap | [Platform Connector](product/features/platform-connector.md) + the [multi-agent roadmap](/multi-agent-workflow.md) |
+| Recurring maintenance (release notes, deps) | ❌ Gap | Scheduled workflows (cron) — [multi-agent roadmap Phase 3](/multi-agent-workflow.md) |
 | Merge after green CI + approval | ⚠️ Works (`gh pr merge`) but ungated | Keep human-gated until trust is earned |
 | Deploy + verify live | ✅ Works — CI on merge to `main` pushes to Dokku and health-checks ([deploy.yml](../../../.github/workflows/deploy.yml)) | Merge stays human-gated |
 | Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](learnings/agent-image-staleness.md) |
@@ -133,4 +133,4 @@ The agent merges after green CI + approval, then deploys to Dokku and verifies. 
 
 - What's the minimum deploy connector (SSH key vs. Dokku plugin) that keeps the agent's blast radius small enough for Phase 5?
 - Does the dev playbook (Phase 2) live in the repo (`AGENTS.md`/`SKILL.md`) or as an agent-land role template once orchestration lands?
-- At what point does a second agent (reviewer) make sense, and does that wait for the agent→agent channel?
+- At what point does a second agent (reviewer) make sense, and does that wait for the agent→agent channel? — the [multi-agent roadmap](/multi-agent-workflow.md) answers: a reviewer child lands with the static orchestrator (Phase 2), right after Platform Connector (Phase 1).

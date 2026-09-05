@@ -13,4 +13,5 @@ The single home for documentation and reference — every note is OKF with `stat
 * [Product](product/) — goals (vision + boundary), features, designs, and the pipeline
 * [Learnings](learnings/) — operational gotchas and empirical findings
 * [Dogfooding](dogfooding.md) — developing agent-land on agent-land
+* [Multi-agent workflow](multi-agent-workflow.md) — the roadmap from stated vision to review-ready PRs via orchestrated child sessions
 * [Decisions](adrs/) — architecture decision records
