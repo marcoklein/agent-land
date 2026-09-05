@@ -18,7 +18,7 @@ sources:
 
 # Agent Land domain boundary
 
-This note is the refine stage's fit-check reference. Every outcome is measured against it before a Feature note is written. Out-of-bound outcomes aren't rejected outright — they are surfaced as **scope deviations**, resolved by one of: reject, reframe, or amend the boundary via an ADR.
+This note is the refine stage's *is it in scope?* check. Its counterpart, [the vision board](/product/goals/vision-board.md), answers *is it worth building?* Every outcome is measured against both before a Feature note is written. Out-of-bound outcomes aren't rejected outright — they are surfaced as **scope deviations**, resolved by one of: reject, reframe, or amend the boundary via an ADR.
 
 ## Is (in scope)
 

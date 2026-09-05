@@ -23,7 +23,12 @@ Never skip a gate. This skill stops at the design gate — it does not implement
 
 ### 1. Refine (outcome → Feature note)
 
-**Fit-check first.** Before writing, read `docs/knowledge/product/goals/boundaries.md` and the relevant ADRs. Determine whether the outcome composes from the six primitives or violates the domain boundary (in-core UI, in-core orchestration, vendor knowledge, databases). If it deviates, surface a **scope deviation** — reject/reframe/amend-via-ADR — and do *not* write a Feature note until the human resolves it. Scope creep is revealed, never silently absorbed.
+**Fit-check first.** Before writing, read `docs/knowledge/product/goals/boundaries.md`, `docs/knowledge/product/goals/vision-board.md`, and the relevant ADRs. Run two checks:
+
+1. **Boundary** — does the outcome compose from the six primitives, or does it violate the domain boundary (in-core UI, in-core orchestration, vendor knowledge, databases)? This answers *is it in scope?*
+2. **Vision board** — does the outcome serve the stated vision, target group, needs, or business goals? This answers *is it worth building?* A change can pass the boundary and still fail the board.
+
+If either check signals a deviation, surface a **scope deviation** — reject/reframe/amend-via-ADR — and do *not* write a Feature note until the human resolves it. Scope creep is revealed, never silently absorbed.
 
 Then write `docs/knowledge/product/features/<slug>.md` as an OKF note (`type: Feature`, `status: draft`). Follow the [okf skill](/opencode/skills/okf). The note must contain:
 
