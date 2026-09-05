@@ -58,7 +58,8 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Split work across agents | ❌ Gap | Agent→agent channel (orchestration milestone) |
 | Recurring maintenance (release notes, deps) | ❌ Gap | Scheduled workflows (cron) |
 | Merge after green CI + approval | ⚠️ Works (`gh pr merge`) but ungated | Keep human-gated until trust is earned |
-| Deploy + verify live | ❌ Gap | SSH/Dokku connector; human deploys today |
+| Deploy + verify live | ✅ Works — CI on merge to `main` pushes to Dokku and health-checks ([deploy.yml](../../../.github/workflows/deploy.yml)) | Merge stays human-gated |
+| Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](learnings/agent-image-staleness.md) |
 
 ## Roadmap
 
