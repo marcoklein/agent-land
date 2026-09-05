@@ -1,4 +1,19 @@
-# Agent Land — Dogfooding: developing agent-land on agent-land
+---
+type: Reference
+title: Dogfooding — developing agent-land on agent-land
+description: The strategy for building Agent Land with Agent Land: a phased, trust-earned loop from task to merged change, and the gaps that remain.
+status: stable
+generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
+sources:
+  - id: product-vision
+    resource: /knowledge/product/goals/product-vision.md
+    title: Agent Land product vision
+  - id: pipeline
+    resource: /knowledge/product/pipeline.md
+    title: The product pipeline
+---
+
+# Dogfooding — developing agent-land on agent-land
 
 **One-liner:** Use Agent Land to build Agent Land — every feature an agent can run against this repo becomes real the day it lands, and every gap becomes a roadmap item.
 
@@ -79,7 +94,7 @@ The agent reads PR review comments (`gh api`), addresses them, replies, and requ
 
 ### Phase 4 — Scheduled maintenance
 
-Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [the product vision](reference/product/goals/product-vision.md).
+Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [the product vision](product/goals/product-vision.md).
 
 - **Deliverable:** a cron workflow that opens a maintenance PR every week without being asked.
 
@@ -110,7 +125,7 @@ The agent merges after green CI + approval, then deploys to Dokku and verifies. 
 |------|------------|
 | Agent breaks its own host (the platform code it runs on) | CI gates every change; human reviews and merges; deploy stays human until Phase 5 |
 | Secret leakage through the loop | GitHub connector stays scoped; deploy credentials never enter the agent until a dedicated, minimal connector exists |
-| Long sessions dying mid-task | Session lifecycle already survives redeploys ([reference](reference/learnings/session-lifecycle.md)); re-attach and continue |
+| Long sessions dying mid-task | Session lifecycle already survives redeploys ([learnings](learnings/session-lifecycle.md)); re-attach and continue |
 | Agent quality regressions get hidden | Dogfooding *is* the regression test — a red loop is a product bug, not just a model limitation |
 
 ## Open questions

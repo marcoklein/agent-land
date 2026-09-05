@@ -1,15 +1,11 @@
 # Agent Land — Documentation
 
-* [Product & value](reference/product/goals/product-vision.md) — vision, principles, and the domain boundary
-* [Product pipeline](reference/product/pipeline.md) — how an outcome becomes shipped code, and the human gates
-* [Dogfooding](dogfooding.md) — design & roadmap for developing agent-land on agent-land
+All documentation and reference material lives in one place: the **knowledge** bundle at [`docs/knowledge/`](knowledge/). Everything there is an OKF note with source citations and `status` metadata — no loose prose docs outside it.
 
-## Reference
-
-Agent-consumable reference material (OKF v0.2) with source citations and status metadata:
-
-* [Reference index](reference/) — CLI, LLM providers, product memory, and operational learnings
-
-## Decisions
-
-* [Architecture Decision Records](adrs/) — the platform's design decisions
+* [Knowledge index](knowledge/index.md) — the entry point to the whole bundle
+* [Engine](knowledge/engine.md) — the purest form: six primitives, three substrates, one opinion
+* [Architecture](knowledge/architecture.md) — the zoom ladder of diagrams
+* [Product](knowledge/product/) — goals, features, designs, and the pipeline
+* [Learnings](knowledge/learnings/) — operational gotchas and empirical findings
+* [Dogfooding](knowledge/dogfooding.md) — developing agent-land on agent-land
+* [Decisions](knowledge/adrs/) — architecture decision records

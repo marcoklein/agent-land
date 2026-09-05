@@ -9,7 +9,7 @@ sources:
     resource: /adrs/017-product-layer-okf-memory.md
     title: Build a Product Layer on OKF Memory with an Agentic Pipeline
   - id: archon-inspiration
-    resource: /reference/learnings/archon-inspiration.md
+    resource: /knowledge/learnings/archon-inspiration.md
     title: Inspiration from Archon
 ---
 
@@ -39,7 +39,7 @@ flowchart LR
 1. **Refine** — turn the outcome into a `Feature` OKF note: user stories, acceptance criteria, open questions. Deterministic where possible; AI only at the decision points[^archon].
 2. **Design** — draft a `Design` OKF note: interfaces, risks, ADR pointers, and the minimal change set. Stops at the gate.
 3. **Implement** — from an approved design, the build agent runs the standard dev loop (branch → typecheck → test → PR → CI green). Deterministic steps (`pnpm typecheck`, `pnpm test`) run as commands between AI turns[^archon].
-4. **Close** — on merge, promote the `Feature` note `draft → stable` and capture learnings in `docs/reference/learnings/`.
+4. **Close** — on merge, promote the `Feature` note `draft → stable` and capture learnings in `docs/knowledge/learnings/`.
 
 ## The three human gates
 
@@ -57,6 +57,6 @@ flowchart LR
 
 ## The future: agent-land-native
 
-The same recipe ports to agent-land sessions once [Platform Connector](/reference/product/features/platform-connector.md) and [Mount](/reference/product/features/mount.md) land — an orchestrator session runs the pipeline on the platform and spawns the build session as a child. The human gates become `waiting_for_input` states. Until then, opencode skills exercise the same flow and teach us what the recipe needs.
+The same recipe ports to agent-land sessions once [Platform Connector](/knowledge/product/features/platform-connector.md) and [Mount](/knowledge/product/features/mount.md) land — an orchestrator session runs the pipeline on the platform and spawns the build session as a child. The human gates become `waiting_for_input` states. Until then, opencode skills exercise the same flow and teach us what the recipe needs.
 
-[^archon]: [Inspiration from Archon](/reference/learnings/archon-inspiration.md) — recipe outside the engine, deterministic steps between AI nodes
+[^archon]: [Inspiration from Archon](/knowledge/learnings/archon-inspiration.md) — recipe outside the engine, deterministic steps between AI nodes

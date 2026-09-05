@@ -6,13 +6,13 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /reference/engine.md
+    resource: /knowledge/engine.md
     title: Agent Land engine — the purest form
 ---
 
 # Agent Land architecture — the zoom ladder
 
-The same system at six scales. Everything here is a projection of the [engine](/reference/engine.md) — six primitives, three substrates, one opinion.
+The same system at six scales. Everything here is a projection of the [engine](/knowledge/engine.md) — six primitives, three substrates, one opinion.
 
 ## Zoom in — one turn, concretely
 

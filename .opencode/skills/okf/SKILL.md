@@ -1,6 +1,6 @@
 ---
 name: okf
-description: Write knowledge documents in OKF (Open Knowledge Format) v0.2. Active when capturing learnings, writing reference docs, or creating files under docs/reference/.
+description: Write knowledge documents in OKF (Open Knowledge Format) v0.2. Active when capturing learnings, writing reference docs, or creating files under docs/knowledge/.
 ---
 
 ## Concept template
@@ -35,7 +35,7 @@ usage_window: { from: YYYY-MM-DD, to: YYYY-MM-DD }  # frames usage_count
 
 `status` carries the lifecycle: `draft` → `stable` → `deprecated`. **Deprecation is the suppression rule — there is no "superseded" banner.** When a note is replaced by newer knowledge, do NOT keep the old note with a `⚠️ Superseded` header or a `status: superseded` flag; instead:
 
-1. Set the old note's `status` to `deprecated` **and** note its replacement inline in one line (e.g. `Superseded by /reference/product/goals/product-vision.md`).
+1. Set the old note's `status` to `deprecated` **and** note its replacement inline in one line (e.g. `Superseded by /knowledge/product/goals/product-vision.md`).
 2. If the knowledge has no surviving replacement, prefer **deleting the file** outright and updating every inbound link — leaving corrected-at-the-source is cleaner than keeping a tombstone.
 3. Update every index and cross-link that pointed at the removed note.
 
@@ -79,17 +79,23 @@ Plain markdown, no frontmatter (except bundle root may carry `okf_version: "0.2"
 Prefer bundle-relative paths (start with `/`) — they survive file moves. Links are untyped — meaning is in the prose.
 
 ```markdown
-See [OpenCode API](/reference/providers/opencode-api.md) for endpoints.
+See [OpenCode API](/knowledge/providers/opencode-api.md) for endpoints.
 ```
 
 ## Where to write
 
-Under `docs/reference/`, organized by domain. Create `index.md` in each directory.
+Under `docs/knowledge/`, organized by domain. Create `index.md` in each directory.
 
 ```
-docs/reference/
+docs/knowledge/
   index.md
+  engine.md
   providers/
     index.md
     opencode-api.md
+  learnings/
+    index.md
+  product/
+    index.md
+  adrs/
 ```

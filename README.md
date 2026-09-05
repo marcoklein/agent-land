@@ -64,8 +64,8 @@ The JSON HTTP + SSE API (sessions, connectors, models, providers) is defined onc
 
 ## Docs
 
-- [Documentation](docs/README.md) — product, reference, learnings, and decisions
-- [Architecture Decision Records](docs/adrs/)
+- [Documentation](docs/README.md) — the knowledge bundle: engine, product, learnings, and decisions
+- [Architecture Decision Records](docs/knowledge/adrs/)
 - [Contributing](CONTRIBUTING.md)
 
 ## License

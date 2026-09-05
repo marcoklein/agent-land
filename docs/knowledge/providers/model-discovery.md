@@ -7,7 +7,7 @@ generated: { by: opencode/deepseek-v4-pro, at: 2026-07-31T00:00:00Z }
 updated: { by: opencode/qwen3.8-max, at: 2026-08-30T00:00:00Z }
 sources:
   - id: opencode-api
-    resource: /reference/providers/opencode-api.md
+    resource: /knowledge/providers/opencode-api.md
     title: OpenCode API reference
   - id: pi-dockerfile
     resource: agent-image/Dockerfile

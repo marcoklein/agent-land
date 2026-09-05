@@ -15,7 +15,7 @@ sources:
     title: Archon docs — AI Assistants (Claude, Codex, OpenCode, Pi, Copilot)
     last_modified: 2026-09-01
   - id: engine
-    resource: /reference/engine.md
+    resource: /knowledge/engine.md
     title: Agent Land engine — the purest form
 ---
 
@@ -32,7 +32,7 @@ Archon is the mirror image of agent-land. It solves "every run is different" wit
 | # | Archon idea | Agent Land translation | Actionability |
 |---|---|---|---|
 | 1 | Per-run **git worktree isolation** — parallel runs never conflict[^archon-readme] | Mount (roadmap) hosts the durable checkout; each *run* gets a disposable worktree/branch on that Mount. Cheaper than a fresh container filesystem, still conflict-free parallel runs | feeds Mount design |
-| 2 | **Portable recipes**: workflows committed to the repo, same behavior on every surface; user-level overrides under `~/.archon/`[^archon-readme] | Recipe convention: discoverable recipe files (repo-local, user-level override). Recipes stay outside the engine but get a portable home | new convention, no engine change — see the [product pipeline](/reference/product/pipeline.md) for the first realization |
+| 2 | **Portable recipes**: workflows committed to the repo, same behavior on every surface; user-level overrides under `~/.archon/`[^archon-readme] | Recipe convention: discoverable recipe files (repo-local, user-level override). Recipes stay outside the engine but get a portable home | new convention, no engine change — see the [product pipeline](/knowledge/product/pipeline.md) for the first realization |
 | 3 | **Approval gates** as first-class steps: `interactive: true` loop pauses for a human approve[^archon-readme] | Maps 1:1 to the existing `waiting_for_input` state + manual permission policy. Recipe pattern: run until `waiting_for_input`, human resolves, run continues. At most a tiny CLI affordance (`al resolve`) | mostly documentation |
 | 4 | **Deterministic/AI mix**: bash and validation nodes are deterministic; AI only runs where it adds value[^archon-readme] | Recipe discipline: typecheck, tests, git steps as plain commands between sessions; AI only at decision points | discipline |
 | 5 | **Capability declarations → generated matrix**: the provider capability matrix is generated from provider capability declarations, so docs never drift[^archon-ai-assistants] | Providers/models could carry capability flags (structured output, tools, session resume); `al models` renders them instead of a hand-maintained table | small schema extension |
@@ -58,4 +58,4 @@ Archon is the mirror image of agent-land. It solves "every run is different" wit
 
 [^archon-readme]: Archon README (dev branch), https://github.com/coleam00/archon
 [^archon-ai-assistants]: Archon docs — AI Assistants, https://archon.diy/getting-started/ai-assistants/
-[^engine]: `docs/reference/engine.md` — six primitives, three substrates, one engine opinion
+[^engine]: `docs/knowledge/engine.md` — six primitives, three substrates, one engine opinion

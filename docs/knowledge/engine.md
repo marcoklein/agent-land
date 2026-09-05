@@ -6,7 +6,7 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-29T00:00:00Z }
 sources:
   - id: architecture
-    resource: /reference/architecture.md
+    resource: /knowledge/architecture.md
     title: Architecture — the zoom ladder
   - id: session-service
     resource: packages/server/src/core/session-service.ts

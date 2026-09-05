@@ -6,7 +6,7 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /reference/engine.md
+    resource: /knowledge/engine.md
     title: Agent Land engine — the purest form
   - id: strip-adr
     resource: /adrs/016-strip-web-ui-and-vendor-knowledge.md
@@ -49,6 +49,6 @@ scope deviation: "<outcome>" conflicts with <ADR/boundary>
     3. amend the boundary via a new ADR (deliberate, not drift)
 ```
 
-[^engine]: [Agent Land engine](/reference/engine.md)
+[^engine]: [Agent Land engine](/knowledge/engine.md)
 [^strip-adr]: [Strip Web UI and Vendor Knowledge from Server](/adrs/016-strip-web-ui-and-vendor-knowledge.md)
 [^product-adr]: [Build a Product Layer on OKF Memory with an Agentic Pipeline](/adrs/017-product-layer-okf-memory.md)

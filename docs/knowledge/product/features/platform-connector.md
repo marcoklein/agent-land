@@ -7,7 +7,7 @@ tags: [engine, composition, multi-agent, loopback]
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /reference/engine.md
+    resource: /knowledge/engine.md
     title: Agent Land engine — the purest form
 ---
 
@@ -30,7 +30,7 @@ Multi-agent composition currently has no home: the only way to split work is for
 - Session launch adds `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` to the container env when enabled.
 - The injected credentials authenticate against the JSON/SSE API as a scoped platform identity, not the operator's full basic auth.
 - A session can create, prompt, and observe a child session using only the injected env vars.
-- No new primitive: this is env injection plus the existing API — see [engine.md](/reference/engine.md#loopback).
+- No new primitive: this is env injection plus the existing API — see [engine.md](/knowledge/engine.md#loopback).
 
 ## Open questions
 

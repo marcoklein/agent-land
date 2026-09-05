@@ -6,7 +6,7 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /reference/engine.md
+    resource: /knowledge/engine.md
     title: Agent Land engine — the purest form
   - id: strip-adr
     resource: /adrs/016-strip-web-ui-and-vendor-knowledge.md
@@ -54,4 +54,4 @@ The engine is six primitives, three substrates, one opinion — everything else 
 - **API-first.** No vendor catalog, no web UI in-core — presentation and preset knowledge live in the CLI[^strip-adr].
 
 [^strip-adr]: [Strip Web UI and Vendor Knowledge from Server](/adrs/016-strip-web-ui-and-vendor-knowledge.md)
-[^engine]: [Agent Land engine](/reference/engine.md)
+[^engine]: [Agent Land engine](/knowledge/engine.md)
