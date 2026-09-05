@@ -6,8 +6,8 @@ status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-29T00:00:00Z }
 sources:
   - id: architecture
-    resource: docs/architecture.html
-    title: Architecture v2 presentation
+    resource: /reference/architecture.md
+    title: Architecture — the zoom ladder
   - id: session-service
     resource: packages/server/src/core/session-service.ts
     title: Session lifecycle and capability injection

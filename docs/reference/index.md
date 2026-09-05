@@ -5,6 +5,7 @@ okf_version: "0.2"
 # Reference
 
 * [Engine](engine.md) — the purest form: six primitives, three substrates, one engine opinion
+* [Architecture](architecture.md) — the zoom ladder: the primitives as diagrams, from one turn to the deployed platform
 * [CLI (`al`)](cli.md) — install, configure, and drive agent-land from the terminal
 * [Providers](providers/) — LLM backends: API behaviors, model discovery, auth
 * [Product](product/) — goals, features, and designs as OKF notes, plus the product pipeline
