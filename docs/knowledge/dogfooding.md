@@ -64,11 +64,11 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 
 Phases are ordered by how much they exercise the current platform, not by ambition. Each phase is only "done" when the agent performs it on this repo in anger.
 
-### Phase 0 — One-shot feature work (today)
+### Phase 0 — One-shot feature work (done 2026-09-05)
 
 `al run` a feature task end-to-end: clone → edit → `pnpm typecheck` + `pnpm test` → branch → commit → push → open PR. Human reviews, merges, deploys.
 
-- **Deliverable:** a real agent-land PR opened by agent-land (this repo).
+- **Deliverable:** a real agent-land PR opened by agent-land (this repo). Achieved 2026-09-05 with [PR #43](https://github.com/marcoklein/agent-land/pull/43); the gaps it surfaced are logged in [First dogfooding run](/learnings/first-dogfooding-run.md).
 - **Constraint:** start with low-risk work — docs, tests, refactors — before feature code.
 
 ### Phase 1 — Long-lived dev session
