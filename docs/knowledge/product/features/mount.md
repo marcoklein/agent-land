@@ -41,4 +41,6 @@ Long-lived development needs durable state: the repo checkout, warm caches, skil
 - Is "at most one live session per mount" a hard invariant or a soft policy with a force override?
 - Do mounts need size/cleanup tooling (`al mounts prune`) at first ship, or is manual cleanup enough?
 
+_Resolved by the [Mount design](/product/designs/mount-design.md): hard invariant (no `--force`), manual cleanup only._
+
 [^archon]: [Inspiration from Archon](/learnings/archon-inspiration.md) — idea #1, worktree isolation feeding Mount design
