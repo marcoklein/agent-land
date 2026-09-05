@@ -24,6 +24,7 @@ export interface InteractiveContainerOptions {
   image: string;
   sessionVolume: string;
   workspaceVolume: string;
+  extraBinds?: string[];
 }
 
 export class DockerService implements DockerPort {
@@ -93,6 +94,10 @@ export class DockerService implements DockerPort {
   async removeVolume(name: string): Promise<void> {
     const volume = this.docker.getVolume(name);
     await volume.remove().catch(() => {});
+  }
+
+  async createVolume(name: string, labels: Record<string, string>): Promise<void> {
+    await this.docker.createVolume({ Name: name, Labels: labels });
   }
 
   async execCommand(containerId: string, args: string[]): Promise<ExecResult> {
@@ -175,6 +180,7 @@ export class DockerService implements DockerPort {
         Binds: [
           `${options.sessionVolume}:/sessions`,
           `${options.workspaceVolume}:/workspace`,
+          ...(options.extraBinds ?? []),
         ],
         NetworkMode: "bridge",
         Memory: AGENT_CONTAINER_LIMITS.memoryBytes,

@@ -38,7 +38,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 2. **Provider** — LLM backend config. One generic record shape: `id`, `baseUrl`, `api` (dialect), `models`, `defaultModel`, and a sealed credential payload. No vendor catalog in-core — presets and device flows live in the CLI/packs.
 
-3. **Mount** — named durable folder attached to a session container at a chosen path. Realized as a Docker volume with a label. Outlives any session. M:N attach; at most one live session per mount. Carries repo checkouts, warm caches, skill files, tooling dirs — the platform is content-agnostic. *(roadmap — not yet implemented)*
+3. **Mount** — named durable folder attached to a session container at a chosen path. Realized as a Docker volume with a label. Outlives any session. M:N attach; at most one live session per mount. Carries repo checkouts, warm caches, skill files, tooling dirs — the platform is content-agnostic.
 
 ### The engine
 
@@ -56,7 +56,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 | Service | Realizes |
 |---|---|
-| Docker | Session → container (limited, cap-dropped, no-new-privileges, socket-sibling), Mount → volume *(roadmap)* |
+| Docker | Session → container (limited, cap-dropped, no-new-privileges, socket-sibling), Mount → volume |
 | SOPS/Age | Secrets at rest (Connector and Provider credentials) |
 | Flat JSON | Session records, connector/provider registries, per-session event logs |
 

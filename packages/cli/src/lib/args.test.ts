@@ -41,6 +41,13 @@ describe("parseArgs", () => {
     expect(opts.connectors).toEqual(["github", "jira"]);
   });
 
+  it("collects repeated --mount flags", () => {
+    const { opts } = parseArgs([
+      "new", "--mount", "repo:/repo", "--mount", "cache:/cache",
+    ]);
+    expect(opts.mounts).toEqual(["repo:/repo", "cache:/cache"]);
+  });
+
   it("collects repeated --field flags", () => {
     const { opts } = parseArgs([
       "connectors", "add", "--name", "n", "--url", "u",

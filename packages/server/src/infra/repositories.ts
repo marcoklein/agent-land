@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile, readdir, stat, unlink, appendFile, rename } from "fs/promises";
 import path from "path";
-import type { SessionRepository, ConnectorRepository, SessionEventLog, ProviderRepository } from "../core/ports.js";
-import type { AgentSession, Connector, ProviderConfig } from "../core/types.js";
+import type { SessionRepository, ConnectorRepository, SessionEventLog, ProviderRepository, MountRepository } from "../core/ports.js";
+import type { AgentSession, Connector, MountRecord, ProviderConfig } from "../core/types.js";
 import type { SessionEvent } from "../core/events.js";
 
 export class JsonSessionRepository implements SessionRepository {
@@ -162,6 +162,32 @@ export class JsonProviderRepository implements ProviderRepository {
   }
 
   async save(list: ProviderConfig[]): Promise<void> {
+    await mkdir(this.dataDir, { recursive: true });
+    const tmpPath = `${this.filePath()}.tmp`;
+    await writeFile(tmpPath, JSON.stringify(list, null, 2));
+    await rename(tmpPath, this.filePath());
+  }
+}
+
+export class JsonMountRepository implements MountRepository {
+  constructor(private dataDir: string) {}
+
+  private filePath(): string {
+    return path.join(this.dataDir, "mounts.json");
+  }
+
+  async list(): Promise<MountRecord[]> {
+    try {
+      await stat(this.filePath());
+      const content = await readFile(this.filePath(), "utf-8");
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async save(list: MountRecord[]): Promise<void> {
     await mkdir(this.dataDir, { recursive: true });
     const tmpPath = `${this.filePath()}.tmp`;
     await writeFile(tmpPath, JSON.stringify(list, null, 2));

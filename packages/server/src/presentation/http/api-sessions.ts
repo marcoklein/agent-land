@@ -14,9 +14,10 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
     try {
       const parsed = parseInput(createSessionInputSchema, req.body);
       if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-      const { connectors, permissionPolicy, model, provider } = parsed.data;
+      const { connectors, mounts, permissionPolicy, model, provider } = parsed.data;
       const session = await sessionService.createSession({
         connectors,
+        mounts,
         permissionPolicy: (permissionPolicy as PermissionPolicy) ?? "auto",
         model,
         provider,

@@ -9,9 +9,11 @@ import type {
   SessionRepository,
   ConnectorRepository,
   ProviderRepository,
+  MountRepository,
   SessionEventLog,
 } from "./ports.js";
 import { SESSION_VOLUME_NAME } from "../infra/docker.js";
+import { mountVolumeName, MountNotFoundError, MountInUseError } from "./mount-service.js";
 import type { Config } from "../config.js";
 import { agentContainerId } from "./harness.js";
 
@@ -34,6 +36,7 @@ interface SessionServiceDeps {
   sessions: SessionRepository;
   connectors: ConnectorRepository;
   providers: ProviderRepository;
+  mounts: MountRepository;
   harness: AgentHarness;
   eventLog: SessionEventLog;
   config: Config;
@@ -106,12 +109,16 @@ export class SessionService {
 
   async createSession(options: {
     connectors?: string[];
+    mounts?: { source: string; target: string }[];
     permissionPolicy?: PermissionPolicy;
     model?: string;
     provider?: string;
   }): Promise<AgentSession> {
     const connectors = (options.connectors ?? []).filter(
       (c): c is string => typeof c === "string"
+    );
+    const mounts = (options.mounts ?? []).filter(
+      (m): boolean => m && typeof m.source === "string" && typeof m.target === "string"
     );
     const permissionPolicy: PermissionPolicy =
       options.permissionPolicy === "manual" ? "manual" : "auto";
@@ -126,6 +133,23 @@ export class SessionService {
     const providerRecord = await this.deps.providers.get(providerId).catch(() => null);
     const model = options.model || providerRecord?.defaultModel || this.deps.config.defaultModel;
 
+    const ids = new Set(mounts.map((m) => m.source));
+    if (mounts.length > 0) {
+      const existing = await this.deps.mounts.list();
+      const known = new Set(existing.map((m) => m.name));
+      for (const id of ids) {
+        if (!known.has(id)) throw new MountNotFoundError(id);
+      }
+      const live = (await this.deps.sessions.list()).filter((s) => s.status !== "stopped");
+      for (const liveSession of live) {
+        for (const bound of liveSession.mounts ?? []) {
+          if (ids.has(bound.source)) {
+            throw new MountInUseError(bound.source);
+          }
+        }
+      }
+    }
+
     const id = randomUUID().slice(0, 8);
     const workspaceVolume = workspaceVolumeName(id);
 
@@ -138,6 +162,7 @@ export class SessionService {
       permissionPolicy,
       sessionDir: `/sessions/${id}`,
       connectors,
+      mounts: mounts.length > 0 ? mounts : undefined,
       model,
       provider,
       createdAt: now,
@@ -152,6 +177,7 @@ export class SessionService {
         image: this.deps.config.agentImage,
         sessionVolume: SESSION_VOLUME_NAME,
         workspaceVolume,
+        extraBinds: mounts.map((m) => `${mountVolumeName(m.source)}:${m.target}`),
       });
       containerId = container.id;
       session.containerId = container.id;

@@ -40,7 +40,7 @@ The engine is six primitives, three substrates, one opinion — everything else 
 
 - **Connector** — named sealed env bag (SOPS/Age), generic, no type enum.
 - **Provider** — LLM backend config as a generic record, no vendor catalog in-core.
-- **Mount** — named durable folder attached to a session *(roadmap)*.
+- **Mount** — named durable folder attached to a session.
 - **Session** — one `pi --mode rpc` agent in one container, with a permission policy.
 - **Event Stream** — the single sequenced observation channel over SSE.
 - **Platform Connector** — self-injected `AGENT_LAND_URL`/`AGENT_LAND_BASIC_AUTH` so an agent can spawn children *(roadmap)*.

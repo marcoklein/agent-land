@@ -11,7 +11,7 @@ import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
 import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
 import { formatAge } from "./lib/format.js";
 import { gatherChoices, type SelectOption } from "./lib/new-wizard.js";
-import type { AgentEvent, ConnectorSummary, ProviderSummary, RenderLine, SessionSummary, WaitingForInput } from "./lib/types.js";
+import type { AgentEvent, ConnectorSummary, MountSummary, ProviderSummary, RenderLine, SessionSummary, WaitingForInput } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
 
@@ -55,6 +55,15 @@ Usage:
 
   al connectors rm <name> [-y|--yes]
       delete a connector (prompts y/N)
+
+  al mounts ls
+      list mounts (name)
+
+  al mounts add --name <n>
+      create a named mount (a durable Docker volume)
+
+  al mounts rm <name> [-y|--yes]
+      delete a mount (prompts y/N; fails while a live session binds it)
 
   al run <message> [new-flags] [--rm] [--timeout <seconds>] [--verbose]
       one-shot: create, prompt, wait for settle, print the final answer
@@ -202,6 +211,34 @@ async function listConnectors(client: ApiClient): Promise<void> {
   for (const x of connectors) {
     process.stdout.write(`${x.name.padEnd(nameWidth)}  ${x.url ?? "-"}\n`);
   }
+}
+
+async function listMounts(client: ApiClient): Promise<void> {
+  const { mounts } = (await client.listMounts()) as { mounts?: MountSummary[] };
+  if (!mounts || mounts.length === 0) {
+    process.stdout.write("no mounts\n");
+    return;
+  }
+  for (const x of mounts) {
+    process.stdout.write(`${x.name}\n`);
+  }
+}
+
+async function addMount(client: ApiClient, opts: ParsedArgs["opts"]): Promise<void> {
+  const { name } = opts;
+  if (!name) fail("mounts add requires --name");
+  const { mount } = await client.createMount({ name });
+  process.stdout.write(`created mount "${mount.name}"\n`);
+}
+
+async function rmMount(client: ApiClient, name: string, opts: ParsedArgs["opts"]): Promise<void> {
+  if (!name) fail("mounts rm requires a name");
+  await confirmOrFail(`delete mount "${name}"? [y/N] `, {
+    yes: opts.yes,
+    what: "delete a mount",
+  });
+  await client.deleteMount(name);
+  process.stdout.write(`deleted mount "${name}"\n`);
 }
 
 async function listProviders(client: ApiClient, { json }: { json?: boolean } = {}): Promise<void> {
@@ -681,8 +718,15 @@ async function main() {
     }
   }
 
+  const parsedMounts = (opts.mounts ?? []).map((m: string) => {
+    const idx = m.indexOf(":");
+    if (idx <= 0) fail(`--mount expects NAME:PATH, got "${m}"`);
+    return { source: m.slice(0, idx), target: m.slice(idx + 1) };
+  });
+
   const payload: Record<string, unknown> = {
     ...(connectors.length > 0 ? { connectors } : {}),
+    ...(parsedMounts.length > 0 ? { mounts: parsedMounts } : {}),
     ...(opts.manual ? { permissionPolicy: "manual" } : {}),
     ...(model ? { model } : {}),
     ...(provider ? { provider } : {}),
@@ -810,6 +854,21 @@ async function main() {
       }
     } catch (err) {
       fail(`connectors ${sub} failed: ${(err as Error).message}`);
+    }
+  } else if (cmd === "mounts") {
+    const sub = positional[0] || "ls";
+    try {
+      if (sub === "ls") {
+        await listMounts(client);
+      } else if (sub === "add") {
+        await addMount(client, opts);
+      } else if (sub === "rm") {
+        await rmMount(client, positional[1], opts);
+      } else {
+        fail(`mounts: unknown subcommand "${sub}"`);
+      }
+    } catch (err) {
+      fail(`mounts ${sub} failed: ${(err as Error).message}`);
     }
   } else if (cmd === "run") {
     const message = positional[0];

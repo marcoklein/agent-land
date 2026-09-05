@@ -1,5 +1,6 @@
 import type { SessionEnvelope, SessionListEnvelope } from "./session.js";
 import type { ConnectorEnvelope, ConnectorListEnvelope } from "./connector.js";
+import type { MountEnvelope, MountListEnvelope } from "./mount.js";
 import type { ProviderEnvelope, ProviderListEnvelope } from "./provider.js";
 import type { AcceptedEnvelope, DeletedEnvelope, ModelsEnvelope } from "./http.js";
 
@@ -34,6 +35,11 @@ export const api = {
     list: endpoint<void, ConnectorListEnvelope>("GET", "/api/connectors", "List connectors"),
     create: endpoint<unknown, ConnectorEnvelope>("POST", "/api/connectors", "Create a connector (encrypts secrets)"),
     remove: endpoint<void, DeletedEnvelope>("DELETE", "/api/connectors/:name", "Delete a connector"),
+  },
+  mounts: {
+    list: endpoint<void, MountListEnvelope>("GET", "/api/mounts", "List mounts"),
+    create: endpoint<unknown, MountEnvelope>("POST", "/api/mounts", "Create a named mount (labeled Docker volume)"),
+    remove: endpoint<void, DeletedEnvelope>("DELETE", "/api/mounts/:name", "Delete a mount (fails while a live session binds it)"),
   },
   models: {
     list: endpoint<void, ModelsEnvelope>("GET", "/api/models", "Discover models for a provider"),
