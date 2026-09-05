@@ -2,10 +2,18 @@ import { Router } from "express";
 import { SessionService } from "../../core/session-service.js";
 import type { Config } from "../../config.js";
 import type { PermissionPolicy } from "../../core/types.js";
+import type { AgentSession } from "../../core/types.js";
+import type { Session } from "@agent-land/contracts";
 import type { SequencedEvent } from "../../core/events.js";
 import { createSessionInputSchema, promptInputSchema, respondInputSchema } from "@agent-land/contracts";
 import { parseInput } from "./validate.js";
 import { errorMessage, sessionErrorResponse } from "./errors.js";
+
+/** Strips the internal loopback token from a session record before it reaches the wire. */
+function publicSession(session: AgentSession): Session {
+  const { platformToken: _platformToken, ...rest } = session;
+  return rest;
+}
 
 export function sessionsApiRouter(sessionService: SessionService, config: Config) {
   const router = Router();
@@ -14,15 +22,17 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
     try {
       const parsed = parseInput(createSessionInputSchema, req.body);
       if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-      const { connectors, mounts, permissionPolicy, model, provider } = parsed.data;
+      const { connectors, mounts, permissionPolicy, model, provider, platform, parentSessionId } = parsed.data;
       const session = await sessionService.createSession({
         connectors,
         mounts,
         permissionPolicy: (permissionPolicy as PermissionPolicy) ?? "auto",
         model,
         provider,
+        platform,
+        parentSessionId,
       });
-      res.status(201).json({ session });
+      res.status(201).json({ session: publicSession(session) });
     } catch (err) {
       res.status(500).json({ error: errorMessage(err) });
     }
@@ -30,13 +40,13 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
 
   router.get("/", async (_req, res) => {
     const sessions = await sessionService.listSessions();
-    res.json({ sessions });
+    res.json({ sessions: sessions.map(publicSession) });
   });
 
   router.get("/:id", async (req, res) => {
     const session = await sessionService.getSession(req.params.id);
     if (!session) return res.status(404).json({ error: "Session not found" });
-    res.json({ session });
+    res.json({ session: publicSession(session) });
   });
 
   router.post("/:id/prompt", async (req, res) => {

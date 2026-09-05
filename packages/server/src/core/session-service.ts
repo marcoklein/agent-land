@@ -1,6 +1,6 @@
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import type { AgentSession, PermissionPolicy, SessionStatus } from "./types.js";
-import { DEFAULT_PROVIDER_ID } from "./types.js";
+import { DEFAULT_PROVIDER_ID, PLATFORM_SESSION_PREFIX } from "./types.js";
 import type { SessionEvent, SequencedEvent, SequencedEventStream } from "./events.js";
 import type { AgentHandle, AgentHarness, EventStream } from "./harness.js";
 import type {
@@ -47,6 +47,10 @@ const HISTORY_CAP = 10_000;
 
 function workspaceVolumeName(id: string): string {
   return `agent-land-ws-${id}`;
+}
+
+function mintPlatformToken(): string {
+  return randomBytes(32).toString("base64url");
 }
 
 export class SessionNotFoundError extends Error {
@@ -120,6 +124,8 @@ export class SessionService {
     permissionPolicy?: PermissionPolicy;
     model?: string;
     provider?: string;
+    platform?: boolean;
+    parentSessionId?: string;
   }): Promise<AgentSession> {
     const connectors = (options.connectors ?? []).filter(
       (c): c is string => typeof c === "string"
@@ -163,6 +169,20 @@ export class SessionService {
     await this.deps.docker.ensureAgentImage(this.deps.config.agentImage);
 
     const now = new Date().toISOString();
+
+    const platform = options.platform === true;
+    const parentSessionId =
+      typeof options.parentSessionId === "string" && options.parentSessionId.trim().length > 0
+        ? options.parentSessionId.trim()
+        : undefined;
+
+    let platformToken: string | undefined;
+    if (platform) {
+      platformToken = mintPlatformToken();
+      envVarsMap.set("AGENT_LAND_URL", this.deps.config.agentLandUrl);
+      envVarsMap.set("AGENT_LAND_BASIC_AUTH", `${PLATFORM_SESSION_PREFIX}${id}:${platformToken}`);
+    }
+
     const session: AgentSession = {
       id,
       status: "idle",
@@ -172,6 +192,9 @@ export class SessionService {
       mounts: mounts.length > 0 ? mounts : undefined,
       model,
       provider,
+      platform,
+      parentSessionId,
+      platformToken,
       createdAt: now,
       updatedAt: now,
     };
@@ -306,6 +329,7 @@ export class SessionService {
     await this.deps.docker.removeVolume(workspaceVolumeName(id)).catch(() => {});
 
     handle.subscribers.clear();
+    handle.session.platformToken = undefined;
     this.setStatus(handle, "stopped");
     await drainWrites(handle);
   }
@@ -412,6 +436,7 @@ export class SessionService {
   private async markStopped(session: AgentSession): Promise<void> {
     session.status = "stopped";
     session.updatedAt = new Date().toISOString();
+    session.platformToken = undefined;
     await this.deps.sessions.save(session).catch(() => {});
     await this.deps.eventLog
       .append(session.id, { type: "status", status: "stopped" }, HISTORY_CAP)

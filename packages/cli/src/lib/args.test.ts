@@ -79,6 +79,15 @@ describe("parseArgs", () => {
     });
   });
 
+  it("parses --platform on new and run", () => {
+    expect(parseArgs(["new", "--platform"]).opts.platform).toBe(true);
+    expect(parseArgs(["run", "hello", "--platform"]).opts.platform).toBe(true);
+  });
+
+  it("parses --tree on ls", () => {
+    expect(parseArgs(["ls", "--tree"]).opts.tree).toBe(true);
+  });
+
   it("rejects a non-numeric --timeout", () => {
     expect(() => parseArgs(["run", "x", "--timeout", "abc"])).toThrow(/positive integer/);
   });
