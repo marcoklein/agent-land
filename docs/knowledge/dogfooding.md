@@ -78,9 +78,9 @@ Phases are ordered by how much they exercise the current platform, not by ambiti
 - **Deliverable:** a multi-turn feature built without restarting the session.
 - **Exercises:** session durability, streaming, manual policy dialogs.
 
-### Phase 2 — CI-aware loop
+### Phase 2 — CI-aware loop (playbook checked in 2026-09-05)
 
-Check in a **dev playbook** (a `SKILL.md` or `AGENTS.md` section) the agent always follows: branch → typecheck → test → commit → push → PR → `gh pr checks --watch` → re-push on red → report the result. No human nudge between red CI and the fix.
+Check in a **dev playbook** (a `SKILL.md` or `AGENTS.md` section) the agent always follows: branch → typecheck → test → commit → push → PR → `gh pr checks --watch` → re-push on red → report the result. No human nudge between red CI and the fix. The playbook is [`.opencode/skills/dev-playbook/SKILL.md`](../../../.opencode/skills/dev-playbook/SKILL.md); `AGENTS.md` points at it as the canonical contract.
 
 - **Deliverable:** an agent that opens a PR *and* brings it to green before handing over.
 - **Exercises:** long-running sessions, re-attach from a different machine.
