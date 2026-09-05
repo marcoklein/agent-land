@@ -21,6 +21,16 @@ sources:
 
 Gap #2 from the first dogfooding run[^gap]: agents can only commit after being explicitly told to `git config user.name/user.email`. The platform already knows the operator's git identity (`GIT_USER_NAME`/`GIT_USER_EMAIL` are server config on every deployment) — inject it.
 
+## Requirement amendment (2026-09-05): multi-account identity
+
+The operator may run **multiple GitHub connectors** (e.g. a work account and a personal account), each with its own commit identity. Identity is therefore *per-account*, and the account lives in the connector — not in platform config. Layering:
+
+1. **Connector-sealed identity (primary, already shipped today).** `GIT_USER_NAME`/`GIT_USER_EMAIL` inside a connector's sealed env bag ride along with the token they belong to — per-connector env injection is existing engine behavior, verified live: a connector carrying `Jane Doe <jane@example.com>` delivers both vars to sessions binding it, alongside its token.
+2. **Server-config identity (fallback — what PR #50 adds).** Platform-level `GIT_USER_NAME`/`GIT_USER_EMAIL` inject into every session *only when no connector provided them* ("connector wins"). This is the default identity for sessions without a git-bearing connector — useful, but the multi-account answer is layer 1.
+3. **Neither set** → playbook fallback: the agent asks the operator.
+
+Edge case to be aware of: a session binding *two* connectors that both carry `GIT_USER_NAME` gets whichever merges last (`decryptMultiple` iterates in registry order — effectively undefined). Treat duplicate identity keys across connectors as user error; the playbook's `git config user.name "$GIT_USER_NAME"` stays correct because exactly one var surfaces either way.
+
 ## Approach
 
 No new primitive: two more capability env vars resolved at session creation, alongside connector and provider secrets. `resolveAgentEnv` injects them when the server config has them, and never overrides connector-provided values (connector wins — it is the more specific capability).
