@@ -76,12 +76,12 @@ Decisions taken for the roadmap (to be confirmed in the feature's design note):
 
 ### Phase 2 — Static orchestrator recipe
 
-A platform-enabled orchestrator session with a Mount holding the repo checkout runs the pipeline as a **fixed, deterministic stage list**: research → refine (spec PR) → design (design PR) → self-review (a reviewer child critiques before the human sees it). Stages run **sequentially**, each a fresh child session with a stage-specific prompt; the orchestrator only decides *content*, never *control flow*[^archon]. Gates are `waiting_for_input`: the orchestrator parks until the human re-prompts with the gate outcome.
+A platform-enabled orchestrator session runs the pipeline as a **fixed, deterministic stage list**: research → refine (spec PR) → design (design PR) → self-review (a reviewer child critiques before the human sees it). Stages run **sequentially**, each a fresh child session with a stage-specific prompt; the orchestrator only decides *content*, never *control flow*[^archon]. Gates are `waiting_for_input`: the orchestrator parks until the human re-prompts with the gate outcome.
 
-Sequential stages also respect the Mount single-writer invariant — at most one live child touches the checkout at a time.
+Sequential stages respect the Mount single-writer invariant: the server hard-enforces at most one live session per Mount, so the repo checkout Mount is bound by **one stage child at a time** (the orchestrator itself binds no Mount — it coordinates via the JSON/SSE API), and each child is deleted before the next starts.
 
 - **Deliverable:** one prompt ("run the pipeline on issue #N") → two open PRs (spec + design) plus a review summary from the critic child.
-- **Recipe home:** the orchestrator's stage list lives as a skill in the agent image, not in the server.
+- **Recipe home:** the orchestrator's stage list lives as a skill in the agent image — `agent-image/skills/orchestrator/SKILL.md` — not in the server. The skill is the canonical Phase 2 recipe (stage prompts, exact `curl`/`jq` loops, gate mechanics, and a no-platform-injection fallback).
 
 ### Phase 3 — Scheduled trigger (cron first, webhooks later)
 

@@ -55,10 +55,12 @@ curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
   "$AGENT_LAND_URL/api/sessions/$CHILD_ID/events?live=1"
 ```
 
-Streams newline-delimited `data: {…}` SSE frames. Watch for two event types:
+Streams `data: {…}` SSE frames (note the `data: ` prefix — strip it before parsing with `jq`). Watch for two event types:
 
 - `{"type":"message_end","message":{...}}` — carries the assistant's final message for the turn (the text blocks are the answer).
 - `{"type":"agent_settled"}` — the agent is idle again; the turn is done. **React to this**, not to stream silence.
+
+> **GOTCHA:** this stream never closes on `agent_settled` — it only closes when the session is **stopped**. A bare `curl -N` hangs forever. Always break on the settle marker (or bound the stream with `timeout` + poll `GET /api/sessions/:id`).
 
 ## Fetch the result
 
@@ -66,18 +68,23 @@ Two options:
 
 ```bash
 # 1. From the settle loop — extract the last message_end text (preferred; you already have it)
-# 2. Re-read the session record
+# 2. Re-read the session record (status/envelope only — the transcript text is not in the record)
 curl -sS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/sessions/$CHILD_ID"
 ```
 
-For a one-shot child, this minimal `jq` loop prints the final message and exits on settle:
+For a one-shot child, this minimal loop prints the final message and exits on settle:
 
 ```bash
 curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
   "$AGENT_LAND_URL/api/sessions/$CHILD_ID/events?live=1" \
-  | jq --unbuffered -c 'select(.type == "message_end") | .message.content[].text,
-     select(.type == "agent_settled") | "SETTLED"' \
-  | { while read -r line; do [ "$line" = '"SETTLED"' ] && break; printf '%s\n' "$line"; done; }
+  | jq --unbuffered -R -c 'select(startswith("data: ")) | .[6:] | fromjson |
+       (select(.type == "message_end") |
+          (.message.content
+            | if type == "array" then .[].text? // empty
+              elif type == "string" then .
+              else empty end)),
+       (select(.type == "agent_settled") | "SETTLED")' \
+  | { while IFS= read -r line; do [ "$line" = '"SETTLED"' ] && break; printf '%s\n' "$line"; done; }
 ```
 
 ## Stop the child when done
