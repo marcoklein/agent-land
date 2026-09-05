@@ -2,8 +2,9 @@
 type: Design
 title: Git identity injection
 description: The server injects GIT_USER_NAME/GIT_USER_EMAIL from its own config into every session env, so agents commit without being told who they are.
-status: draft
+status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-05T00:00:00Z }
 sources:
   - id: gap
     resource: /learnings/first-dogfooding-run.md

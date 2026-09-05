@@ -2,9 +2,10 @@
 type: Feature
 title: Mount
 description: A named durable folder attached to a session container at a chosen path, realized as a Docker volume, outliving any single session.
-status: draft
+status: stable
 tags: [engine, storage, isolation, worktree]
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
     resource: /engine.md

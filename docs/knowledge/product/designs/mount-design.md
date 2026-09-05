@@ -2,8 +2,9 @@
 type: Design
 title: Mount — durable named folder
 description: Design for the Mount primitive: a named Docker volume registered in the mount registry, attachable M:N at session creation, with a single-writer invariant and explicit cleanup. Answers the Mount Feature note's open questions.
-status: draft
+status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-05T00:00:00Z }
 sources:
   - id: feature
     resource: /product/features/mount.md
