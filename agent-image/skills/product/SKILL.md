@@ -30,7 +30,7 @@ Never skip a gate. This skill stops at the design gate — it does not implement
 
 If either check signals a deviation, surface a **scope deviation** — reject/reframe/amend-via-ADR — and do *not* write a Feature note until the human resolves it. Scope creep is revealed, never silently absorbed.
 
-Then write `docs/knowledge/product/features/<slug>.md` as an OKF note (`type: Feature`, `status: draft`). Follow the [okf skill](../okf/SKILL.md). The note must contain:
+Then write `docs/knowledge/product/features/<slug>.md` as an OKF note (`type: Feature`, `status: draft`). Follow the okf skill. The note must contain:
 
 - **Why** — the problem in one paragraph.
 - **User stories** — `As a …, I want …, so …`.

@@ -10,3 +10,4 @@ Operational and empirical findings that live here because the code can't express
 * [Inspiration from Archon](archon-inspiration.md) — what to borrow from Archon's workflow-engine approach, and what to refuse
 * [Agent Land and Archon — how they compose](archon-composition.md) — recipe layer vs runtime, and where they overlap
 * [First dogfooding run (Phase 0)](first-dogfooding-run.md) — the first `al run` that opened a real agent-land PR, and the gaps it surfaced
+* [Agent image staleness on deploy](agent-image-staleness.md) — deployed hosts keep the once-built agent image; skill changes don't reach sessions until it is rebuilt
