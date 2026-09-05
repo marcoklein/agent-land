@@ -4,6 +4,7 @@ title: Session lifecycle & redeploy resilience
 description: What survives an orchestrator redeploy, and how sessions recover.
 status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: session-service
     resource: packages/server/src/core/session-service.ts

@@ -4,6 +4,7 @@ title: SSE over the hosted edge proxy
 description: The three proxy gotchas that broke SSE for non-browser clients, and their fixes.
 status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: api-sessions
     resource: packages/server/src/presentation/http/api-sessions.ts

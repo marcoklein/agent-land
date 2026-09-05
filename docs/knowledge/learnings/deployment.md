@@ -4,6 +4,7 @@ title: Deployment gotchas (Dokku + SOPS)
 description: Build-time and host-setup bugs hit while deploying agent-land to a Dokku host, and their fixes.
 status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-23T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: sops-service
     resource: packages/server/src/infra/sops.ts

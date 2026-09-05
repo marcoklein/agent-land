@@ -4,6 +4,7 @@ title: pi `--mode rpc` harness
 description: How agent-land drives pi as a headless RPC process, and its lifecycle semantics.
 status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
+verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: harness
     resource: packages/server/src/core/harness.ts
@@ -27,7 +28,7 @@ Pi runs headless inside the agent container, driven over a hijacked `docker exec
 pi --mode rpc --provider <id> --model <id> --session-dir <dir> --session-id <id>
 ```
 
-The provider is currently hardcoded to `opencode-go`.[^harness] `--session-dir` points at the per-session transcript dir under the shared `agent-land-sessions` volume; `--session-id` pins the conversation to the session's own id.
+The provider comes from the session record (`session.provider ?? DEFAULT_PROVIDER_ID`), defaulting to `opencode-go`.[^harness] `--session-dir` points at the per-session transcript dir under the shared `agent-land-sessions` volume; `--session-id` pins the conversation to the session's own id.
 
 # Process lifecycle
 
