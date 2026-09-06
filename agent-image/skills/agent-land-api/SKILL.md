@@ -56,10 +56,10 @@ The prompt is queued; the session runs asynchronously.
 
 ```bash
 curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
-  "$AGENT_LAND_URL/api/sessions/$CHILD_ID/events?live=1"
+  "$AGENT_LAND_URL/api/sessions/$CHILD_ID/events"
 ```
 
-Streams `data: {…}` SSE frames (note the `data: ` prefix — strip it before parsing with `jq`). Watch for two event types:
+Use the **non-live** endpoint (no `?live=1`): it replays the persisted event log *first*, so a child that settled before you attached is still captured, then keeps streaming. `?live=1` replays nothing — a fast child's result is silently lost. Streams `data: {…}` SSE frames (note the `data: ` prefix — strip it before parsing with `jq`). Watch for two event types:
 
 - `{"type":"message_end","message":{...}}` — carries the assistant's final message for the turn (the text blocks are the answer).
 - `{"type":"agent_settled"}` — the agent is idle again; the turn is done. **React to this**, not to stream silence.
@@ -79,8 +79,9 @@ curl -sS -u "$AGENT_LAND_BASIC_AUTH" "$AGENT_LAND_URL/api/sessions/$CHILD_ID"
 For a one-shot child, this minimal loop prints the final message and exits on settle:
 
 ```bash
+# NOTE: use the NON-live endpoint so history is replayed (a fast child isn't lost).
 curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
-  "$AGENT_LAND_URL/api/sessions/$CHILD_ID/events?live=1" \
+  "$AGENT_LAND_URL/api/sessions/$CHILD_ID/events" \
   | jq --unbuffered -R -c 'select(startswith("data: ")) | .[6:] | fromjson |
        (select(.type == "message_end") |
           (.message.content

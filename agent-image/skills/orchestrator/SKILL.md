@@ -90,17 +90,16 @@ prompt_child() {
     -d "$(jq -n --arg m "$message" '{message: $m}')"
 }
 
-# GOTCHA: GET /api/sessions/:id/events?live=1 NEVER closes on `agent_settled` —
-# it only closes when the session is STOPPED. A bare `curl -N` hangs forever.
-# GOTCHA 2: a `curl | jq | while read` pipeline that `break`s on the marker still
-# hangs — curl only dies on SIGPIPE, which needs a *write*, and a settled child
-# writes nothing more. Capture in the background and poll the file instead, then
-# kill curl explicitly. (Both hangs observed live on 2026-09-05.)
+# GOTCHA: use the NON-live events endpoint (no ?live=1). The bare endpoint
+# replays the persisted log FIRST (so a child that settled before you attached is
+# still captured — live=1 replays nothing and a fast child's result is lost), then
+# keeps streaming. It does not close on agent_settled, so never wait for EOF:
+# capture in the background, poll the file for the marker, then kill curl.
 watch_child() {
   child_id="$1"; out="/tmp/${child_id}.sse"
   : > "$out"
   curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
-    "$AGENT_LAND_URL/api/sessions/$child_id/events?live=1" >> "$out" 2>/dev/null &
+    "$AGENT_LAND_URL/api/sessions/$child_id/events" >> "$out" 2>/dev/null &
   local curl_pid=$!
   while kill -0 "$curl_pid" 2>/dev/null; do
     if grep -q '"type":"agent_settled"' "$out" || grep -q '"status":"stopped"' "$out"; then
