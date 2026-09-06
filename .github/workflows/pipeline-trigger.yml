@@ -28,6 +28,10 @@ jobs:
           # either has been started (or finished), so it must not be spawned again.
           START_MARKER="Orchestrator started"
           DONE_MARKER="Pipeline complete"
+          # A human who wants to run an already-completed issue again adds the
+          # `rerun` label. Once the run kicks off the label is removed, so a
+          # subsequent poll does not spawn a second orchestrator.
+          RERUN_LABEL="rerun"
 
           : "${AGENT_LAND_URL:?AGENT_LAND_URL secret is not set}"
           : "${AGENT_LAND_BASIC_AUTH:?AGENT_LAND_BASIC_AUTH secret is not set}"
@@ -51,8 +55,13 @@ jobs:
             fi
 
             if printf '%s' "$comments" | grep -qF "$DONE_MARKER"; then
-              echo "issue #$n already has the completion marker; skipping"
-              continue
+              if gh issue view "$n" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qF "$RERUN_LABEL"; then
+                echo "issue #$n already completed but labeled $RERUN_LABEL; re-running"
+                gh issue edit "$n" --repo "$REPO" --remove-label "$RERUN_LABEL"
+              else
+                echo "issue #$n already has the completion marker; skipping (add the $RERUN_LABEL label to re-run)"
+                continue
+              fi
             fi
 
             if printf '%s' "$comments" | grep -qF "$START_MARKER"; then
