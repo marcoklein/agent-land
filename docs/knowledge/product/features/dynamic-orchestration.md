@@ -40,6 +40,9 @@ sources:
   - id: dogfooding
     resource: /dogfooding.md
     title: Dogfooding — developing agent-land on agent-land
+  - id: design-note
+    resource: /product/designs/dynamic-orchestration-design.md
+    title: Dynamic Orchestration Design note — resolves the open questions below
 ---
 
 # Dynamic Orchestration
@@ -80,7 +83,7 @@ The static orchestrator treats every task identically: it always researches, alw
 
 ## Open questions
 
-The Design note must answer these; each is sharpened because the graph is no longer a fixed list.
+The [Design note](/product/designs/dynamic-orchestration-design.md) (PR #67) answers each of these (see its "Answers to the Feature note's open questions"); they are retained here as the record of what the design gate had to resolve. Each is sharpened because the graph is no longer a fixed list.
 
 1. **The plan's home and contract.** Is the planner's output a per-task plan artifact (JSON/prompt) posted to the issue *before* execution for human veto, or emergent behavior inside the orchestrator's reasoning? How is "which stages run, in what order, with which model and budget" made inspectable — and is the plan itself a new gate?
 2. **Parallelism vs. the single-writer invariant.** Do parallel children each get their own Mount holding a git worktree (pure composition), or does the invariant soften to allow multiple live sessions per Mount (an ADR amendment)? If one-mount-per-child: how are worktrees seeded from a shared repo without a shared live `.git` (independent clones vs. `git worktree add` from a shared seed vs. `clone --reference`), and how are parallel branches reconciled without clobbering[^mount-design]?
