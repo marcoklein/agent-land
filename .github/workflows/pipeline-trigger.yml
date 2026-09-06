@@ -54,22 +54,26 @@ jobs:
               continue
             fi
 
-            if printf '%s' "$comments" | grep -qF "$DONE_MARKER"; then
-              if gh issue view "$n" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qF "$RERUN_LABEL"; then
-                echo "issue #$n already completed but labeled $RERUN_LABEL; re-running"
-                gh issue edit "$n" --repo "$REPO" --remove-label "$RERUN_LABEL"
-              else
+            # The START/DONE markers latch forever, so an intentional re-run is
+            # signalled by the `rerun` label — which overrides BOTH latches and is
+            # consumed (removed) here so the next poll cannot double-spawn.
+            rerun="$(gh issue view "$n" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qF "$RERUN_LABEL" && echo 1 || echo 0)"
+
+            if [ "$rerun" = "0" ]; then
+              if printf '%s' "$comments" | grep -qF "$DONE_MARKER"; then
                 echo "issue #$n already has the completion marker; skipping (add the $RERUN_LABEL label to re-run)"
                 continue
               fi
+              if printf '%s' "$comments" | grep -qF "$START_MARKER"; then
+                echo "issue #$n already has the orchestrator start marker; skipping"
+                continue
+              fi
+            else
+              echo "issue #$n labeled $RERUN_LABEL; re-running regardless of marker state"
+              gh issue edit "$n" --repo "$REPO" --remove-label "$RERUN_LABEL"
             fi
 
-            if printf '%s' "$comments" | grep -qF "$START_MARKER"; then
-              echo "issue #$n already has the orchestrator start marker; skipping"
-              continue
-            fi
-
-            echo "issue #$n is pipeline-ready and unstarted; spawning an orchestrator session"
+            echo "issue #$n is pipeline-ready; spawning an orchestrator session"
 
             session_id="$(curl -fsS -u "$AGENT_LAND_BASIC_AUTH" \
               -X POST "$AGENT_LAND_URL/api/sessions" \
