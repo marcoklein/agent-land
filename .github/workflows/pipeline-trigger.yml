@@ -22,11 +22,12 @@ jobs:
           set -euo pipefail
 
           REPO="marcoklein/agent-land"
-          # The orchestrator posts this marker as its first issue comment (see
-          # agent-image/skills/orchestrator/SKILL.md). It is the idempotency guard:
-          # an issue that already carries it has been started, so it must not be
-          # spawned again.
+          # The orchestrator posts this marker as its first issue comment and a
+          # completion summary as its last (see agent-image/skills/orchestrator/
+          # SKILL.md). Together they are the idempotency guard: an issue carrying
+          # either has been started (or finished), so it must not be spawned again.
           START_MARKER="Orchestrator started"
+          DONE_MARKER="Pipeline complete"
 
           : "${AGENT_LAND_URL:?AGENT_LAND_URL secret is not set}"
           : "${AGENT_LAND_BASIC_AUTH:?AGENT_LAND_BASIC_AUTH secret is not set}"
@@ -44,7 +45,17 @@ jobs:
           fi
 
           for n in $issues; do
-            if gh issue view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$START_MARKER"; then
+            if ! comments="$(gh issue view "$n" --repo "$REPO" --json comments --jq '.comments[].body')"; then
+              echo "issue #$n: could not read comments (transient gh/token failure); skipping to avoid a duplicate spawn"
+              continue
+            fi
+
+            if printf '%s' "$comments" | grep -qF "$DONE_MARKER"; then
+              echo "issue #$n already has the completion marker; skipping"
+              continue
+            fi
+
+            if printf '%s' "$comments" | grep -qF "$START_MARKER"; then
               echo "issue #$n already has the orchestrator start marker; skipping"
               continue
             fi
