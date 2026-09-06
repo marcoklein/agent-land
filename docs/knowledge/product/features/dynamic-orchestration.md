@@ -61,6 +61,7 @@ The static orchestrator treats every task identically: it always researches, alw
 ## User stories
 
 - As an operator, I want the orchestrator to **skip research** when the issue is already well-specified, so a turn and its cost aren't spent re-deriving what the issue already says.
+- As an operator, I want the orchestrator to **deepen research** when an issue or a prior stage raises a design or architecture question, so it reads the specific extra docs, ADRs, and learnings named by the question and produces an addendum brief instead of skipping the needed context or assuming it.
 - As an operator, I want the orchestrator to **split independent implementation work into parallel children** on per-child worktree Mounts, so a task finishes faster than strictly sequential stages allow.
 - As an operator, I want the orchestrator to **spawn an adversarial reviewer** before I see a design, so weak or out-of-scope work is caught before it reaches a human gate.
 - As an operator, I want the orchestrator to **retry a failed stage with an adjusted prompt**, so transient failures or a weak first attempt self-correct without a human re-prompt.
