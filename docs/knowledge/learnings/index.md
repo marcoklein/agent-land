@@ -15,4 +15,5 @@ Operational and empirical findings that live here because the code can't express
 * [Mount operations](mount-operations.md) — durable-checkout discipline: auto-created targets, single-writer guard in anger, sync-to-main rule
 * [First loopback run](first-loopback-run.md) — Platform Connector live on the host: nginx auth blocks loopback, the localhost footgun, tag-bump image rebuilds, and SSE streams that never close
 * [First orchestrated run](first-orchestrated-run.md) — phases 1–3 built by platform sessions: stall-and-re-prompt discipline, the workflow-scope token wall, and why the orchestrator must verify every worker PR
+* [First end-to-end pipeline run](first-pipeline-run.md) — label → merged product memory: stage-transition stalls, the watch-loop/gh-auth fixes, the critic that caught a wrong claim, and gate delegation
 * [Scheduled pipeline trigger](scheduled-pipeline-trigger.md) — the cron workflow that spawns orchestrators for unstarted pipeline-ready issues, and its operator-auth + marker-comment idempotency decisions
