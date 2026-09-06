@@ -8,6 +8,7 @@ The single home for documentation and reference — every note is OKF with `stat
 
 * [Engine](engine.md) — the purest form: six primitives, three substrates, one engine opinion
 * [Architecture](architecture.md) — the zoom ladder: the primitives as diagrams, from one turn to the deployed platform
+* [Multi-agent pipeline architecture](multi-agent-architecture.md) — the built system: intake, trigger, orchestrator session, stage children, gates, and the loopback primitive
 * [CLI (`al`)](cli.md) — install, configure, and drive agent-land from the terminal
 * [Providers](providers/) — LLM backends: API behaviors, model discovery, auth
 * [Product](product/) — goals (vision + boundary), features, designs, and the pipeline
