@@ -19,6 +19,7 @@ stages:
   research:
     role: "research stage of the product pipeline"
     connectors: [github]
+    mounts: [{ source: agent-land, target: /data/agent-land, seed: clone }]   # seeds/syncs the checkout and reads the repo docs
     provider: opencode-go
     model: deepseek-v4-pro            # cheap
     budget: { timeoutSec: 900, maxTokens: 60000, maxCost: 0.60 }

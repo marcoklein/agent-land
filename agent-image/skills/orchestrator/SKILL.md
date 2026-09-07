@@ -152,6 +152,30 @@ watch_child() {
   wait "$curl_pid" 2>/dev/null || true
 }
 
+# Bounded variant for stall detection: kills the stream after budget_sec and
+# reports STALL if the child never settled. Use this in the execute loop with
+# the stage's budget.timeoutSec as the bound — a child past its wall-clock
+# budget is a stall by definition (policy retry.onStall). Prefer this over
+# watch_child in the execute loop; watch_child is only for unbounded quick checks.
+watch_child_bounded() {
+  child_id="$1"; budget_sec="$2"; out="/tmp/${child_id}.sse"
+  : > "$out"
+  timeout "$budget_sec" curl -sS -N -u "$AGENT_LAND_BASIC_AUTH" \
+    "$AGENT_LAND_URL/api/sessions/$child_id/events" >> "$out" 2>/dev/null &
+  local curl_pid=$!
+  while kill -0 "$curl_pid" 2>/dev/null; do
+    if grep -q '"type":"agent_settled"' "$out" || grep -q '"status":"stopped"' "$out"; then
+      break
+    fi
+    sleep 5
+  done
+  kill "$curl_pid" 2>/dev/null
+  wait "$curl_pid" 2>/dev/null || true
+  if ! grep -q '"type":"agent_settled"' "$out" && ! grep -q '"status":"stopped"' "$out"; then
+    echo "STALL"
+  fi
+}
+
 # Extract the last assistant message from the captured SSE frames.
 collect_result() {
   child_id="$1"
@@ -273,14 +297,82 @@ Per stage:
 1. **Budget gate.** Compare actual spend so far (tracked in `/tmp/run-state.json`) against the aggregate budget: if `spent + worst-case(this stage) > remaining`, fall back to the policy's cheaper model ladder or escalate (park) — never spawn blind.
 2. **Spawn.** Sequential stage → `stage_to_child_json` with the shared Mount. Parallel stage → first `create_parallel_mount "agent-land-<stage>-<runId>"`, then spawn with `mounts: [{source: "agent-land-<stage>-<runId>", target: /data/agent-land}]`.
 3. **Prompt** the child with the stage prompt (the *content* you compose — embed the issue body, research brief, prior stage outputs, and the stage role from the policy).
-4. **Watch** until settled; **collect** result and usage; add actuals to the run state; append a trace record `{stage, childId, provider, model, budgetUsed, result, deletedAt}`.
+4. **Watch** with `watch_child_bounded "<child>" "$(echo "$STAGE" | jq -r '.budget.timeoutSec')"`; if it prints `STALL`, go to the stall retry path. Otherwise **collect** result and usage; add actuals to the run state; append a trace record (see below).
 5. **Delete** the child; for parallel stages also `delete_parallel_mount` (a finally/cleanup step — never let a full-clone volume orphan).
 6. Post **one** progress comment per stage transition.
-7. **Verify against the deliverable** — a stage is done when its artifact exists (PR open, CI green), never merely because `agent_settled` fired.
+7. **Verify against the deliverable** — a stage is done when its artifact exists (PR open, CI green), never merely because `agent_settled` fired. If the artifact is missing or invalid, treat it as a **failure** retry.
+
+Soft-budget enforcement is **post-settle accounting**, exactly as the design's risk section accepts: you observe usage when the child settles (mid-turn overruns are bounded by the watch interval + the wall-clock bound), add it to the run actuals, and refuse to spawn any further stage whose worst case would blow the remaining run budget. If the run budget is exhausted mid-graph, post the collected outputs and escalate — never spawn blind.
+
+### Trace records (append one per attempt, before delete)
+
+```bash
+: > /tmp/trace.jsonl   # once, at the start of the execute phase
+
+# after each attempt settles (or stalls), before delete_child:
+jq -cn \
+  --arg stage "$STAGE_ID" \
+  --arg child "$child_id" \
+  --arg model "$(echo "$STAGE" | jq -r '.model')" \
+  --arg provider "$(echo "$STAGE" | jq -r '.provider')" \
+  --arg result "$RESULT_TEXT" \
+  --arg outcome "$OUTCOME" \
+  '{stage: $stage, childId: $child, provider: $provider, model: $model,
+    outcome: $outcome, budgetUsed: '"$(collect_usage "$child_id")"', result: $result,
+    deletedAt: (now | todate)}' >> /tmp/trace.jsonl
+```
+
+`$STAGE_ID`, `$RESULT_TEXT`, and `$OUTCOME` (`settled` | `stall` | `failure` | `budget-exceeded`) come from the attempt you just watched.
 
 ### Stage prompts — the content you decide
 
-The compose-and-run pattern (sequential stage, shared Mount):
+Research stage (shared Mount — seeds it if the operator's Mount is not yet a checkout):
+
+```bash
+ISSUE_BODY="$(jq -r '.body' /tmp/issue.json)"
+STAGE="$(jq -c '.stages[] | select(.id=="research")' /tmp/plan.json)"
+
+RESEARCH_PROMPT="$(cat <<EOF
+You are the research stage of the agent-land product pipeline, working on issue #$ISSUE_N.
+
+Working directory: $MOUNT_TARGET (a mounted git checkout of $REPO).
+
+Step 0 — seed or sync the checkout:
+  if [ ! -d $MOUNT_TARGET/.git ]; then
+    git clone https://github.com/$REPO.git $MOUNT_TARGET
+  fi
+  cd $MOUNT_TARGET && git fetch origin && git checkout main && git reset --hard origin/main
+
+Then:
+1. Read the issue: gh issue view $ISSUE_N --repo $REPO --json number,title,body,labels
+2. Read the docs that matter: docs/knowledge/multi-agent-workflow.md, docs/knowledge/product/pipeline.md,
+   and any ADRs or designs the issue points at.
+3. Write a research brief.
+
+Issue body:
+$ISSUE_BODY
+
+The brief must contain:
+- The issue's goal in one paragraph.
+- The constraints that bind the work (engine boundaries, OKF conventions, the Mount single-writer invariant, human gates).
+- The specific docs and ADRs the later stages must read, with repo paths.
+- Open questions the Feature note and Design note must answer.
+- A recommended angle for the Feature note and the Design note.
+
+Report the brief as your final message. Do NOT open PRs. Do NOT modify the repo.
+EOF
+)"
+
+MOUND="$(jq -n --arg m "$MOUNT_NAME" --arg t "$MOUNT_TARGET" '[{source:$m, target:$t}]')"
+child_id="$(spawn_child "$(stage_to_child_json "$STAGE" "$MOUND")")"
+prompt_child "$child_id" "$RESEARCH_PROMPT" >/dev/null
+watch_child_bounded "$child_id" "$(echo "$STAGE" | jq -r '.budget.timeoutSec')"
+collect_result "$child_id" | tee /tmp/research.result
+collect_usage "$child_id" | tee /tmp/research.usage
+delete_child "$child_id" >/dev/null
+```
+
+The compose-and-run pattern for a sequential producing stage (shared Mount):
 
 ```bash
 ISSUE_BODY="$(jq -r '.body' /tmp/issue.json)"
@@ -310,7 +402,7 @@ EOF
 MOUND="$(jq -n --arg m "$MOUNT_NAME" --arg t "$MOUNT_TARGET" '[{source:$m, target:$t}]')"
 child_id="$(spawn_child "$(stage_to_child_json "$STAGE" "$MOUND")")"
 prompt_child "$child_id" "$REFINE_PROMPT" >/dev/null
-watch_child "$child_id"
+watch_child_bounded "$child_id" "$(echo "$STAGE" | jq -r '.budget.timeoutSec')"
 collect_result "$child_id" | tee /tmp/refine.result
 collect_usage "$child_id" | tee /tmp/refine.usage
 delete_child "$child_id" >/dev/null
@@ -326,7 +418,7 @@ STAGE="$(jq -c '.stages[] | select(.id=="implement-a")' /tmp/plan.json)"
 MOUND="$(jq -n --arg m "$PG_MOUNT" --arg t "/data/agent-land" '[{source:$m, target:$t}]')"
 child_id="$(spawn_child "$(stage_to_child_json "$STAGE" "$MOUND")")"
 prompt_child "$child_id" "<implementation prompt: clone into its own Mount, branch, dev loop, PR>" >/dev/null
-watch_child "$child_id"
+watch_child_bounded "$child_id" "$(echo "$STAGE" | jq -r '.budget.timeoutSec')"
 collect_result "$child_id" | tee /tmp/implement-a.result
 collect_usage "$child_id" | tee /tmp/implement-a.usage
 delete_child "$child_id" >/dev/null
@@ -365,7 +457,7 @@ gh issue comment "$ISSUE_N" --repo "$REPO" --body "$(cat <<EOF
 ## Execution trace
 
 \`\`\`json
-$(jq -c . /tmp/trace.json)
+$(jq -s -c . /tmp/trace.jsonl)
 \`\`\`
 
 - Plan deviations: <list>
@@ -405,7 +497,7 @@ The identical recipe works from a human-driven session without `AGENT_LAND_URL` 
 
 - **Mount ownership.** You bind no Mount. Sequential stages bind the shared repo Mount one at a time; parallel stages each get their own `agent-land-<stage>-<runId>` Mount that is deleted in the cleanup step. This is the only layout consistent with the enforced single-writer invariant.
 - **Per-stage models.** Each child is created with the plan stage's `provider`/`model` (ADR 015). Substitutions follow the preflight ladder and are always posted as a one-line issue note.
-- **Soft budgets.** Budget enforcement is orchestrator-side: actuals come from `message_end` `usage` events; a child observed over budget (per-stage or remaining-run) is `DELETE`d, and spawning refuses when `spent + worst-case > remaining`. If pi emits no `usage`, budget enforcement degrades to wall-clock only (ADR 011 limitation). Hard server-side kill switches are ADR 011 future work.
+- **Soft budgets.** Budget enforcement is orchestrator-side, post-settle: actuals come from `message_end` `usage` events, added to the run actuals after each child settles; spawning refuses when `spent + worst-case(next stage) > remaining`, and a wall-clock overrun is caught by the bounded watch (stall). If pi emits no `usage`, budget enforcement degrades to wall-clock only (ADR 011 limitation). Hard server-side kill switches are ADR 011 future work.
 - **Lineage/observability.** Children are deleted after use to free their Mounts; `al ls --tree` shows only the in-flight graph. The durable record is the issue: plan artifact + progress comments + the execution trace.
 - **Connector scope.** Each stage gets exactly the connectors declared in its plan entry — `github` for producing stages, `github-ro` only for the critic. Names must match exactly; an unknown connector name resolves to *no* connectors, silently.
 - **SSE frame format.** Events arrive as `data: {…}` lines, not bare JSON — always strip the `data: ` prefix before `fromjson`. The bundled `agent-land-api` skill's watch examples show this.
