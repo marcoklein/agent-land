@@ -130,13 +130,14 @@ export function validatePlan(plan, opts = {}) {
 
   // Dependencies must reference declared stages (duplicate edges are tolerated).
   for (const s of plan.stages ?? []) {
+    if (!byId.has(s.id)) continue; // malformed stage already reported
     for (const d of s.dependencies ?? []) if (!ids.has(d)) err(`stage "${s.id}": dependency "${d}" is undeclared`);
   }
 
   // Parallel groups: no internal edges, no shared Mounts.
   const groupMembers = new Map();
   for (const s of plan.stages ?? []) {
-    if (s.parallelGroup == null) continue;
+    if (s.parallelGroup == null || !isStage(s)) continue;
     if (!groupMembers.has(s.parallelGroup)) groupMembers.set(s.parallelGroup, []);
     groupMembers.get(s.parallelGroup).push(s);
   }
@@ -159,7 +160,8 @@ export function validatePlan(plan, opts = {}) {
 
   // Budget invariant: the graph's aggregate must fit the declared aggregate.
   if (isBudget(plan.aggregateBudget)) {
-    const agg = computeAggregateBudget(plan.stages ?? [], plan.parallelGroups ?? []);
+    const validStages = (plan.stages ?? []).filter(isStage);
+    const agg = computeAggregateBudget(validStages, plan.parallelGroups ?? []);
     for (const dim of ["timeoutSec", "maxTokens", "maxCost"]) {
       if (agg[dim] > plan.aggregateBudget[dim])
         err(`aggregate ${dim}: graph needs ${agg[dim]}, plan declares ${plan.aggregateBudget[dim]}`);
@@ -204,10 +206,20 @@ function isStage(v) {
     typeof v.kind === "string" &&
     typeof v.role === "string" &&
     Array.isArray(v.dependencies) &&
+    v.dependencies.every((d) => typeof d === "string") &&
     (v.parallelGroup == null || typeof v.parallelGroup === "string") &&
     Array.isArray(v.connectors) &&
     v.connectors.length >= 1 &&
+    v.connectors.every((c) => typeof c === "string" && c.length > 0) &&
     Array.isArray(v.mounts) &&
+    v.mounts.every(
+      (m) =>
+        m != null &&
+        typeof m.source === "string" &&
+        m.source.length > 0 &&
+        typeof m.target === "string" &&
+        m.target.length > 0
+    ) &&
     typeof v.provider === "string" &&
     typeof v.model === "string" &&
     isBudget(v.budget) &&

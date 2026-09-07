@@ -190,6 +190,31 @@ test("validatePlan: rejects an aggregate above the policy runBudget", () => {
   assert.ok(errors.some((e) => e.includes("exceeds policy runBudget")));
 });
 
+test("validatePlan: rejects malformed stage entries without crashing", () => {
+  const bad = validPlan({
+    stages: [stage({ id: "a" }), { id: "broken", kind: "refine", mounts: [null] }],
+    edges: [["a", "broken"]],
+  });
+  const { ok, errors } = validatePlan(bad);
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes("malformed")));
+  assert.ok(errors.some((e) => e.includes('edge to "broken" references an undeclared stage')));
+});
+
+test("validatePlan: rejects empty connector names", () => {
+  const { ok, errors } = validatePlan(validPlan({ stages: [stage({ connectors: ["github", ""] })] }));
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes("malformed")));
+});
+
+test("validatePlan: rejects a stage with a broken mount entry without crashing", () => {
+  const { ok, errors } = validatePlan(
+    validPlan({ stages: [stage({ mounts: [{ source: "agent-land", target: 42 }] })] })
+  );
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes("malformed")));
+});
+
 test("validatePlan: runBudget at or above the aggregate passes", () => {
   const plan = validPlan();
   const { ok } = validatePlan(plan, { runBudget: budget(10000, 100000, 100) });
