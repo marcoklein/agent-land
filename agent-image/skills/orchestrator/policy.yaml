@@ -1,0 +1,97 @@
+# Orchestrator policy — prompt-level declaration of stages, budgets, retries, and
+# decision axes. This file makes the planner governed: it may only deviate along
+# the enumerated `decisions` axes; everything else is bounded by Gate 0 (the
+# plan) and the plan validator invariants.
+version: 1
+defaults:
+  provider: opencode-go
+  model: deepseek-v4-pro
+  budget: { timeoutSec: 1800, maxTokens: 100000, maxCost: 1.00 }   # orchestrator-enforced soft budget
+runBudget: { timeoutSec: 14400, maxTokens: 800000, maxCost: 15.00 }   # aggregate ceiling, orchestrator-held
+retry:
+  # maxAttempts is TOTAL attempts per stage = 1 initial + (maxAttempts - 1) retries.
+  # maxAttempts: 2 = 2 total runs (1 initial + 1 retry); maxAttempts: 1 = no retry.
+  default: { maxAttempts: 2, on: [failure] }
+  onFailure: "retry with adjusted prompt + the previous attempt's failure reason"
+  onStall: "DELETE the stalled child, re-prompt with numbered steps and a smaller scope"
+  escalateAfter: "per-stage budget x maxAttempts, or the aggregate run budget — whichever exhausts first"
+stages:
+  research:
+    role: "research stage of the product pipeline"
+    connectors: [github]
+    provider: opencode-go
+    model: deepseek-v4-pro            # cheap
+    budget: { timeoutSec: 900, maxTokens: 60000, maxCost: 0.60 }
+    retry: { maxAttempts: 2, on: [failure, stall] }
+    leadsToGate: null
+  refine:
+    role: "refine stage — feature note + spec PR"
+    connectors: [github]
+    mounts: [{ source: agent-land, target: /data/agent-land, seed: clone }]
+    provider: opencode-go
+    model: deepseek-v4-pro
+    budget: { timeoutSec: 1200, maxTokens: 100000, maxCost: 1.00 }
+    retry: { maxAttempts: 2, on: [failure] }
+    leadsToGate: outcome
+  design:
+    role: "design stage — design note + design PR"
+    connectors: [github]
+    mounts: [{ source: agent-land, target: /data/agent-land, seed: clone }]
+    provider: opencode-go
+    model: deepseek-v4-pro
+    budget: { timeoutSec: 1800, maxTokens: 150000, maxCost: 1.50 }   # strong
+    retry: { maxAttempts: 2, on: [failure, stall] }
+    leadsToGate: design
+  critic:
+    role: "adversarial reviewer — read-only, advises only, never merges"
+    connectors: [github-ro]            # read-only GitHub token: view/diff only, cannot push or open PRs
+    mounts: []                         # gh pr view / gh pr diff need no checkout
+    provider: opencode-go
+    model: deepseek-v4-pro
+    budget: { timeoutSec: 600, maxTokens: 40000, maxCost: 0.40 }     # small
+    retry: { maxAttempts: 1, on: [failure] }    # 1 total attempt = no retry
+    leadsToGate: design
+  implement:
+    role: "implementation child — dev loop to a green PR"
+    connectors: [github]
+    mounts: [{ source: agent-land, target: /data/agent-land, seed: clone }]
+    provider: opencode-go
+    model: deepseek-v4-pro
+    budget: { timeoutSec: 1800, maxTokens: 200000, maxCost: 2.00 }
+    retry: { maxAttempts: 2, on: [failure, stall] }
+    leadsToGate: merge
+decisions:
+  skip-research:
+    allow: true
+    triggers:
+      - "issue body already specifies the outcome, constraints, and acceptance criteria (no ambiguity)"
+      - "a Feature note already exists on the issue and needs no new research"
+    forbid:
+      - "issue references docs/ADRs not already summarized in the body"
+      - "open questions remain in the Feature note's scope"
+    effect: "research stage omitted from the plan; its role moves into the refine prompt's context"
+  deepen-research:
+    allow: true
+    triggers:
+      - "the issue or a prior stage raises a design/architecture question the notes must answer"
+      - "a referenced ADR/design/trace is contested or partially contradicted by the issue"
+    definition: "an extra research pass that reads the specific additional docs, ADRs, and learnings/ trace notes named by the trigger and produces an addendum brief — never a blanket 'read everything'"
+    effect: "a second research child (or an expanded research prompt) whose brief is appended to refine's context"
+  parallel:
+    allow: true
+    maxFanOut: 3
+    splitBy: "non-overlapping implementation concerns or non-overlapping note sections, each on its own branch + PR"
+    forbid:
+      - "two children touching the same files"
+      - "two children sharing a Mount"
+      - "fan-out of gate-producing stages (refine/design stay sequential)"
+gates:
+  plan:    { order: 0, mechanism: "issue comment + waiting_for_input" }
+  outcome: { order: 1, mechanism: "spec PR review" }
+  design:  { order: 2, mechanism: "design PR review" }
+  merge:   { order: 3, mechanism: "human PR merge" }
+invariants:
+  - "gates may never be removed, merged, or bypassed"
+  - "parallel children get one Mount each, named agent-land-<stage>-<runId>, DELETEd after the child settles; never a shared live .git"
+  - "connectors and mounts resolve by exact name"
+  - "critic is read-only: github-ro connector only, no mounts"

@@ -11,7 +11,7 @@
     "build": "pnpm -r build",
     "start": "node packages/server/dist/server.js",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r build && pnpm -r test",
+    "test": "pnpm -r build && pnpm -r test && node --test 'agent-image/skills/orchestrator/**/*.test.mjs'",
     "test:watch": "pnpm --filter @agent-land/server test:watch",
     "al": "pnpm --filter @agent-land/cli start"
   },

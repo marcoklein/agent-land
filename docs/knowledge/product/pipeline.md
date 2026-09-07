@@ -41,13 +41,16 @@ flowchart LR
 3. **Implement** — from an approved design, the build agent runs the standard dev loop (branch → typecheck → test → PR → CI green). Deterministic steps (`pnpm typecheck`, `pnpm test`) run as commands between AI turns[^archon].
 4. **Close** — on merge, promote the `Feature` note `draft → stable` and capture learnings in `docs/knowledge/learnings/`.
 
-## The three human gates
+## The human gates
 
 | Gate | Artifact | Mechanism |
 |---|---|---|
+| Plan (Gate 0) | `plan.json` posted to the issue | human approves or amends the stage graph before any child spawns |
 | Outcome | Feature note (draft) | quick review of the note — did it capture intent? |
 | Design | Design note (draft) | **PR on the note** — review like code; merge = approved design |
 | Merge | green PR | existing PR review; merge stays human-gated |
+
+Gate 0 is additive: it precedes the other gates and does not replace them. A dynamic planner may reorder or reshape stages, but may never remove, merge, or bypass a gate.
 
 ## Who does what
 
