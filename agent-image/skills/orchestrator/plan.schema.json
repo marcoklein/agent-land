@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/marcoklein/agent-land/blob/main/agent-image/skills/orchestrator/plan.schema.json",
+  "title": "Orchestrator plan artifact (per-task stage graph)",
+  "description": "The contract for the plan.json the orchestrator emits, validates, and posts to the issue as Gate 0 before any child is spawned. The executable validator is plan.mjs next to this file; this schema is the human-readable contract both implement. See docs/knowledge/product/designs/dynamic-orchestration-design.md.",
+  "type": "object",
+  "required": ["planVersion", "runId", "issue", "status", "stages", "edges", "parallelGroups", "gates", "aggregateBudget"],
+  "additionalProperties": false,
+  "properties": {
+    "planVersion": { "const": 1 },
+    "runId": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9]{6,16}$" },
+    "issue": {
+      "type": "object",
+      "required": ["repo", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": { "type": "string", "minLength": 1 },
+        "number": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "status": { "enum": ["proposed", "approved"] },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [{ "type": "string" }, { "type": "string" }],
+        "items": { "type": "string" },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "parallelGroups": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["plan", "outcome", "design", "merge"] },
+      "uniqueItems": true
+    },
+    "aggregateBudget": { "$ref": "#/$defs/budget" },
+    "deviations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["default", "actual", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "default": { "type": "string" },
+          "actual": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "budget": {
+      "type": "object",
+      "required": ["timeoutSec", "maxTokens", "maxCost"],
+      "additionalProperties": false,
+      "properties": {
+        "timeoutSec": { "type": "number", "minimum": 1 },
+        "maxTokens": { "type": "number", "minimum": 1 },
+        "maxCost": { "type": "number", "minimum": 0.01 }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "required": ["id", "kind", "role", "dependencies", "parallelGroup", "connectors", "mounts", "provider", "model", "budget", "retry", "leadsToGate"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["research", "refine", "design", "critic", "implement"] },
+        "role": { "type": "string", "minLength": 1 },
+        "dependencies": { "type": "array", "items": { "type": "string" } },
+        "parallelGroup": { "type": ["string", "null"] },
+        "connectors": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "mounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "target"],
+            "additionalProperties": false,
+            "properties": {
+              "source": { "type": "string", "minLength": 1 },
+              "target": { "type": "string", "minLength": 1 },
+              "seed": { "enum": ["clone"] }
+            }
+          }
+        },
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "budget": { "$ref": "#/$defs/budget" },
+        "retry": {
+          "type": "object",
+          "required": ["maxAttempts", "on"],
+          "additionalProperties": false,
+          "properties": {
+            "maxAttempts": { "type": "integer", "minimum": 1 },
+            "on": {
+              "type": "array",
+              "items": { "enum": ["failure", "stall"] },
+              "uniqueItems": true
+            }
+          }
+        },
+        "leadsToGate": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
