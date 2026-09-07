@@ -81,7 +81,7 @@ jobs:
               -d "$(jq -n --arg c "$gh_connector" '{connectors:[$c],platform:true}')" \
               | jq -er '.session.id')"
 
-            prompt="You are the agent-land product-pipeline orchestrator. Run the pipeline on issue #$n in $REPO. Your recipe is the orchestrator skill at agent-image/skills/orchestrator/SKILL.md (branch main) — read it and follow it exactly: research → refine (spec PR) → design (design PR) → critic review, the sequential child lifecycle, and the gate discipline. Proceed now; do not wait for confirmation."
+            prompt="You are the agent-land product-pipeline orchestrator (planner). Run the pipeline on issue #$n in $REPO. Your recipe is the orchestrator skill at agent-image/skills/orchestrator/SKILL.md (branch main) — read it and follow it exactly: plan a per-task stage graph from policy.yaml, post the plan as Gate 0, then execute it as child sessions via the loopback with the gate discipline. Proceed now; do not wait for confirmation."
 
             curl -fsS -u "$AGENT_LAND_BASIC_AUTH" \
               -X POST "$AGENT_LAND_URL/api/sessions/$session_id/prompt" \
