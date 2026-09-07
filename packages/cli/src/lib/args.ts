@@ -1,4 +1,4 @@
-const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "models", "connectors", "providers", "mounts", "run", "watch"]);
+const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "status", "models", "connectors", "providers", "mounts", "run", "watch"]);
 
 interface FlagSpec {
   key: string;
@@ -40,6 +40,7 @@ const COMMAND_FLAGS: Record<string, string[]> = {
   ls: ["--json", "--tree"],
   rm: ["--yes", "-y"],
   log: ["--follow", "--json"],
+  status: ["--json"],
   models: ["--provider"],
   connectors: ["--yes", "-y", "--name", "--url", "--field", "--content"],
   providers: ["--json", "--yes", "-y", "--id", "--label", "--base-url", "--api", "--api-key", "--models", "--default-model", "--field", "--content"],
