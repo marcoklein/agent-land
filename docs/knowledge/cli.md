@@ -56,7 +56,8 @@ al new [--connectors a,b,c] [--mount NAME:PATH]... [--model <m>] [--provider <id
 al chat <session-id>            attach (history replays, then live events)
 al ls [--json]                  list sessions with status, age, model, connectors
 al rm <session-id> [-y|--yes]   delete a session (prompts y/N while running)
-al log <session-id> [--follow] [--json]
+al status <session-id> [--json] print status, mounts, connectors, model, last assistant message
+al log <session-id> [--follow] [--json]  print event history; --json emits one JSON object per line
 al models [--provider <id>]     list available models
 al providers [--json]           list configured providers (id, label, api, enabled)
 al providers add --id <slug> [--label <l>] [--base-url <u>] [--api <type>]
@@ -75,6 +76,8 @@ al watch [<session-id> | --all] tail live events, print "<id>: settled" (stdout 
 ```
 
 `al new` and `al run` are interactive in a TTY: when provider/model/connectors flags are omitted, they prompt for them. Repo setup (e.g. `git clone`) is left to the agent — start a session and ask it to clone the repo, or bind a [Mount](/product/features/mount.md) with `--mount NAME:PATH` (repeatable) so the checkout persists across sessions; see [mount operations](/learnings/mount-operations.md) for the sync rule. `al run` exits 0 on `agent_settled` and 1 on stop/timeout; the session is kept unless `--rm`. A `run failed: terminated` exit is a transport failure (often the [self-deploy hazard](/learnings/self-deploy-hazard.md)) — the session usually survives; check `al ls`. `--manual` sets `permissionPolicy: "manual"` so dialogs reach the client.
+
+`al log <id>` without `--follow` replays the history the server has at the moment of the run (the full sequenced snapshot): for a stopped session that is the complete history; for a live session it is history-up-to-now, ending when events go quiet for 500 ms or immediately on `agent-done`. `--follow` keeps tailing live events, and `--json` emits raw events as newline-delimited JSON (one JSON object per line, with the SSE `data: ` prefix stripped). `al status <id>` prints a single session's record — status, mounts, connectors, model, created/updated timestamps, and the last completed assistant message (the previous turn's message for a mid-turn session) — without entering the chat overlay; `--json` prints the raw session record plus a `lastMessage` field.
 
 # In chat
 

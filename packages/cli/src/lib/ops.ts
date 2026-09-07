@@ -15,7 +15,7 @@ export function createSeqFilter() {
   };
 }
 
-type StreamFn = (
+export type StreamFn = (
   url: string,
   opts: { authHeader?: string; signal?: AbortSignal }
 ) => AsyncGenerator<SseEvent>;

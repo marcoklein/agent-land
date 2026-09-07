@@ -88,6 +88,18 @@ describe("parseArgs", () => {
     expect(parseArgs(["ls", "--tree"]).opts.tree).toBe(true);
   });
 
+  it("parses status with --json", () => {
+    expect(parseArgs(["status", "abc12345", "--json"])).toMatchObject({
+      cmd: "status",
+      opts: { json: true },
+      positional: ["abc12345"],
+    });
+  });
+
+  it("rejects a non-status flag for status", () => {
+    expect(() => parseArgs(["status", "abc", "--follow"])).toThrow(UsageError);
+  });
+
   it("rejects a non-numeric --timeout", () => {
     expect(() => parseArgs(["run", "x", "--timeout", "abc"])).toThrow(/positive integer/);
   });

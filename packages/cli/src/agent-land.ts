@@ -7,6 +7,8 @@ import { streamSse } from "./lib/sse.js";
 import { createEventRenderer, wrapText } from "./lib/render.js";
 import { createApiClient, type ApiClient } from "./lib/api.js";
 import { runSession, watchSession, createSeqFilter } from "./lib/ops.js";
+import { logSession } from "./lib/log.js";
+import { getSessionStatus, formatStatus, statusJson } from "./lib/status.js";
 import { parseArgs, UsageError, type ParsedArgs } from "./lib/args.js";
 import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
 import { formatAge } from "./lib/format.js";
@@ -31,8 +33,11 @@ Usage:
   al rm <session-id> [-y|--yes]
       delete a session (prompts y/N when it is still running)
 
+  al status <session-id> [--json]
+      print a session's status, mounts, connectors, model, and last assistant message
+
   al log <session-id> [--follow] [--json]
-      print the full event history; --follow keeps tailing, --json prints raw events
+      print the event history; --follow keeps tailing, --json prints raw events (one JSON per line)
 
   al models [--provider <id>]
       list available models (defaults to the default provider)
@@ -345,69 +350,6 @@ async function resolveProviderForModel(
     if (pm.includes(model)) return p.id;
   }
   return undefined;
-}
-
-async function logSession(
-  client: ApiClient,
-  sessionId: string,
-  { json, follow }: { json?: boolean; follow?: boolean }
-): Promise<void> {
-  const renderer = createEventRenderer();
-  const dedupe = createSeqFilter();
-  let stop = false;
-  let ac: AbortController | null = null;
-  let quietTimer: NodeJS.Timeout | null = null;
-
-  const onSigint = () => {
-    stop = true;
-    if (ac) ac.abort();
-  };
-  process.on("SIGINT", onSigint);
-
-  const scheduleQuietStop = () => {
-    if (follow || stop) return;
-    if (quietTimer) clearTimeout(quietTimer);
-    quietTimer = setTimeout(() => {
-      stop = true;
-      if (ac) ac.abort();
-    }, 500);
-  };
-
-  while (!stop) {
-    ac = new AbortController();
-    let done = false;
-    try {
-      for await (const ev of streamSse(client.eventsUrl(sessionId), {
-        authHeader: client.authHeader,
-        signal: ac.signal,
-      })) {
-        if (ev.event === "agent-done") {
-          done = true;
-          break;
-        }
-        if (ev.data === undefined) continue;
-        let parsed: AgentEvent;
-        try {
-          parsed = JSON.parse(ev.data);
-        } catch {
-          continue;
-        }
-        if (dedupe(parsed)) continue;
-        if (json) {
-          process.stdout.write(JSON.stringify(parsed) + "\n");
-        } else {
-          for (const line of renderer.render(parsed)) process.stdout.write(line.text + "\n");
-        }
-        scheduleQuietStop();
-      }
-    } catch {
-      if (stop) break;
-    }
-    if (done || !follow || stop) break;
-    await sleep(1000);
-  }
-  if (quietTimer) clearTimeout(quietTimer);
-  process.removeListener("SIGINT", onSigint);
 }
 
 async function chat(
@@ -818,6 +760,16 @@ async function main() {
       await logSession(client, sessionId, { json: opts.json, follow: opts.follow });
     } catch (err) {
       fail(`log failed: ${(err as Error).message}`);
+    }
+  } else if (cmd === "status") {
+    const sessionId = positional[0];
+    if (!sessionId) fail("status requires a session id");
+    try {
+      const result = await getSessionStatus(client, sessionId);
+      if (opts.json) process.stdout.write(statusJson(result));
+      else for (const line of formatStatus(result)) process.stdout.write(line + "\n");
+    } catch (err) {
+      fail(`status failed: ${(err as Error).message}`);
     }
   } else if (cmd === "models") {
     try {
