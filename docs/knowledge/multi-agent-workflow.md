@@ -95,7 +95,7 @@ Remove the human nudge that *starts* and *resumes* the pipeline. The cheap first
 The orchestrator stops following a fixed stage list and **plans the stage graph per task**: skips or deepens research, splits implementation into parallel children on per-child worktree mounts, spawns adversarial reviewers, retries failed stages with adjusted prompts, and picks models per stage (cheap for research, strong for design). The recipe becomes prompt-level policy — roles, tools, gates, budgets — instead of a scripted sequence.
 
 - **Enablers:** parallel mounts/worktrees, per-child model selection (providers already support it), cost guardrails and the kill switch (ADR 011), session-tree observability from Phase 1.
-- **Deliverable:** a task where the orchestrator's stage graph visibly differs from the default pipeline, with the quality to match.
+- **Deliverable:** a task where the orchestrator's stage graph visibly differs from the default pipeline, with the quality to match. **Achieved:** PR #78 (planner recipe + `policy.yaml` + `plan.mjs`), dogfooded on issue #79 — skip-research, no critic, budget-capped implement retry, declined fan-out; spec #81 → design #82 → implementation #83 all merged green. See [first dynamic-orchestration run](/learnings/first-dynamic-orchestration-run.md).
 
 ## Cross-cutting rules
 

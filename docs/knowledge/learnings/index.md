@@ -17,3 +17,4 @@ Operational and empirical findings that live here because the code can't express
 * [First orchestrated run](first-orchestrated-run.md) — phases 1–3 built by platform sessions: stall-and-re-prompt discipline, the workflow-scope token wall, and why the orchestrator must verify every worker PR
 * [First end-to-end pipeline run](first-pipeline-run.md) — label → merged product memory: stage-transition stalls, the watch-loop/gh-auth fixes, the critic that caught a wrong claim, and gate delegation
 * [Scheduled pipeline trigger](scheduled-pipeline-trigger.md) — the cron workflow that spawns orchestrators for unstarted pipeline-ready issues, and its operator-auth + marker-comment idempotency decisions
+* [First dynamic-orchestration run (Phase 4)](first-dynamic-orchestration-run.md) — the planner's first dogfood: a visibly different stage graph that went to three green PRs, and the plan-comment substitution + Dokku deploy-lock bugs it surfaced
