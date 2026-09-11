@@ -269,17 +269,20 @@ jq . /tmp/plan.json >/dev/null          # it is valid JSON
 node "$PLAN_MJS" validate < /tmp/plan.json
 node "$PLAN_MJS" budget < /tmp/plan.json   # compare against policy runBudget
 
-gh issue comment "$ISSUE_N" --repo "$REPO" --body "$(cat <<EOF
-## Plan (Gate 0)
+# Assemble the comment in a FILE, not a nested $(cat <<EOF … $(cat plan.json) …)
+# substitution — a command substitution inside a heredoc does not reliably
+# expand, so the literal "$(cat /tmp/plan.json)" would otherwise be posted
+# instead of the plan (seen in the first dogfood run).
+{
+  printf '## Plan (Gate 0)\n\n```json\n'
+  cat /tmp/plan.json
+  printf '\n```\n\nDeviations from the default pipeline: <summarize plan.deviations, or "none">.\n'
+  printf 'Aggregate budget: '
+  node "$PLAN_MJS" budget < /tmp/plan.json
+  printf ' (policy ceiling: <runBudget from policy.yaml>).\n'
+} > /tmp/plan-comment.md
 
-\`\`\`json
-$(cat /tmp/plan.json)
-\`\`\`
-
-Deviations from the default pipeline: <summarize plan.deviations, or "none">.
-Aggregate budget: <budget output> (policy ceiling: <runBudget from policy.yaml>).
-EOF
-)"
+gh issue comment "$ISSUE_N" --repo "$REPO" --body-file /tmp/plan-comment.md
 ```
 
 Your final message at Gate 0 (end the turn — no children yet):
@@ -453,18 +456,14 @@ On the next human prompt: **`approved`** → advance; **`feedback:`** → re-run
 At run end, post the execution trace so the human sees both the plan and what actually ran:
 
 ```bash
-gh issue comment "$ISSUE_N" --repo "$REPO" --body "$(cat <<EOF
-## Execution trace
+# Assemble in a file (see the Gate 0 comment — the same nested-substitution trap).
+{
+  printf '## Execution trace\n\n```json\n'
+  jq -s -c . /tmp/trace.jsonl
+  printf '\n```\n\n- Plan deviations: <list>\n- Model substitutions: <list or none>\n- Budget used: <actuals> of <aggregate>.\n'
+} > /tmp/trace-comment.md
 
-\`\`\`json
-$(jq -s -c . /tmp/trace.jsonl)
-\`\`\`
-
-- Plan deviations: <list>
-- Model substitutions: <list or none>
-- Budget used: <actuals> of <aggregate>.
-EOF
-)"
+gh issue comment "$ISSUE_N" --repo "$REPO" --body-file /tmp/trace-comment.md
 ```
 
 Then settle with a summary. You do **not** merge — merging stays human-gated.

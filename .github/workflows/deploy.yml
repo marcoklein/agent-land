@@ -8,6 +8,13 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Dokku allows a single active deploy; bursts of merged PRs fire concurrent
+    # pushes and fail with "deploy lock in place". Serialize them so later runs
+    # wait instead of racing, and cancel none (each push is idempotent-ish, but
+    # dropping one would skip a merge's content).
+    concurrency:
+      group: dokku-deploy
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
         with:
@@ -27,7 +34,18 @@ jobs:
       - name: Deploy to Dokku
         run: |
           git remote add dokku dokku@impromat.app:agent-land
-          git push dokku main:master --force
+          # Retry the push against Dokku's deploy lock: another deploy (e.g. a
+          # concurrent merge) may hold it for up to ~a minute. Back off and retry
+          # instead of failing the workflow.
+          for i in 1 2 3 4 5 6; do
+            if git push dokku main:master --force; then
+              exit 0
+            fi
+            echo "deploy push failed (attempt $i); backing off and retrying"
+            sleep 15
+          done
+          echo "deploy push failed after 6 attempts"
+          exit 1
 
       - name: Verify deploy is serving
         env:
