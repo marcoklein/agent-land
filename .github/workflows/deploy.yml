@@ -34,18 +34,23 @@ jobs:
       - name: Deploy to Dokku
         run: |
           git remote add dokku dokku@impromat.app:agent-land
-          # Retry the push against Dokku's deploy lock: another deploy (e.g. a
-          # concurrent merge) may hold it for up to ~a minute. Back off and retry
-          # instead of failing the workflow.
-          for i in 1 2 3 4 5 6; do
+          # Dokku permits one active deploy; a concurrent merge may hold the lock
+          # for the duration of a build (minutes). The concurrency group above
+          # serializes future bursts, but the retry is the safety net for the
+          # transition and for genuine Dokku-side locks: retry until the push
+          # succeeds or ~10 minutes pass.
+          end=$((SECONDS + 600))
+          while :; do
             if git push dokku main:master --force; then
               exit 0
             fi
-            echo "deploy push failed (attempt $i); backing off and retrying"
-            sleep 15
+            if [ "$SECONDS" -ge "$end" ]; then
+              echo "deploy push failed after ~10 minutes (deploy lock never cleared)"
+              exit 1
+            fi
+            echo "deploy push failed; deploy lock likely held — retrying"
+            sleep 20
           done
-          echo "deploy push failed after 6 attempts"
-          exit 1
 
       - name: Verify deploy is serving
         env:
