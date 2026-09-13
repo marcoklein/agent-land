@@ -9,7 +9,7 @@ sources:
     resource: /product/features/dynamic-orchestration.md
     title: Dynamic Orchestration Feature note
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: boundary
     resource: /product/goals/boundaries.md
@@ -39,16 +39,16 @@ sources:
     resource: /product/pipeline.md
     title: The product pipeline — the three human gates
   - id: dogfooding
-    resource: /dogfooding.md
+    resource: /playbook/dogfooding.md
     title: Dogfooding strategy — trust ladder, success signals
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow — Phase 4
 ---
 
 # Dynamic Orchestration
 
-Phase 4 of the [multi-agent roadmap](/multi-agent-workflow.md): the orchestrator stops running the fixed `research → refine → design → critic` script and becomes a **planner**. The recipe shifts from a scripted sequence to **prompt-level policy** — a declaration of roles, tools, gates, budgets, and models — and the orchestrator realizes that policy as child sessions over the loopback [Platform Connector](/engine.md#loopback). This is a **composition change, not an engine change**[^boundary][^engine].
+Phase 4 of the [multi-agent roadmap](/playbook/multi-agent-workflow.md): the orchestrator stops running the fixed `research → refine → design → critic` script and becomes a **planner**. The recipe shifts from a scripted sequence to **prompt-level policy** — a declaration of roles, tools, gates, budgets, and models — and the orchestrator realizes that policy as child sessions over the loopback [Platform Connector](/platform/engine.md#loopback). This is a **composition change, not an engine change**[^boundary][^engine].
 
 ## Approach
 
@@ -320,7 +320,7 @@ Post-dogfood (separate run, not this PR): `docs/knowledge/learnings/` note and a
 No CLI changes and no new endpoints.
 
 [^feature]: [Dynamic Orchestration Feature note](/product/features/dynamic-orchestration.md)
-[^engine]: [Agent Land engine](/engine.md) — six primitives, everything else is composition
+[^engine]: [Agent Land engine](/platform/engine.md) — six primitives, everything else is composition
 [^boundary]: [Agent Land domain boundary](/product/goals/boundaries.md)
 [^mount-design]: [Mount design](/product/designs/mount-design.md) — hard single-writer invariant
 [^kill-switch]: [ADR 011 — per-run kill switch](/adrs/011-kill-switch.md)
@@ -330,5 +330,5 @@ No CLI changes and no new endpoints.
 [^session-contract]: `packages/contracts/src/session.ts`
 [^routes]: `packages/contracts/src/routes.ts`
 [^pipeline]: [The product pipeline](/product/pipeline.md)
-[^dogfooding]: [Dogfooding strategy](/dogfooding.md)
-[^roadmap]: [Multi-agent workflow](/multi-agent-workflow.md)
+[^dogfooding]: [Dogfooding strategy](/playbook/dogfooding.md)
+[^roadmap]: [Multi-agent workflow](/playbook/multi-agent-workflow.md)

@@ -7,7 +7,7 @@ tags: [orchestration, cron, github-actions, platform-connector, dogfooding, pipe
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T16:11:47Z }
 sources:
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow roadmap — Phase 3
   - id: orchestrator
     resource: ../../../agent-image/skills/orchestrator/SKILL.md
@@ -22,7 +22,7 @@ sources:
 
 # Scheduled pipeline trigger — cron starts the pipeline with nobody at a terminal
 
-Phase 3 of [the roadmap](/multi-agent-workflow.md) landed as [`../../../.github/workflows/pipeline-trigger.yml`](../../../.github/workflows/pipeline-trigger.yml): an hourly (`0 * * * *`) + `workflow_dispatch` GitHub Actions job that scans for open issues labeled `pipeline-ready` and spawns an orchestrator session for each one that has not been started. Label an issue → spec and design PRs appear with nobody at a terminal.
+Phase 3 of [the roadmap](/playbook/multi-agent-workflow.md) landed as [`../../../.github/workflows/pipeline-trigger.yml`](../../../.github/workflows/pipeline-trigger.yml): an hourly (`0 * * * *`) + `workflow_dispatch` GitHub Actions job that scans for open issues labeled `pipeline-ready` and spawns an orchestrator session for each one that has not been started. Label an issue → spec and design PRs appear with nobody at a terminal.
 
 ## How it works
 

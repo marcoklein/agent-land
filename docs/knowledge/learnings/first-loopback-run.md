@@ -16,13 +16,13 @@ sources:
     resource: /learnings/self-deploy-hazard.md
     title: Self-deploy hazard
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow roadmap
 ---
 
 # First loopback run — Platform Connector in the live host
 
-On 2026-09-05 the first platform-enabled session on the hosted platform (`agent-land.host.impromat.app`) created a child session, prompted it, and read back `CHILD-OK` — the composition loop of [the roadmap](/multi-agent-workflow.md) Phase 1 is live. Getting there broke four things worth remembering.
+On 2026-09-05 the first platform-enabled session on the hosted platform (`agent-land.host.impromat.app`) created a child session, prompted it, and read back `CHILD-OK` — the composition loop of [the roadmap](/playbook/multi-agent-workflow.md) Phase 1 is live. Getting there broke four things worth remembering.
 
 ## 1. nginx basic-auth sits *in front of* the app and rejects session credentials
 

@@ -37,7 +37,7 @@ Then write `docs/knowledge/product/features/<slug>.md` as an OKF note (`type: Fe
 - **Acceptance criteria** — concrete, testable.
 - **Open questions** — decisions the design gate must answer.
 
-Cross-link the underlying engine primitives from `/engine.md`. Present the note for the outcome gate; do not proceed until the human confirms it captured intent.
+Cross-link the underlying engine primitives from `/platform/engine.md`. Present the note for the outcome gate; do not proceed until the human confirms it captured intent.
 
 ### 2. Design (Feature → Design note)
 

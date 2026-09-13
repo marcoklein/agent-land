@@ -7,7 +7,7 @@ generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: architecture
-    resource: /architecture.md
+    resource: /platform/architecture.md
     title: Architecture — the zoom ladder
   - id: session-service
     resource: packages/server/src/core/session-service.ts

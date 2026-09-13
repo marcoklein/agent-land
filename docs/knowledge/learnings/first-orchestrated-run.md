@@ -7,7 +7,7 @@ tags: [orchestration, dogfooding, sessions, github-token, learnings]
 generated: { by: opencode/qwen3.8-max, at: 2026-09-05T16:35:00Z }
 sources:
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow roadmap
   - id: loopback
     resource: /learnings/first-loopback-run.md
@@ -19,7 +19,7 @@ sources:
 
 # First orchestrated run — phases 1–3 executed by platform sessions
 
-On 2026-09-05 a master session (opencode on the operator's laptop) acted as the orchestrator for [the roadmap](/multi-agent-workflow.md)'s first three phases: it spawned one `al run` session per phase against the hosted platform, watched them via `al ls --tree` / `al log`, verified their PRs in a local git worktree, merged them, and re-prompted them when they stalled. Results: Platform Connector (#58), orchestrator skill (#62), pipeline trigger (#63) — all produced by platform sessions, all live.
+On 2026-09-05 a master session (opencode on the operator's laptop) acted as the orchestrator for [the roadmap](/playbook/multi-agent-workflow.md)'s first three phases: it spawned one `al run` session per phase against the hosted platform, watched them via `al ls --tree` / `al log`, verified their PRs in a local git worktree, merged them, and re-prompted them when they stalled. Results: Platform Connector (#58), orchestrator skill (#62), pipeline trigger (#63) — all produced by platform sessions, all live.
 
 The loopback-specific findings live in [first loopback run](/learnings/first-loopback-run.md). These are the *orchestration* findings — what a master session must expect when driving worker sessions.
 

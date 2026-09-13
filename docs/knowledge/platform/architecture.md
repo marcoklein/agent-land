@@ -6,13 +6,13 @@ status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
 ---
 
 # Agent Land architecture — the zoom ladder
 
-The same system at six scales. Everything here is a projection of the [engine](/engine.md) — six primitives, three substrates, one opinion.
+The same system at six scales. Everything here is a projection of the [engine](/platform/engine.md) — six primitives, three substrates, one opinion.
 
 ## Zoom in — one turn, concretely
 
@@ -148,7 +148,7 @@ graph LR
     api     -->|"watch streams"| main
 ```
 
-Orchestration lives in the feedback loop, outside the engine. A workflow is a script that creates sessions, prompts them, watches their event streams, and reacts. Agent-driven looping (agents spawning agents) runs through the Platform Connector's loopback credential — see the [built system](/multi-agent-architecture.md); external scripts drive the same loop via the CLI and the API.
+Orchestration lives in the feedback loop, outside the engine. A workflow is a script that creates sessions, prompts them, watches their event streams, and reacts. Agent-driven looping (agents spawning agents) runs through the Platform Connector's loopback credential; external scripts drive the same loop via the CLI and the API.
 
 ## Zoom out — the platform on a server
 

@@ -9,13 +9,13 @@ sources:
     resource: /product/features/platform-connector.md
     title: Platform Connector Feature note
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: architecture
-    resource: /architecture.md
+    resource: /platform/architecture.md
     title: Agent Land architecture — the zoom ladder
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow — Phase 1
   - id: adr-008
     resource: /adrs/008-json-files-no-database.md
@@ -121,9 +121,9 @@ No new ADR: env injection is existing engine behavior (ADR 004/006 patterns), st
 - Tests — credential minting/injection/revocation, auth middleware, lineage, tree rendering.
 
 [^feature]: [Platform Connector Feature note](/product/features/platform-connector.md)
-[^engine]: [Agent Land engine](/engine.md) — Loopback primitive
-[^architecture]: [Agent Land architecture](/architecture.md) — composition loop
-[^roadmap]: [Multi-agent workflow](/multi-agent-workflow.md) — Phase 1 decisions
+[^engine]: [Agent Land engine](/platform/engine.md) — Loopback primitive
+[^architecture]: [Agent Land architecture](/platform/architecture.md) — composition loop
+[^roadmap]: [Multi-agent workflow](/playbook/multi-agent-workflow.md) — Phase 1 decisions
 [^adr-008]: [ADR 008 — flat JSON, no database](/adrs/008-json-files-no-database.md)
 [^adr-009]: [ADR 009 — no authentication in v1](/adrs/009-no-authentication-v1.md)
 [^adr-014]: [ADR 014 — JSON API is canonical](/adrs/014-json-api-canonical-machine-interface.md)

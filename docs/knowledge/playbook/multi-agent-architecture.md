@@ -7,10 +7,10 @@ tags: [architecture, orchestration, pipeline, platform-connector, dogfooding]
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-06T00:00:00Z }
 sources:
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow — the phased roadmap
   - id: pipeline
     resource: /product/pipeline.md
@@ -37,7 +37,7 @@ sources:
 
 # Multi-agent pipeline architecture — the built system
 
-This describes the *dogfooding product pipeline* as it is actually assembled and running, not the roadmap intent. It is a composition built on the [engine](/engine.md) primitives — nothing here adds a workflow executor to the engine; control flow lives in a recipe and a GitHub Actions trigger that shell out to the JSON/SSE API[^engine].
+This describes the *dogfooding product pipeline* as it is actually assembled and running, not the roadmap intent. It is a composition built on the [engine](/platform/engine.md) primitives — nothing here adds a workflow executor to the engine; control flow lives in a recipe and a GitHub Actions trigger that shell out to the JSON/SSE API[^engine].
 
 ## The whole at one glance
 
@@ -187,12 +187,12 @@ When no operator credential is configured, the deployment is trusted-network/rev
 
 The architecture's one hard rule, carried over from the design notes: **control flow stays outside the engine.** The engine gained one primitive (loopback env injection) and a lineage field; everything else — the stage list, the trigger, the gates — is a recipe and a cron that speak the JSON/SSE API[^engine][^roadmap].
 
-[^engine]: [Agent Land engine](/engine.md)
-[^roadmap]: [Multi-agent workflow roadmap](/multi-agent-workflow.md)
+[^engine]: [Agent Land engine](/platform/engine.md)
+[^roadmap]: [Multi-agent workflow roadmap](/playbook/multi-agent-workflow.md)
 [^pipeline]: [The product pipeline](/product/pipeline.md)
 [^conn]: [Platform Connector feature note](/product/features/platform-connector.md)
 [^conn-design]: [Platform Connector design note](/product/designs/platform-connector-design.md)
-[^orch-skill]: [Orchestrator recipe](agent-image/skills/orchestrator/SKILL.md)
+[^orch-skill]: [Orchestrator recipe](../../../agent-image/skills/orchestrator/SKILL.md)
 [^trigger-learn]: [Scheduled pipeline trigger](/learnings/scheduled-pipeline-trigger.md)
 [^loopback-learn]: [First loopback run](/learnings/first-loopback-run.md)
 [^orch-learn]: [First orchestrated run](/learnings/first-orchestrated-run.md)

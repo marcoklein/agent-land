@@ -6,7 +6,7 @@ status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: strip-adr
     resource: /adrs/016-strip-web-ui-and-vendor-knowledge.md
@@ -24,7 +24,7 @@ This note is the refine stage's *is it in scope?* check. Its counterpart, [the v
 
 - The **engine itself**: the six primitives (Connector, Provider, Mount, Session, Event Stream, Platform Connector) and the three substrates (Docker, SOPS/Age, flat JSON)[^engine].
 - The **CLI** (`al`) and the **JSON/SSE API** — the only surfaces.
-- **Composition outside the engine**: playbooks — bundles of skills, recipes, policies, and gates that realize a way of working (the [dogfooding playbook](/dogfooding.md) is the first), plus workflows, schedules, and gate disciplines.
+- **Composition outside the engine**: playbooks — bundles of skills, recipes, policies, and gates that realize a way of working (the [dogfooding playbook](/playbook/dogfooding.md) is the first), plus workflows, schedules, and gate disciplines.
 
 ## Is not (out of scope — deliberate)
 
@@ -50,6 +50,6 @@ scope deviation: "<outcome>" conflicts with <ADR/boundary>
     3. amend the boundary via a new ADR (deliberate, not drift)
 ```
 
-[^engine]: [Agent Land engine](/engine.md)
+[^engine]: [Agent Land engine](/platform/engine.md)
 [^strip-adr]: [Strip Web UI and Vendor Knowledge from Server](/adrs/016-strip-web-ui-and-vendor-knowledge.md)
 [^product-adr]: [Build a Product Layer on OKF Memory with an Agentic Pipeline](/adrs/017-product-layer-okf-memory.md)

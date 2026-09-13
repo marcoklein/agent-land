@@ -13,13 +13,13 @@ sources:
     resource: /product/features/platform-connector.md
     title: Platform Connector
   - id: dogfooding
-    resource: /dogfooding.md
+    resource: /playbook/dogfooding.md
     title: Dogfooding — the agent-land playbook
   - id: archon
     resource: /learnings/archon-inspiration.md
     title: Inspiration from Archon
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
 ---
 
@@ -31,7 +31,7 @@ sources:
 
 A human describes a product vision conversationally. An **intake agent** refines it into an issue and a draft feature note. An **orchestrator agent** picks up the issue and fans the work out across dedicated child sessions — research, refine, design, review, implement — each a normal agent-land session with its own connectors and model. The orchestrator pauses at the human gates as `waiting_for_input` and resumes when the gate clears. The final form is **dynamic orchestration**: the orchestrator plans its own stage graph per task instead of following a fixed script.
 
-This is the [product pipeline](/product/pipeline.md) running on the platform itself, and the "Split work across agents" gap in [dogfooding](/dogfooding.md) closed. Control flow stays a recipe *outside* the engine — the engine gains no workflow executor, only the [loopback](/engine.md#loopback) primitive that lets sessions compose[^archon].
+This is the [product pipeline](/product/pipeline.md) running on the platform itself, and the "Split work across agents" gap in [dogfooding](/playbook/dogfooding.md) closed. Control flow stays a recipe *outside* the engine — the engine gains no workflow executor, only the [loopback](/platform/engine.md#loopback) primitive that lets sessions compose[^archon].
 
 ```mermaid
 flowchart LR
@@ -99,7 +99,7 @@ The orchestrator stops following a fixed stage list and **plans the stage graph 
 
 ## Cross-cutting rules
 
-1. **Every phase dogfoods** — gaps become issues, not workarounds ([dogfooding rules](/dogfooding.md)).
+1. **Every phase dogfoods** — gaps become issues, not workarounds ([dogfooding rules](/playbook/dogfooding.md)).
 2. **Merges stay human-gated** through all phases; implementation children only run once spec and design gates prove reliable.
 3. **The engine stays minimal** — every phase is env injection, existing API, skills, and external schedules; nothing in Phases 0–4 asks the server to understand workflows.
 4. **Trust ladder** — the reviewer child (Phase 2) is the first agent granted judgment over another agent's output; it advises, the human decides.
@@ -107,5 +107,5 @@ The orchestrator stops following a fixed stage list and **plans the stage graph 
 ## Open questions
 
 - **Resolved — per-session identity:** ephemeral per-session credentials, minted at create, stored in the flat-JSON session record (`platformToken`), revoked on delete — [Platform Connector design](/product/designs/platform-connector-design.md).
-- **Resolved in practice — pipeline state across redeploys:** the durable trail is the issue's comments and PRs, not the session tree or event history — [the built system](/multi-agent-architecture.md).
-- Does the intake agent and the orchestrator merge into one session, or stay separate roles? (Today intake is the human writing the issue — no intake session exists yet; the [operator model](/dogfooding.md#the-operator-model--two-touchpoints) keeps intake as a touchpoint, not an agent.)
+- **Resolved in practice — pipeline state across redeploys:** the durable trail is the issue's comments and PRs, not the session tree or event history — [the built system](/playbook/multi-agent-architecture.md).
+- Does the intake agent and the orchestrator merge into one session, or stay separate roles? (Today intake is the human writing the issue — no intake session exists yet; the [operator model](/playbook/dogfooding.md#the-operator-model--two-touchpoints) keeps intake as a touchpoint, not an agent.)

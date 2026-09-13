@@ -8,7 +8,7 @@ generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 verified: { by: human:marcoklein, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: archon-inspiration
     resource: /learnings/archon-inspiration.md
@@ -35,7 +35,7 @@ Long-lived development needs durable state: the repo checkout, warm caches, skil
 - A session can bind one or more mounts at chosen container paths at creation time (M:N attach).
 - At most one live session binds a given mount at once.
 - The mount is content-agnostic — the platform never inspects or interprets its contents.
-- See [engine.md](/engine.md#capabilities-injected-at-session-creation) for the primitive spec.
+- See [engine.md](/platform/engine.md#capabilities-injected-at-session-creation) for the primitive spec.
 
 ## Open questions
 

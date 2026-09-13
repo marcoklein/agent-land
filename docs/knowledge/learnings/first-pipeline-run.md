@@ -10,7 +10,7 @@ sources:
     resource: /learnings/first-orchestrated-run.md
     title: First orchestrated run
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow roadmap
   - id: skill
     resource: agent-image/skills/orchestrator/SKILL.md

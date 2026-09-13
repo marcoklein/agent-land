@@ -121,13 +121,13 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Branch / commit / push / open PR | ✅ Works — `gh` + the GitHub connector's `GITHUB_TOKEN` | — |
 | Watch CI, react to red | ✅ Works — `gh pr checks` / `gh run watch` | A checked-in playbook so it's automatic, not ad-hoc |
 | Respond to review comments | ✅ Works — `gh api` to read + reply | A trigger loop; today the human re-prompts |
-| Split work across agents | ✅ Works (2026-09-05) | [Platform Connector](product/features/platform-connector.md) live: `platform: true` sessions spawn children via the API; see [first loopback run](learnings/first-loopback-run.md) and the [multi-agent roadmap](/multi-agent-workflow.md) |
-| Recurring maintenance (release notes, deps) | ⚠️ Partial | [Pipeline trigger](learnings/scheduled-pipeline-trigger.md) runs hourly for `pipeline-ready` issues; generic maintenance crons still open — [multi-agent roadmap Phase 3](/multi-agent-workflow.md) |
+| Split work across agents | ✅ Works (2026-09-05) | [Platform Connector](/product/features/platform-connector.md) live: `platform: true` sessions spawn children via the API; see [first loopback run](/learnings/first-loopback-run.md) and the [multi-agent roadmap](/playbook/multi-agent-workflow.md) |
+| Recurring maintenance (release notes, deps) | ⚠️ Partial | [Pipeline trigger](/learnings/scheduled-pipeline-trigger.md) runs hourly for `pipeline-ready` issues; generic maintenance crons still open — [multi-agent roadmap Phase 3](/playbook/multi-agent-workflow.md) |
 | Merge after green CI + approval | ⚠️ Works (`gh pr merge`) but ungated | Keep human-gated until trust is earned |
 | Deploy + verify live | ✅ Works — CI on merge to `main` pushes to Dokku and health-checks ([deploy.yml](../../../.github/workflows/deploy.yml)) | Merge stays human-gated |
-| Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](learnings/agent-image-staleness.md) |
+| Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](/learnings/agent-image-staleness.md) |
 | Watch a long unattended run | ⚠️ Partial | pi's `compaction_start/end` and `auto_retry_start/end` events are dropped by the harness — a compacting or retrying session looks hung. Project them into the event stream (mechanical, invariant-safe) |
-| Know a session's cost / context fill | ❌ Gap | pi's `get_session_stats` (tokens, cost, context %) is unused; expose via `al status` for budget guardrails ([kill switch](adrs/011-kill-switch.md)) |
+| Know a session's cost / context fill | ❌ Gap | pi's `get_session_stats` (tokens, cost, context %) is unused; expose via `al status` for budget guardrails ([kill switch](/adrs/011-kill-switch.md)) |
 
 ## Roadmap
 
@@ -163,7 +163,7 @@ The agent reads PR review comments (`gh api`), addresses them, replies, and requ
 
 ### Phase 4 — Scheduled maintenance
 
-Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [the product vision](product/goals/product-vision.md).
+Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [the product vision](/product/goals/product-vision.md).
 
 - **Deliverable:** a cron workflow that opens a maintenance PR every week without being asked.
 
@@ -196,14 +196,14 @@ The agent merges after green CI + approval, then deploys to Dokku and verifies. 
 |------|------------|
 | Agent breaks its own host (the platform code it runs on) | CI gates every change; human reviews and merges; deploy stays human until Phase 5 |
 | Secret leakage through the loop | GitHub connector stays scoped; deploy credentials never enter the agent until a dedicated, minimal connector exists |
-| Long sessions dying mid-task | Session lifecycle already survives redeploys ([learnings](learnings/session-lifecycle.md)); re-attach and continue |
+| Long sessions dying mid-task | Session lifecycle already survives redeploys ([learnings](/learnings/session-lifecycle.md)); re-attach and continue |
 | Agent quality regressions get hidden | Dogfooding *is* the regression test — a red loop is a product bug, not just a model limitation |
 
 ## Open questions
 
 - What's the minimum deploy connector (SSH key vs. Dokku plugin) that keeps the agent's blast radius small enough for Phase 5?
 - Does the dev playbook (Phase 2) live in the repo (`AGENTS.md`/`SKILL.md`) or as an agent-land role template once orchestration lands?
-- At what point does a second agent (reviewer) make sense, and does that wait for the agent→agent channel? — the [multi-agent roadmap](/multi-agent-workflow.md) answers: a reviewer child lands with the static orchestrator (Phase 2), right after Platform Connector (Phase 1).
+- At what point does a second agent (reviewer) make sense, and does that wait for the agent→agent channel? — the [multi-agent roadmap](/playbook/multi-agent-workflow.md) answers: a reviewer child lands with the static orchestrator (Phase 2), right after Platform Connector (Phase 1).
 - HITD port: merge into the product pipeline recipe, or sibling recipe for single-task work?
 
 [^product-vision]: [Agent Land product vision](/product/goals/product-vision.md) — the engine/playbook split

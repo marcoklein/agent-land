@@ -6,13 +6,13 @@ status: draft
 generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 sources:
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: strip-adr
     resource: /adrs/016-strip-web-ui-and-vendor-knowledge.md
     title: Strip Web UI and Vendor Knowledge from Server
   - id: dogfooding
-    resource: /dogfooding.md
+    resource: /playbook/dogfooding.md
     title: Dogfooding — the agent-land playbook
 ---
 
@@ -34,9 +34,9 @@ Personal, local-first agent tools are powerful but live in a laptop terminal —
 
 **The engine is the product. Everything above it is your opinion.**
 
-The engine is neutral machinery. It runs agents as isolated sessions in containers, gives each one sealed credentials, a model, and a workspace, observes everything through a single event feed, and lets agents hire agents. Its contract is the isolated session plus that event feed — the runtime inside the session is an opinionated choice, with pi as the reference implementation. The technical decomposition (six primitives, three substrates) lives in the [engine note](/engine.md)[^engine].
+The engine is neutral machinery. It runs agents as isolated sessions in containers, gives each one sealed credentials, a model, and a workspace, observes everything through a single event feed, and lets agents hire agents. Its contract is the isolated session plus that event feed — the runtime inside the session is an opinionated choice, with pi as the reference implementation. The technical decomposition (six primitives, three substrates) lives in the [engine note](/platform/engine.md)[^engine].
 
-How you use it lives in **playbooks** — bundles of skills, recipes, policies, and gates that encode proven ways of solving hard problems with agentic workflows. Playbooks are composition: they speak the same JSON/SSE API as every other client, and they are swappable — the engine never grows workflow knowledge[^strip-adr]. They are first-class citizens of the monorepo, bundled as packages, not scattered config. The first playbook is agent-land's own: the [dogfooding playbook](/dogfooding.md), where you state a problem, review PRs at gates, and everything in between runs itself.
+How you use it lives in **playbooks** — bundles of skills, recipes, policies, and gates that encode proven ways of solving hard problems with agentic workflows. Playbooks are composition: they speak the same JSON/SSE API as every other client, and they are swappable — the engine never grows workflow knowledge[^strip-adr]. They are first-class citizens of the monorepo, bundled as packages, not scattered config. The first playbook is agent-land's own: the [dogfooding playbook](/playbook/dogfooding.md), where you state a problem, review PRs at gates, and everything in between runs itself.
 
 ```mermaid
 graph TB
@@ -92,4 +92,4 @@ The analogy is a commitment, not branding — five properties every change must 
 - **API-first.** No vendor catalog, no web UI in-core — presentation and preset knowledge live in clients and playbooks[^strip-adr].
 
 [^strip-adr]: [Strip Web UI and Vendor Knowledge from Server](/adrs/016-strip-web-ui-and-vendor-knowledge.md)
-[^engine]: [Agent Land engine](/engine.md)
+[^engine]: [Agent Land engine](/platform/engine.md)

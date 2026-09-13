@@ -9,13 +9,13 @@ sources:
     resource: /product/goals/product-vision.md
     title: Agent Land product vision
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: boundary
     resource: /product/goals/boundaries.md
     title: Agent Land domain boundary
   - id: dogfooding
-    resource: /dogfooding.md
+    resource: /playbook/dogfooding.md
     title: Dogfooding strategy
 ---
 
@@ -30,8 +30,8 @@ One honest note: the board itself is part of the agent-land playbook (OKF produc
 | [Vision](#vision) | Why does it exist, what's the one-liner? | [product-vision.md](/product/goals/product-vision.md) |
 | [Target group](#target-group) | Who is it for, exactly? | (stated here) |
 | [Needs](#needs) | What problems must be solved, with which values? | [product-vision.md](/product/goals/product-vision.md) |
-| [Product](#product) | What is the thing, in primitives? | [engine.md](/engine.md) |
-| [Business goals](#business-goals) | How do we know it's working? | [dogfooding.md](/dogfooding.md) |
+| [Product](#product) | What is the thing, in primitives? | [engine.md](/platform/engine.md) |
+| [Business goals](#business-goals) | How do we know it's working? | [dogfooding.md](/playbook/dogfooding.md) |
 
 ## Vision
 
@@ -58,5 +58,5 @@ The six primitives — Connector, Provider, Mount, Session, Event Stream, Platfo
 Personal value, not revenue. Success is the agent-land playbook working: the fraction of agent-land PRs opened by agent-land, the task→green-PR time, red-CI self-recovery, recurring work that needs no human — and an operator whose day is intake plus gate review, nothing else.[^dogfooding]
 
 [^vision]: [Agent Land product vision](/product/goals/product-vision.md)
-[^engine]: [Agent Land engine](/engine.md)
-[^dogfooding]: [Dogfooding strategy](/dogfooding.md)
+[^engine]: [Agent Land engine](/platform/engine.md)
+[^dogfooding]: [Dogfooding strategy](/playbook/dogfooding.md)

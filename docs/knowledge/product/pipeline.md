@@ -56,9 +56,9 @@ Gate 0 is additive: it precedes the other gates and does not replace them. A dyn
 
 Two implementations run this pipeline; the stages and gates are identical:
 
-- **agent-land-native (canonical)** — an orchestrator session plans the stage graph per task ([dynamic orchestration](/product/features/dynamic-orchestration.md)) and spawns research / refine / design / implement children through the loopback API; gates are `waiting_for_input` parks. This is the [built system](/multi-agent-architecture.md).
-- **laptop-side (opencode skills)** — the `product` skill runs stages 1–2 with the same gate discipline; a build agent (opencode or `al run`, following the [dev playbook](/dogfooding.md)) runs stage 3. No engine dependency; works offline and teaches the recipe.
-- **human** — intake plus the gates (plan, outcome, design, merge). Nothing else. The two touchpoints of the [operator model](/dogfooding.md#the-operator-model--two-touchpoints).
+- **agent-land-native (canonical)** — an orchestrator session plans the stage graph per task ([dynamic orchestration](/product/features/dynamic-orchestration.md)) and spawns research / refine / design / implement children through the loopback API; gates are `waiting_for_input` parks. This is the [built system](/playbook/multi-agent-architecture.md).
+- **laptop-side (opencode skills)** — the `product` skill runs stages 1–2 with the same gate discipline; a build agent (opencode or `al run`, following the [dev playbook](/playbook/dogfooding.md)) runs stage 3. No engine dependency; works offline and teaches the recipe.
+- **human** — intake plus the gates (plan, outcome, design, merge). Nothing else. The two touchpoints of the [operator model](/playbook/dogfooding.md#the-operator-model--two-touchpoints).
 
 ## Agent-land-native — landed
 

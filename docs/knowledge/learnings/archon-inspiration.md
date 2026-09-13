@@ -15,7 +15,7 @@ sources:
     title: Archon docs — AI Assistants (Claude, Codex, OpenCode, Pi, Copilot)
     last_modified: 2026-09-01
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
 ---
 
@@ -58,4 +58,4 @@ Archon is the mirror image of agent-land. It solves "every run is different" wit
 
 [^archon-readme]: Archon README (dev branch), https://github.com/coleam00/archon
 [^archon-ai-assistants]: Archon docs — AI Assistants, https://archon.diy/getting-started/ai-assistants/
-[^engine]: `docs/knowledge/engine.md` — six primitives, three substrates, one engine opinion
+[^engine]: `docs/knowledge/platform/engine.md` — six primitives, three substrates, one engine opinion
