@@ -36,7 +36,7 @@ sources:
     resource: packages/server/src/presentation/http/api-sessions.ts
     title: GET /api/sessions/:id/events (SSE replay + live)
   - id: cli-docs
-    resource: /cli.md
+    resource: /platform/cli.md
     title: CLI (`al`) reference
   - id: adr-014
     resource: /adrs/014-json-api-canonical-machine-interface.md
@@ -61,13 +61,13 @@ Two additive, non-behavior-changing CLI changes plus one small refactor for test
    - two formatters, `formatStatus` (human lines) and `statusJson` (single pretty-printed object).
    `agent-land.ts` gets a `status` dispatch branch and a `status` entry in the `USAGE` block.
 
-3. **Docs.** `docs/knowledge/cli.md` gains the `al status` command and an explicit statement of `al log`'s no-`--follow` semantics (see *Open questions* #2)[^cli-docs].
+3. **Docs.** `docs/knowledge/platform/cli.md` gains the `al status` command and an explicit statement of `al log`'s no-`--follow` semantics (see *Open questions* #2)[^cli-docs].
 
 ## Interfaces
 
 ### CLI surface (unchanged behavior, new command)
 
-`USAGE` and `docs/knowledge/cli.md` gain:
+`USAGE` and `docs/knowledge/platform/cli.md` gain:
 
 ```
 al status <session-id> [--json]
@@ -230,7 +230,7 @@ export function statusJson(result: SessionStatusResult): string;       // JSON.s
 
 ## Answers to the Feature note's open questions
 
-1. **Docs path.** Use the real path **`docs/knowledge/cli.md`** (`docs/reference/` does not exist). No new doc file; extend the existing reference[^cli-docs].
+1. **Docs path.** Use the real path **`docs/knowledge/platform/cli.md`** (`docs/reference/` does not exist). No new doc file; extend the existing reference[^cli-docs].
 2. **`al log` without `--follow` semantics.** Keep the current behavior and document it precisely: without `--follow`, `al log` replays the history the server has *at the moment of the run* (the full sequenced snapshot), then stops when events go quiet for 500 ms, or immediately on `agent-done` for a stopped session. So for a stopped session it is the *complete* history; for a live session it is *history-up-to-now*. `--follow` keeps tailing live events. No semantics change in this delta — the promise "full event history" is stated as "full up to the run instant."
 3. **`al status` last message.** Use the `runSession` fallback, as preferred: the text of the last completed assistant `message_end` via `messageText`, falling back to accumulated streamed `message_delta` text when `message_end` carries no usable message. A mid-turn session reports the *previous* completed turn's message (or `(none)` if there is none yet) — in-progress deltas are not reported until their `message_end` arrives. This is exactly `lastAssistantText`'s contract.
 4. **`al status` output shape.** Human-readable lines by default **and** a `--json` variant, for parity with `al ls --json` / `al log --json` and for the dogfooding loop (agents script it). `--json` emits the raw `Session` record + `lastMessage`.
@@ -250,9 +250,9 @@ No new ADR — this is CLI surface over existing primitives (Session record + Ev
 - `packages/cli/src/lib/log.test.ts` — new.
 - `packages/cli/src/lib/status.test.ts` — new.
 - `packages/cli/src/lib/args.test.ts` — extend with `status` parsing cases.
-- `docs/knowledge/cli.md` — add `al status` + document `al log` no-`--follow` semantics.
+- `docs/knowledge/platform/cli.md` — add `al status` + document `al log` no-`--follow` semantics.
 
-Not touched: server, contracts, engine. The Feature note's acceptance criteria are satisfied by the above — `al log --json` NDJSON shape is locked by `log.test.ts`; `al status` prints status/mounts/connectors/last message and is covered by `status.test.ts`; both are documented in `docs/knowledge/cli.md`.
+Not touched: server, contracts, engine. The Feature note's acceptance criteria are satisfied by the above — `al log --json` NDJSON shape is locked by `log.test.ts`; `al status` prints status/mounts/connectors/last message and is covered by `status.test.ts`; both are documented in `docs/knowledge/platform/cli.md`.
 
 [^feature]: [CLI session observability Feature note](/product/features/cli-observability.md)
 [^cli-entry]: `packages/cli/src/agent-land.ts`
@@ -264,5 +264,5 @@ Not touched: server, contracts, engine. The Feature note's acceptance criteria a
 [^session-contract]: `packages/contracts/src/session.ts`
 [^event-contract]: `packages/contracts/src/event.ts`
 [^events-route]: `packages/server/src/presentation/http/api-sessions.ts`
-[^cli-docs]: [CLI (`al`)](/cli.md)
+[^cli-docs]: [CLI (`al`)](/platform/cli.md)
 [^adr-014]: [ADR-014 — JSON API is the canonical machine interface](/adrs/014-json-api-canonical-machine-interface.md)

@@ -348,7 +348,7 @@ Step 0 — seed or sync the checkout:
 
 Then:
 1. Read the issue: gh issue view $ISSUE_N --repo $REPO --json number,title,body,labels
-2. Read the docs that matter: docs/knowledge/multi-agent-workflow.md, docs/knowledge/product/pipeline.md,
+2. Read the docs that matter: docs/knowledge/playbook/multi-agent-workflow.md, docs/knowledge/product/pipeline.md,
    and any ADRs or designs the issue points at.
 3. Write a research brief.
 

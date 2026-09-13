@@ -10,7 +10,7 @@ sources:
     resource: /product/features/mount.md
     title: Mount Feature note
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: docker
     resource: packages/server/src/infra/docker.ts
@@ -70,7 +70,7 @@ Session attach is via the existing `HostConfig.Binds` path in `createInteractive
 - `packages/server/src/infra/docker.ts` — accept extra binds (the volume handling already exists)[^docker].
 - `packages/server/src/presentation/` — mount routes wired to the service.
 - `packages/cli/src/` — `al mounts` + `--mount` flag.
-- `docs/knowledge/engine.md` — flip Mount from `roadmap` to `stable` on merge.
+- `docs/knowledge/platform/engine.md` — flip Mount from `roadmap` to `stable` on merge.
 - Tests: `mount-service.test.ts`, session-bind guard test.
 
 ## ADR pointer
@@ -78,7 +78,7 @@ Session attach is via the existing `HostConfig.Binds` path in `createInteractive
 Reuses ADR-004 (Connector model — registry over type enum) and ADR-008 (flat JSON). No new ADR unless the single-writer hard invariant is judged architecturally contested.
 
 [^feature]: [Mount Feature note](/product/features/mount.md)
-[^engine]: [Agent Land engine](/engine.md)
+[^engine]: [Agent Land engine](/platform/engine.md)
 [^docker]: `packages/server/src/infra/docker.ts` — `createInteractiveContainer`, `HostConfig.Binds`
 [^connector-service]: Connector registry pattern to mirror
 [^contracts]: Canonical API surface

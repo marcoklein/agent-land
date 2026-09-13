@@ -3,11 +3,11 @@ type: Reference
 title: Agent Land engine — the purest form
 description: The minimal core of the agent-land platform. Six primitives, three substrates, one engine opinion. Everything else is composition.
 status: stable
-generated: { by: opencode/deepseek-v4-pro, at: 2026-08-29T00:00:00Z }
+generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: architecture
-    resource: /architecture.md
+    resource: /platform/architecture.md
     title: Architecture — the zoom ladder
   - id: session-service
     resource: packages/server/src/core/session-service.ts
@@ -28,7 +28,7 @@ sources:
 
 # Agent Land engine — the purest form
 
-Agent Land is a **session engine**. It runs long-lived coding agents in Docker containers on your server. Each session gets three capabilities, produces one observable output, and can spawn more sessions through the platform's own API.
+Agent Land is a **session engine**. It runs long-lived agents as isolated sessions in Docker containers on your server. Each session gets three capabilities, produces one observable output, and can spawn more sessions through the platform's own API.
 
 ## The six primitives
 
@@ -42,7 +42,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ### The engine
 
-4. **Session** — the agent process itself. One `pi --mode rpc` agent in one Docker container. Lifecycle: `idle` → `running` → `waiting_for_input` → back; `stopped` is terminal. Permission policy: `auto` (unattended) or `manual` (dialogs routed to a human). Fixed at creation — never reconfigured live.
+4. **Session** — the agent process itself. One isolated agent in one Docker container (reference runtime: `pi --mode rpc`). Lifecycle: `idle` → `running` → `waiting_for_input` → back; `stopped` is terminal. Permission policy: `auto` (unattended) or `manual` (dialogs routed to a human). Fixed at creation — never reconfigured live.
 
 ### Observation
 
@@ -50,7 +50,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ### Loopback
 
-6. **Platform Connector** — at session creation, the engine self-injects `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` as env vars. The agent becomes a first-class client of the platform: it can create child sessions, prompt them, and watch their event streams. Multi-agent composition needs no new primitives. *(roadmap — not yet implemented)*
+6. **Platform Connector** — at session creation, the engine self-injects `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` as env vars. The agent becomes a first-class client of the platform: it can create child sessions, prompt them, and watch their event streams. Multi-agent composition needs no new primitives. Opt-in per session (`platform: true`); the credential is ephemeral and dies with the session — see [the design](/product/designs/platform-connector-design.md).
 
 ## Substrate (three services)
 
@@ -62,12 +62,12 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ## One engine opinion
 
-`pi --mode rpc` is the fixed agent runtime — a platform-level choice rather than a session-level knob.
+The engine's contract is the **isolated session plus its event stream** — realized by the `AgentHarness` port. `pi --mode rpc` is the **reference runtime**: a platform-level choice rather than a session-level knob. Alternative runtimes are earned through the same port, never promised.
 
 ## The composition layer
 
-- **Projects** — a named mount + a recipe (connectors, provider, model, playbook). A use-case convention.
-- **Workflows** — sequences of session / prompt / respond calls. Defined in prompts, scripts, or YAML recipes.
+- **Projects** — a named mount + a workflow (connectors, provider, model, skills). A use-case convention.
+- **Workflows** — sequences of session / prompt / respond calls. Defined in prompts, scripts, or YAML.
 - **Schedules** — cron or triggers that call the API. External.
 - **Connector packs** — field schemas and skill files for specific external systems. Live in mounts and CLI presets.
 - **Provider presets** — base URLs, API dialects, default models for known vendors. Live in CLI presets.
@@ -86,5 +86,5 @@ Local dev: `docker compose up --build -d` against `docker-compose.yml`.
 2. Create-time is resolution-time — env, engine config, and mount binds are fixed when the session starts.
 3. The platform observes, never interprets — everything it knows about agent behavior comes from the event stream.
 4. No technology baked into containers — the agent image is node + pi + git + curl.
-5. Every session is a platform client — self-injected auth enables multi-agent composition. *(roadmap)*
+5. Every session is a platform client — self-injected auth enables multi-agent composition.
 6. Everything above is composition — projects, workflows, schedules, gates build from the primitives.

@@ -88,6 +88,20 @@ describe("providerEntryFromEnv", () => {
     const p = provider({});
     expect(providerEntryFromEnv(p, new Map([["access", "x"]]))).toBeNull();
   });
+
+  it("builds an api_key auth.json entry", () => {
+    const p = provider({ id: "qwencloud" });
+    const entry = providerEntryFromEnv(
+      p,
+      new Map([["QWENCLOUD_API_KEY", "sk-test-123"]])
+    );
+    expect(entry).toEqual({
+      type: "api_key",
+      key: "sk-test-123",
+      baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
+      api: "anthropic-messages",
+    });
+  });
 });
 
 describe("parseModelList", () => {

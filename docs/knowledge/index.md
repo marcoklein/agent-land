@@ -4,15 +4,11 @@ okf_version: "0.2"
 
 # Knowledge
 
-The single home for documentation and reference — every note is OKF with `status` and source citations. Nothing relevant to the platform lives outside this bundle.
+The single home for documentation and reference — every note is OKF with `status` and source citations. Nothing relevant to the platform lives outside this bundle. The layout mirrors the [vision](/product/goals/product-vision.md): platform (the neutral engine) and playbook (the way of working on top) are separate shelves.
 
-* [Engine](engine.md) — the purest form: six primitives, three substrates, one engine opinion
-* [Architecture](architecture.md) — the zoom ladder: the primitives as diagrams, from one turn to the deployed platform
-* [Multi-agent pipeline architecture](multi-agent-architecture.md) — the built system: intake, trigger, orchestrator session, stage children, gates, and the loopback primitive
-* [CLI (`al`)](cli.md) — install, configure, and drive agent-land from the terminal
-* [Providers](providers/) — LLM backends: API behaviors, model discovery, auth
+* [Platform](platform/) — the neutral engine: primitives, architecture, and the first client
+* [Playbook](playbook/) — the agent-land playbook: dogfooding strategy, the built multi-agent system, the roadmap
 * [Product](product/) — goals (vision + boundary), features, designs, and the pipeline
+* [Providers](providers/) — LLM backends: API behaviors, model discovery, auth
 * [Learnings](learnings/) — operational gotchas and empirical findings
-* [Dogfooding](dogfooding.md) — developing agent-land on agent-land
-* [Multi-agent workflow](multi-agent-workflow.md) — the roadmap from stated vision to review-ready PRs via orchestrated child sessions
 * [Decisions](adrs/) — architecture decision records

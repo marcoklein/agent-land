@@ -8,13 +8,13 @@ generated: { by: pi/deepseek-v4-pro, at: 2026-09-05T17:21:18Z }
 verified: { by: human:marcoklein, at: 2026-09-06T00:00:00Z }
 sources:
   - id: roadmap
-    resource: /multi-agent-workflow.md
+    resource: /playbook/multi-agent-workflow.md
     title: Multi-agent workflow — the phased roadmap
   - id: pipeline
     resource: /product/pipeline.md
     title: The product pipeline
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
   - id: boundary
     resource: /product/goals/boundaries.md
@@ -38,19 +38,19 @@ sources:
     resource: /adrs/017-product-layer-okf-memory.md
     title: Build a Product Layer on OKF Memory with an Agentic Pipeline
   - id: dogfooding
-    resource: /dogfooding.md
-    title: Dogfooding — developing agent-land on agent-land
+    resource: /playbook/dogfooding.md
+    title: Dogfooding — the agent-land playbook
 ---
 
 # Dynamic Orchestration
 
-Phase 4 of the [multi-agent roadmap](/multi-agent-workflow.md): the orchestrator stops following the fixed `research → refine → design → critic` stage list and **plans its own stage graph per task**. The "recipe" shifts from a scripted sequence to **prompt-level policy** — a declaration of roles, tools, gates, budgets, and models — and the orchestrator realizes that policy as child sessions over the loopback [Platform Connector](/engine.md#loopback).
+Phase 4 of the [multi-agent roadmap](/playbook/multi-agent-workflow.md): the orchestrator stops following the fixed `research → refine → design → critic` stage list and **plans its own stage graph per task**. The "recipe" shifts from a scripted sequence to **prompt-level policy** — a declaration of roles, tools, gates, budgets, and models — and the orchestrator realizes that policy as child sessions over the loopback [Platform Connector](/platform/engine.md#loopback).
 
 ## Fit-check
 
 This is a **composition change, not an engine change**, and it passes both gates in the refine stage.
 
-**Boundary** — dynamic orchestration adds *no* workflow executor to the engine. It reuses the six primitives unchanged[^engine]: the Platform Connector loopback for spawning/observing children, [Mount](/engine.md#capabilities-injected-at-session-creation) for per-child worktrees, [Provider](/engine.md#capabilities-injected-at-session-creation) records for per-stage model choice (already selectable at child create per [ADR 015](/adrs/015-providers-as-config-records-projected-into-pi.md)), and [ADR 011](/adrs/011-kill-switch.md) kill switches for per-child budgets. The graph semantics live entirely in the orchestrator recipe and its artifacts (plan documents, issue comments, PRs), exactly where [the domain boundary](/product/goals/boundaries.md) says control flow belongs. The one boundary-adjacent decision — parallel children against the Mount single-writer invariant — is either pure composition (one Mount per child) or a deliberate ADR amendment, surfaced as a scope decision in the Design note, never silently absorbed[^mount-design].
+**Boundary** — dynamic orchestration adds *no* workflow executor to the engine. It reuses the six primitives unchanged[^engine]: the Platform Connector loopback for spawning/observing children, [Mount](/platform/engine.md#capabilities-injected-at-session-creation) for per-child worktrees, [Provider](/platform/engine.md#capabilities-injected-at-session-creation) records for per-stage model choice (already selectable at child create per [ADR 015](/adrs/015-providers-as-config-records-projected-into-pi.md)), and [ADR 011](/adrs/011-kill-switch.md) kill switches for per-child budgets. The graph semantics live entirely in the orchestrator recipe and its artifacts (plan documents, issue comments, PRs), exactly where [the domain boundary](/product/goals/boundaries.md) says control flow belongs. The one boundary-adjacent decision — parallel children against the Mount single-writer invariant — is either pure composition (one Mount per child) or a deliberate ADR amendment, surfaced as a scope decision in the Design note, never silently absorbed[^mount-design].
 
 **Vision board** — the outcome serves the stated needs directly: *autonomy with trust* (the orchestrator makes routing calls, the human still holds the gates), *reusable working patterns* (the recipe becomes reusable policy), and the business goal of platform velocity (a dynamic graph should reach green PRs faster or with fewer human corrections than the static baseline)[^vision-board][^dogfooding].
 
@@ -72,10 +72,10 @@ The static orchestrator treats every task identically: it always researches, alw
 
 - The orchestrator, given a `pipeline-ready` issue, **emits an inspectable plan before executing** — a per-task stage-graph declaration (stages, order, per-stage role/tools/model/budget, and the gate points) posted to the issue so a human can veto or amend it.
 - Each of **skip-research, deepen-research, parallel fan-out, retry-with-adjusted-prompt, adversarial-review, and per-stage model choice** is reachable from prompt-level policy in the orchestrator recipe — not hard-coded control flow — and can be observed in a real run.
-- **No engine change**: the delivered change composes [Sessions, Mounts, Providers, and the Platform Connector](/engine.md) and adds no DAG/workflow executor, no in-core workflow vocabulary, and no vendor catalog (fails the fit-check otherwise)[^boundary].
+- **No engine change**: the delivered change composes [Sessions, Mounts, Providers, and the Platform Connector](/platform/engine.md) and adds no DAG/workflow executor, no in-core workflow vocabulary, and no vendor catalog (fails the fit-check otherwise)[^boundary].
 - **Gate discipline holds**: the three human gates remain `waiting_for_input` parks; a dynamic graph may reorder or reshape stages but may not remove, merge, or bypass a gate[^pipeline].
 - **Budgets bound the fan-out**: each stage/child carries a per-run [kill switch](/adrs/011-kill-switch.md) budget and the orchestrator holds an aggregate run budget, so retries and parallelism don't multiply spend without limit. Per the design (PR #67): budgets are orchestrator-side soft budgets — the orchestrator reads usage from each child's message_end events and DELETEs over-budget children; hard server-side kill-switch enforcement remains ADR 011 future work.
-- **Deliverable**: a dogfood task on this repo whose executed stage graph **visibly differs from the static default** (e.g. research skipped, or a parallel implementation split, or an adversarial reviewer added) **and** whose artifacts still clear the three human gates with **no more human correction than the static baseline** — measured against the [dogfooding success signals](/dogfooding.md).
+- **Deliverable**: a dogfood task on this repo whose executed stage graph **visibly differs from the static default** (e.g. research skipped, or a parallel implementation split, or an adversarial reviewer added) **and** whose artifacts still clear the three human gates with **no more human correction than the static baseline** — measured against the [dogfooding success signals](/playbook/dogfooding.md).
 
 ## Open questions
 
@@ -92,11 +92,11 @@ The Design note must answer these; each is sharpened because the graph is no lon
 9. **Gate discipline under dynamic planning.** How are the three human gates represented when stages aren't a fixed list — does the planner declare gate points explicitly, and can it ever merge/skip a gate? (Expected answer: no.)
 10. **State across redeploys.** Where does the dynamic plan + progress persist (session event history, issue comments, both)? Already open in the roadmap; sharper once the graph isn't a fixed list[^roadmap].
 
-[^roadmap]: [Multi-agent workflow](/multi-agent-workflow.md) — Phase 4 spec and open questions
+[^roadmap]: [Multi-agent workflow](/playbook/multi-agent-workflow.md) — Phase 4 spec and open questions
 [^pipeline]: [The product pipeline](/product/pipeline.md) — the three human gates
-[^engine]: [Agent Land engine](/engine.md) — six primitives, everything else is composition
+[^engine]: [Agent Land engine](/platform/engine.md) — six primitives, everything else is composition
 [^boundary]: [Agent Land domain boundary](/product/goals/boundaries.md) — fit-check for the refine stage
 [^vision-board]: [Product vision board](/product/goals/vision-board.md) — "is it worth building?"
 [^orchestrator-skill]: [The static orchestrator recipe](agent-image/skills/orchestrator/SKILL.md) — the recipe to replace; note its explicit deferrals of per-stage model choice and parallelism
 [^mount-design]: [Mount design](/product/designs/mount-design.md) — hard single-writer invariant, "amend to soft+`force` only if a concrete fan-out use case emerges"
-[^dogfooding]: [Dogfooding strategy](/dogfooding.md) — trust ladder rule 4, success signals
+[^dogfooding]: [Dogfooding strategy](/playbook/dogfooding.md) — trust ladder rule 4, success signals

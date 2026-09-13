@@ -6,13 +6,13 @@ status: draft
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: engine
-    resource: /engine.md
+    resource: /platform/engine.md
     title: Agent Land engine — the purest form
 ---
 
 # Agent Land architecture — the zoom ladder
 
-The same system at six scales. Everything here is a projection of the [engine](/engine.md) — six primitives, three substrates, one opinion.
+The same system at six scales. Everything here is a projection of the [engine](/platform/engine.md) — six primitives, three substrates, one opinion.
 
 ## Zoom in — one turn, concretely
 
@@ -70,10 +70,10 @@ The session is the atom of the platform — one `pi` agent in one container. Lon
 
 ```mermaid
 graph LR
-    subgraph usecase["USE-CASE LAYER — recipes"]
+    subgraph usecase["COMPOSITION LAYER — workflows"]
         direction TB
         workflow["Workflow<br/>scripts"]:::outside
-        project["Project<br/>mount + recipe"]:::outside
+        project["Project<br/>mount + workflow"]:::outside
         pack["Connector pack<br/>schema + skills"]:::outside
         preset["Provider preset<br/>endpoint + models"]:::outside
     end
@@ -82,7 +82,7 @@ graph LR
         direction LR
         connector["Connector<br/>sealed env bag"]:::core
         provider["Provider<br/>LLM backend record"]:::core
-        mount["Mount<br/>durable volume (roadmap)"]:::core
+        mount["Mount<br/>durable volume"]:::core
         session["Session<br/>pi agent in Docker"]:::core
         events["Event Stream<br/>sequenced SSE"]:::core
     end
@@ -120,7 +120,7 @@ graph LR
     classDef outside fill:#e65100,stroke:#ff9800,color:#fff3e0
 ```
 
-Capabilities are injected at launch · sessions produce event streams · recipes watch streams and create sessions · substrate hosts, seals, and persists.
+Capabilities are injected at launch · sessions produce event streams · workflows watch streams and create sessions · substrate hosts, seals, and persists.
 
 ## Zoom out — the composition loop
 
@@ -148,7 +148,7 @@ graph LR
     api     -->|"watch streams"| main
 ```
 
-Orchestration lives in the feedback loop, outside the engine. A workflow is a script that creates sessions, prompts them, watches their event streams, and reacts. Agent-driven looping (agents spawning agents) arrives with the Platform Connector; today the loop is driven externally via the CLI and the API.
+Orchestration lives in the feedback loop, outside the engine. A workflow is a script that creates sessions, prompts them, watches their event streams, and reacts. Agent-driven looping (agents spawning agents) runs through the Platform Connector's loopback credential; external scripts drive the same loop via the CLI and the API.
 
 ## Zoom out — the platform on a server
 
@@ -188,4 +188,4 @@ Production is a `git push dokku main:master` that builds the Dockerfile and prov
 1. **Registries outlive sessions.** Connectors, providers, mounts are catalogs; sessions reference but never mutate them.
 2. **Create-time is resolution-time.** Env, engine config, and mounts are fixed when the session starts.
 3. **The platform observes.** The event stream is the only observation channel; its vocabulary is agent-mechanical.
-4. **Vendor knowledge and workflows stay in the composition layer.** Presets, packs, projects, workflows — recipes that build on the primitives.
+4. **Vendor knowledge and workflows stay in the composition layer.** Presets, packs, projects, workflows — composition that builds on the primitives.
