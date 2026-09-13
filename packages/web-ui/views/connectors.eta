@@ -1,0 +1,24 @@
+<h2>Connectors</h2>
+
+<% if (it.error) { %>
+<article class="pico-color-red-100"><p><strong>Error:</strong> <%~ it.error %></p></article>
+<% } %>
+
+<% if (it.connectors && it.connectors.length > 0) { %>
+<table>
+  <thead><tr><th>Name</th><th>URL</th><th>Env keys</th><th>Secret file</th><th>Updated</th></tr></thead>
+  <tbody>
+  <% it.connectors.forEach(function(c) { %>
+  <tr>
+    <td><strong><%= c.name %></strong></td>
+    <td><small><%= c.url || "" %></small></td>
+    <td><small><%= c.envKeys ? c.envKeys.join(", ") : "" %></small></td>
+    <td><small><code><%= c.secretFile %></code></small></td>
+    <td><small><%= it.timeAgo ? it.timeAgo(c.updatedAt) : "" %></small></td>
+  </tr>
+  <% }); %>
+  </tbody>
+</table>
+<% } else { %>
+<p><em>No connectors defined.</em></p>
+<% } %>

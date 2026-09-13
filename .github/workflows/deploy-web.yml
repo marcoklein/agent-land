@@ -1,0 +1,66 @@
+name: Deploy Web UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/web-ui/**"
+      - "packages/contracts/**"
+      - "Dockerfile.web"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dokku-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_DEPLOY_KEY }}
+
+      - name: Add server to known hosts (pinned key)
+        run: |
+          mkdir -p ~/.ssh
+          cat >> ~/.ssh/known_hosts <<'EOF'
+          impromat.app ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHZ724vLK/knBUwH7Ir59Oeqv/Ii88luGVZfSMCFdFev
+          EOF
+
+      - name: Deploy to Dokku
+        run: |
+          git remote add dokku-ui dokku@impromat.app:agent-land-ui
+          end=$((SECONDS + 600))
+          while :; do
+            if git push dokku-ui main:master --force; then
+              exit 0
+            fi
+            if [ "$SECONDS" -ge "$end" ]; then
+              echo "deploy push failed after ~10 minutes (deploy lock never cleared)"
+              exit 1
+            fi
+            echo "deploy push failed; deploy lock likely held — retrying"
+            sleep 20
+          done
+
+      - name: Verify deploy is serving
+        env:
+          HOSTED_BASIC_AUTH: ${{ secrets.HOSTED_BASIC_AUTH }}
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS -u "$HOSTED_BASIC_AUTH" https://agent-land-ui.host.impromat.app/ | grep -q 'htmx'; then
+              echo "deploy verified"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "health check failed after 60s"
+          exit 1

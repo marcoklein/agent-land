@@ -94,6 +94,7 @@ Before binding a mount to a second session, read the single-writer rule in [moun
 
 ## Next
 
+- See your agents from any browser: open `https://agent-land-ui.host.impromat.app` — the [Web UI](/platform/web-ui.md) shows running sessions, which ones are waiting on you, and your resource inventory
 - Drive everything from scripts and cron: the [CLI reference](/platform/cli.md)
 - Understand the machine: [engine](/platform/engine.md) · [architecture](/platform/architecture.md)
 - Put work on rails — state an outcome, review at gates: the [dogfooding playbook](/playbook/dogfooding.md)

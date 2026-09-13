@@ -1,0 +1,32 @@
+<h2>Providers</h2>
+
+<% if (it.error) { %>
+<article class="pico-color-red-100"><p><strong>Error:</strong> <%~ it.error %></p></article>
+<% } %>
+
+<% if (it.providers && it.providers.length > 0) { %>
+<table>
+  <thead><tr><th>ID</th><th>Label</th><th>API dialect</th><th>Base URL</th><th>Models</th><th>Default</th><th>Enabled</th></tr></thead>
+  <tbody>
+  <% it.providers.forEach(function(p) { %>
+  <tr>
+    <td><code><%= p.id %></code></td>
+    <td><%= p.label || "" %></td>
+    <td><small><%= p.api || "" %></small></td>
+    <td><small><%= p.baseUrl || "" %></small></td>
+    <td><small><%= p.models ? p.models.join(", ") : "" %></small></td>
+    <td><small><%= p.defaultModel || "" %></small></td>
+    <td>
+      <% if (p.enabled) { %>
+      <mark class="pico-color-jade-100">enabled</mark>
+      <% } else { %>
+      <mark class="pico-color-red-100">disabled</mark>
+      <% } %>
+    </td>
+  </tr>
+  <% }); %>
+  </tbody>
+</table>
+<% } else { %>
+<p><em>No providers defined.</em></p>
+<% } %>

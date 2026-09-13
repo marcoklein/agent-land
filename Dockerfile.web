@@ -1,0 +1,38 @@
+FROM node:22-alpine AS build
+
+RUN npm install -g pnpm@11
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/web-ui/package.json ./packages/web-ui/
+COPY packages/contracts/package.json ./packages/contracts/
+RUN pnpm install --frozen-lockfile
+
+COPY packages/contracts/ ./packages/contracts/
+COPY packages/web-ui/ ./packages/web-ui/
+RUN pnpm --filter @agent-land/contracts build
+RUN pnpm --filter @agent-land/web-ui build
+
+FROM node:22-alpine
+
+RUN npm install -g pnpm@11
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages/web-ui/package.json ./packages/web-ui/
+COPY packages/contracts/package.json ./packages/contracts/
+RUN pnpm install --frozen-lockfile --prod --filter "@agent-land/web-ui..."
+
+COPY --from=build /app/packages/web-ui/dist/ ./packages/web-ui/dist/
+COPY --from=build /app/packages/contracts/dist/ ./packages/contracts/dist/
+COPY packages/web-ui/views/ ./packages/web-ui/views/
+COPY packages/web-ui/public/ ./packages/web-ui/public/
+
+ENV NODE_ENV=production
+ENV PORT=5000
+
+EXPOSE 5000
+
+CMD ["node", "packages/web-ui/dist/src/main.js"]

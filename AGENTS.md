@@ -10,6 +10,7 @@
 pnpm typecheck      # tsc --noEmit (all packages)
 pnpm test           # vitest run (all packages)
 pnpm dev            # run the server locally (tsx watch)
+pnpm dev:web        # run the web UI locally (tsx watch)
 pnpm build          # tsc (all packages)
 ```
 
