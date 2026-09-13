@@ -1,7 +1,7 @@
 ---
 type: ProductGoal
 title: Agent Land product vision
-description: Agent Land runs AI agents on your own server — securely, durably, unattended. The engine runs agents; playbooks decide how.
+description: The vim of agentic platforms — an easy-to-deploy engine that runs isolated agent sessions on your own server, plus playbooks on top that encode proven ways of working.
 status: draft
 generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 sources:
@@ -18,7 +18,7 @@ sources:
 
 # Agent Land product vision
 
-**One-liner:** Agent Land runs AI agents on your own server — securely, durably, unattended. **The engine runs agents; playbooks decide how.**
+**One-liner:** Agent Land is the vim of agentic platforms: easy to deploy, driven from any terminal, honest down to its plain-text state. The engine runs isolated agent sessions on your own server — securely, durably, unattended. **The engine runs agents; playbooks decide how.**
 
 ## Why it exists
 
@@ -27,15 +27,16 @@ Personal, local-first agent tools are powerful but live in a laptop terminal —
 - agents keep working after you close the laptop,
 - you look in from anywhere, on any connection — the live feed replays what you missed,
 - secrets stay encrypted until the moment an agent needs them,
+- it deploys in minutes — one container, Docker, flat JSON files; no database, no cluster,
 - and the things you do repeatedly become recipes that eventually run on their own.
 
 ## The two layers
 
 **The engine is the product. Everything above it is your opinion.**
 
-The engine is neutral machinery. It runs agents securely in containers, gives each one sealed credentials, a model, and a workspace, observes everything through a single event feed, and lets agents hire agents. It knows nothing of your workflows — the technical decomposition (six primitives, three substrates) lives in the [engine note](/engine.md)[^engine].
+The engine is neutral machinery. It runs agents as isolated sessions in containers, gives each one sealed credentials, a model, and a workspace, observes everything through a single event feed, and lets agents hire agents. Its contract is the isolated session plus that event feed — the runtime inside the session is an opinionated choice, with pi as the reference implementation. The technical decomposition (six primitives, three substrates) lives in the [engine note](/engine.md)[^engine].
 
-How you use it lives in **playbooks** — bundles of skills, recipes, policies, and gates that realize one way of working. Playbooks are composition: they speak the same JSON/SSE API as every other client, and they are swappable — the engine never grows workflow knowledge[^strip-adr]. The first playbook is agent-land's own: the [dogfooding playbook](/dogfooding.md), where you state a problem, review PRs at gates, and everything in between runs itself.
+How you use it lives in **playbooks** — bundles of skills, recipes, policies, and gates that encode proven ways of solving hard problems with agentic workflows. Playbooks are composition: they speak the same JSON/SSE API as every other client, and they are swappable — the engine never grows workflow knowledge[^strip-adr]. They are first-class citizens of the monorepo, bundled as packages, not scattered config. The first playbook is agent-land's own: the [dogfooding playbook](/dogfooding.md), where you state a problem, review PRs at gates, and everything in between runs itself.
 
 ```mermaid
 graph TB
@@ -44,7 +45,7 @@ graph TB
         any["…any other way of working"]:::dim
     end
     subgraph core["THE ENGINE — the product (neutral machinery)"]
-        run["Run agents securely & durably<br/>(sessions in containers)"]:::core
+        run["Run agents securely & durably<br/>(isolated sessions in containers)"]:::core
         cap["Give them capabilities<br/>(sealed connectors · providers · mounts)"]:::core
         obs["Observe everything, interpret nothing<br/>(one event stream)"]:::core
         loop["Let agents compose agents<br/>(platform loopback)"]:::core
@@ -60,17 +61,31 @@ graph TB
     classDef dim fill:#455a64,stroke:#90a4ae,color:#cfd8dc
 ```
 
+### The vim test
+
+The analogy is a commitment, not branding — five properties every change must preserve:
+
+| Property | Commitment |
+|---|---|
+| Deploys in minutes, runs anywhere | one container + Docker + flat JSON — no database, no cluster |
+| Terminal-native, scriptable | CLI + JSON/SSE API; any UI is an external consumer |
+| Works on a bad connection | state lives server-side; clients re-attach and replay |
+| Plain text all the way down | flat-JSON records, event logs, OKF notes |
+| Stable minimal core, extensions outside it | the engine is isolated sessions; playbooks are the extensions |
+
 ## Value
 
 1. **Durability** — sessions outlive the laptop; start Friday, look Monday.
 2. **Control & privacy** — your infrastructure, your keys; agents get scoped, sealed credentials.
 3. **Autonomy with trust** — agents run unattended but stop and ask when it matters, instead of guessing.
-4. **Your way of working, encoded** — playbooks turn habits into skills, recipes, and gates.
-5. **API-first** — everything the CLI does is a `curl` away; humans, crons, and agents are peer clients[^strip-adr].
+4. **Anything can work here** — the same engine prepares your day (fetch emails and notes into a morning brief) and builds the complex feature in your codebase. Connectors define reach; playbooks define method.
+5. **Your way of working, encoded** — playbooks turn habits into skills, recipes, and gates.
+6. **API-first** — everything the CLI does is a `curl` away; humans, crons, and agents are peer clients[^strip-adr].
 
 ## Principles
 
 - **Mine.** Self-hosted; the only external dependency is the LLM provider.
+- **Small and deployable.** One person, one sitting; the vim test above is the regression suite.
 - **Secrets stay sealed.** Encrypted at rest; decrypted in-memory, only at launch, only for what a session needs.
 - **The engine runs agents; playbooks decide how.** Workflows, orchestration, and vendor knowledge stay outside the engine[^strip-adr].
 - **Ask when it matters.** Human-in-the-loop is a designed state, not an interruption.

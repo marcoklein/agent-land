@@ -35,7 +35,7 @@ One honest note: the board itself is part of the agent-land playbook (OKF produc
 
 ## Vision
 
-The engine runs agents — securely, durably, unattended — on your own server; playbooks decide how. State outcomes, review at gates, and the work outlives your laptop.[^vision]
+The vim of agentic platforms: an easy-to-deploy engine that runs isolated agent sessions on your own server — playbooks decide how. The same engine prepares your day and builds the feature; you state outcomes, review at gates, and the work outlives your laptop.[^vision]
 
 ## Target group
 

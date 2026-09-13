@@ -3,7 +3,7 @@ type: Reference
 title: Agent Land engine — the purest form
 description: The minimal core of the agent-land platform. Six primitives, three substrates, one engine opinion. Everything else is composition.
 status: stable
-generated: { by: opencode/deepseek-v4-pro, at: 2026-08-29T00:00:00Z }
+generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
 sources:
   - id: architecture
@@ -42,7 +42,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ### The engine
 
-4. **Session** — the agent process itself. One `pi --mode rpc` agent in one Docker container. Lifecycle: `idle` → `running` → `waiting_for_input` → back; `stopped` is terminal. Permission policy: `auto` (unattended) or `manual` (dialogs routed to a human). Fixed at creation — never reconfigured live.
+4. **Session** — the agent process itself. One isolated agent in one Docker container (reference runtime: `pi --mode rpc`). Lifecycle: `idle` → `running` → `waiting_for_input` → back; `stopped` is terminal. Permission policy: `auto` (unattended) or `manual` (dialogs routed to a human). Fixed at creation — never reconfigured live.
 
 ### Observation
 
@@ -62,7 +62,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ## One engine opinion
 
-`pi --mode rpc` is the fixed agent runtime — a platform-level choice rather than a session-level knob.
+The engine's contract is the **isolated session plus its event stream** — realized by the `AgentHarness` port. `pi --mode rpc` is the **reference runtime**: a platform-level choice rather than a session-level knob. Alternative runtimes are earned through the same port, never promised.
 
 ## The composition layer
 

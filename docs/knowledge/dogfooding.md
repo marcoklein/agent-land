@@ -43,6 +43,8 @@ What the agent-land playbook bundles today — all of it composition; none of it
 | Trigger | hourly scan for `pipeline-ready` issues | `.github/workflows/pipeline-trigger.yml` |
 | Clients | `al` CLI today; thin conversational client planned | `packages/cli` |
 
+Structural intent (not yet physical): the playbook consolidates into a single monorepo package (`packages/playbook`), so the vision's swappability claim is folder-visible — today the pieces sit where they grew.
+
 ## The operator model — two touchpoints
 
 The operator's day shrinks to two moments; everything else is the engine and the playbook:
