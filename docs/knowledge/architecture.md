@@ -188,4 +188,4 @@ Production is a `git push dokku main:master` that builds the Dockerfile and prov
 1. **Registries outlive sessions.** Connectors, providers, mounts are catalogs; sessions reference but never mutate them.
 2. **Create-time is resolution-time.** Env, engine config, and mounts are fixed when the session starts.
 3. **The platform observes.** The event stream is the only observation channel; its vocabulary is agent-mechanical.
-4. **Vendor knowledge and workflows stay in the composition layer.** Presets, packs, projects, workflows, playbooks — recipes that build on the primitives.
+4. **Vendor knowledge and workflows stay in the composition layer.** Presets, packs, projects, workflows — recipes that build on the primitives.
