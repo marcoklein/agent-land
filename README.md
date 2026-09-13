@@ -2,6 +2,8 @@
 
 Minimal, self-hosted platform for running Dockerized AI coding agents as long-lived sessions. Choose connectors, send a prompt, and get live-streamed agent output with encrypted secret management via SOPS/Age.
 
+**New here? Start with the [operator quickstart](docs/knowledge/platform/quickstart.md)** — deploy a server, seal a secret, and watch your first agent run in five minutes.
+
 ## Quick Start
 
 **Prerequisites:** Docker, Docker Compose, [SOPS](https://github.com/getsops/sops), [Age](https://github.com/FiloSottile/age), and an [OpenCode](https://opencode.ai) API key.
