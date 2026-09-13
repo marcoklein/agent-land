@@ -27,8 +27,8 @@ RUN pnpm install --frozen-lockfile --prod --filter "@agent-land/web-ui..."
 
 COPY --from=build /app/packages/web-ui/dist/ ./packages/web-ui/dist/
 COPY --from=build /app/packages/contracts/dist/ ./packages/contracts/dist/
-COPY packages/web-ui/views/ ./packages/web-ui/views/
-COPY packages/web-ui/public/ ./packages/web-ui/public/
+COPY packages/web-ui/views/ ./packages/web-ui/dist/views/
+COPY packages/web-ui/public/ ./packages/web-ui/dist/public/
 
 ENV NODE_ENV=production
 ENV PORT=5000
