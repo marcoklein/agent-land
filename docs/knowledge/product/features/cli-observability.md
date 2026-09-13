@@ -17,7 +17,7 @@ sources:
     title: Product vision board
   - id: dogfooding
     resource: /dogfooding.md
-    title: Dogfooding — developing agent-land on agent-land
+    title: Dogfooding — the agent-land playbook
   - id: cli
     resource: /cli.md
     title: CLI (`al`)
@@ -85,7 +85,7 @@ Checked against `main` at `eaf26af`:
 [^engine]: [Agent Land engine](/engine.md)
 [^boundary]: [Agent Land domain boundary](/product/goals/boundaries.md)
 [^vision-board]: [Product vision board](/product/goals/vision-board.md)
-[^dogfooding]: [Dogfooding — developing agent-land on agent-land](/dogfooding.md)
+[^dogfooding]: [Dogfooding — the agent-land playbook](/dogfooding.md)
 [^cli]: [CLI (`al`)](/cli.md)
 [^cli-entry]: `packages/cli/src/agent-land.ts`
 [^sse-lib]: `packages/cli/src/lib/sse.ts`

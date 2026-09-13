@@ -1,9 +1,9 @@
 ---
 type: Strategy
-title: Dogfooding — developing agent-land on agent-land
-description: The strategy for building Agent Land with Agent Land: a phased, trust-earned loop from task to merged change, and the gaps that remain.
+title: Dogfooding — the agent-land playbook
+description: The flagship playbook, built and run on the platform itself: state a problem, review PRs at gates, everything in between runs unattended. Phases, gaps, and the trust ladder.
 status: draft
-generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
+generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 sources:
   - id: product-vision
     resource: /product/goals/product-vision.md
@@ -11,20 +11,84 @@ sources:
   - id: pipeline
     resource: /product/pipeline.md
     title: The product pipeline
+  - id: hitd
+    resource: ~/.config/opencode/skills/hitd-workflow/SKILL.md
+    title: HITD workflow skill (operator-local config)
 ---
 
-# Dogfooding — developing agent-land on agent-land
+# Dogfooding — the agent-land playbook
 
-**One-liner:** Use Agent Land to build Agent Land — every feature an agent can run against this repo becomes real the day it lands, and every gap becomes a roadmap item.
+**One-liner:** Build agent-land with agent-land, through the flagship playbook: state a problem, review PRs at gates — everything in between runs itself, on the platform being built.
+
+The [vision](/product/goals/product-vision.md) separates the engine (neutral machinery that runs agents) from playbooks (opinionated ways of working on top). This note is **the agent-land playbook**: the first and flagship bundle of opinion, and simultaneously the platform's test bed — every feature is exercised by a real consumer the day it lands, and every gap becomes a roadmap item.
 
 ## Why dogfood
-
-Building the platform *with* the platform closes the loop:
 
 - **Every feature is exercised by a real consumer** the moment it merges — no synthetic demos.
 - **Gaps become concrete tickets**, not hypotheticals. If the agent can't open a PR, that's a roadmap item, not a footnote.
 - **The product's own velocity is the metric.** The number of agent-land PRs produced by agent-land is the single best signal the platform works.
 - **Trust builds gradually** — start with docs and refactors, earn merge rights, and only then consider deploy.
+
+## The playbook inventory
+
+What the agent-land playbook bundles today — all of it composition; none of it in the engine:
+
+| Piece | What it carries | Home |
+|---|---|---|
+| Product pipeline | outcome → Feature note → Design note → green PR, with gates | [/product/pipeline.md](/product/pipeline.md) |
+| OKF product memory | the notes the pipeline reads and writes | `docs/knowledge/product/` |
+| Orchestrator recipe + policy | dynamic stage planning, budgets, gate discipline | `agent-image/skills/orchestrator/` |
+| HITD recipe | phase contract + handoff protocol (see below) | operator skill — **to port** |
+| Dev playbook | branch → checks → PR → green loop | `.opencode/skills/dev-playbook/` |
+| Trigger | hourly scan for `pipeline-ready` issues | `.github/workflows/pipeline-trigger.yml` |
+| Clients | `al` CLI today; thin conversational client planned | `packages/cli` |
+
+## The operator model — two touchpoints
+
+The operator's day shrinks to two moments; everything else is the engine and the playbook:
+
+1. **Intake** — state the problem, from anywhere, on any connection: an issue, the CLI, or (planned) a thin conversational client against the hosted API. The server holds all state, so a dropped connection costs nothing — clients re-attach and the event feed replays what happened while you were in the tunnel.
+2. **Gate review** — approve or send feedback where the playbook parks: spec PR, design PR, merge. Reviewing a PR *is* the interaction; no terminal required.
+
+```mermaid
+flowchart TB
+    H(["HUMAN touchpoint 1 — intake<br/>state the problem (any client, any connection)"]):::human
+    H --> ISS["Issue + label"]:::playbook
+    ISS --> TRIG["Trigger (cron, later webhook)"]:::playbook
+    TRIG --> ORCH["Orchestrator session<br/>plans the stage graph"]:::engine
+    ORCH --> RES["Research child"]:::engine
+    ORCH --> DES["Design child<br/>→ spec + design PRs"]:::engine
+    ORCH --> IMP["Implement child<br/>→ green PR"]:::engine
+    DES -.-> G{"HUMAN touchpoint 2 — gates<br/>review PRs: approve or feedback"}:::human
+    IMP -.-> G
+    G -.->|feedback| ORCH
+    G -->|approve| CLOSE["Merge · deploy · notes stable · learnings captured"]:::playbook
+
+    classDef human fill:#e65100,stroke:#ff9800,color:#fff3e0
+    classDef playbook fill:#4a2c88,stroke:#8e6fd1,color:#f0e8ff
+    classDef engine fill:#1b5e20,stroke:#4caf50,color:#e8f5e9
+```
+
+Green is engine, purple is playbook, orange is human. Remove the purple and the green still runs someone else's workflow — that separation is the point[^product-vision].
+
+A **thin conversational client** (small web app or similar) is planned as the intake touchpoint's friendliest form. Per ADR 016 it is a *separate consumer* of the JSON/SSE API — presentation never moves into the engine.
+
+## HITD — the canonical recipe to port
+
+HITD (Human in the Design) is the operator's proven single-task workflow: Question → Research → Design → **Human approval** → Structure → Plan → Implement → Verify, with artifacts (`task.md` … `plan.md`) and a strict handoff/status protocol (`HITD_HANDOFF_V1`, `STATUS: COMPLETED | PROGRESS | BLOCKED | …`)[^hitd]. It maps almost 1:1 onto the [product pipeline](/product/pipeline.md) stages the platform already runs[^pipeline]:
+
+| HITD phase | On agent-land | Status |
+|---|---|---|
+| Question | intake conversation / issue body | exists |
+| Research | research child | exists |
+| Design | design child → design PR | exists |
+| Human approval | design gate (PR review) | exists |
+| Structure · Plan | planner (`plan.json` + `policy.yaml`) | exists (Phase 4) |
+| Implement | build child → green PR | exists |
+| Verify | CI + critic child | exists |
+| Artifact + handoff contract | `docs/plans/hitd/<id>/*.md`, `HITD_HANDOFF_V1`, STATUS protocol | **to port** |
+
+What's missing is not engine capability but the recipe's contract layer: durable artifacts on a mount and the phase handoff protocol. **Open question:** port HITD *into* the product pipeline recipe (one recipe, artifact dir alongside OKF notes) or keep it as a sibling recipe for single-task work — decided when the port is specced, not here.
 
 ## The loop
 
@@ -60,6 +124,8 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Merge after green CI + approval | ⚠️ Works (`gh pr merge`) but ungated | Keep human-gated until trust is earned |
 | Deploy + verify live | ✅ Works — CI on merge to `main` pushes to Dokku and health-checks ([deploy.yml](../../../.github/workflows/deploy.yml)) | Merge stays human-gated |
 | Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](learnings/agent-image-staleness.md) |
+| Watch a long unattended run | ⚠️ Partial | pi's `compaction_start/end` and `auto_retry_start/end` events are dropped by the harness — a compacting or retrying session looks hung. Project them into the event stream (mechanical, invariant-safe) |
+| Know a session's cost / context fill | ❌ Gap | pi's `get_session_stats` (tokens, cost, context %) is unused; expose via `al status` for budget guardrails ([kill switch](adrs/011-kill-switch.md)) |
 
 ## Roadmap
 
@@ -112,6 +178,7 @@ The agent merges after green CI + approval, then deploys to Dokku and verifies. 
 2. **Gaps are tickets.** Every "the agent can't X yet" becomes a roadmap item, not a workaround.
 3. **Trust is earned, not granted.** Merge/deploy rights unlock by phase, not by assumption.
 4. **The agent never deploys itself without a human gate.** Self-modifying a running platform is the one action that stays gated longest.
+5. **The playbook is composition.** Nothing this note describes may leak into the engine — recipes, gates, and clients speak the public API like everyone else.
 
 ## Success signals
 
@@ -119,6 +186,7 @@ The agent merges after green CI + approval, then deploys to Dokku and verifies. 
 - **Task → green PR time** — wall-clock from prompt to a PR that passes CI.
 - **Red-CI self-recovery rate** — how often the agent fixes its own failures without a nudge.
 - **Recurring work that needs no human** — maintenance PRs that just appear.
+- **Touchpoint time** — how little of the operator's day is intake + gate review (the rest should be the platform's job).
 
 ## Risks & mitigations
 
@@ -134,3 +202,8 @@ The agent merges after green CI + approval, then deploys to Dokku and verifies. 
 - What's the minimum deploy connector (SSH key vs. Dokku plugin) that keeps the agent's blast radius small enough for Phase 5?
 - Does the dev playbook (Phase 2) live in the repo (`AGENTS.md`/`SKILL.md`) or as an agent-land role template once orchestration lands?
 - At what point does a second agent (reviewer) make sense, and does that wait for the agent→agent channel? — the [multi-agent roadmap](/multi-agent-workflow.md) answers: a reviewer child lands with the static orchestrator (Phase 2), right after Platform Connector (Phase 1).
+- HITD port: merge into the product pipeline recipe, or sibling recipe for single-task work?
+
+[^product-vision]: [Agent Land product vision](/product/goals/product-vision.md) — the engine/playbook split
+[^pipeline]: [The product pipeline](/product/pipeline.md) — outcome → Feature note → Design note → green PR, with gates
+[^hitd]: HITD workflow skill — operator opencode config (`skills/hitd-workflow/SKILL.md`): artifact set, human boundary at design approval, `HITD_HANDOFF_V1` handoff and STATUS protocol

@@ -14,7 +14,7 @@ sources:
     title: Platform Connector
   - id: dogfooding
     resource: /dogfooding.md
-    title: Dogfooding — developing agent-land on agent-land
+    title: Dogfooding — the agent-land playbook
   - id: archon
     resource: /learnings/archon-inspiration.md
     title: Inspiration from Archon

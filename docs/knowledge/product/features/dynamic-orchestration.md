@@ -39,7 +39,7 @@ sources:
     title: Build a Product Layer on OKF Memory with an Agentic Pipeline
   - id: dogfooding
     resource: /dogfooding.md
-    title: Dogfooding — developing agent-land on agent-land
+    title: Dogfooding — the agent-land playbook
 ---
 
 # Dynamic Orchestration

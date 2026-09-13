@@ -7,7 +7,7 @@ generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
 sources:
   - id: dogfooding
     resource: /dogfooding.md
-    title: Dogfooding — developing agent-land on agent-land
+    title: Dogfooding — the agent-land playbook
   - id: session-service
     resource: packages/server/src/core/session-service.ts
     title: SessionService.resolveAgentEnv — capability env injection

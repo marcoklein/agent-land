@@ -13,6 +13,6 @@ The single home for documentation and reference — every note is OKF with `stat
 * [Providers](providers/) — LLM backends: API behaviors, model discovery, auth
 * [Product](product/) — goals (vision + boundary), features, designs, and the pipeline
 * [Learnings](learnings/) — operational gotchas and empirical findings
-* [Dogfooding](dogfooding.md) — developing agent-land on agent-land
+* [Dogfooding](dogfooding.md) — the agent-land playbook: state a problem, review PRs at gates; phases, gaps, and the trust ladder
 * [Multi-agent workflow](multi-agent-workflow.md) — the roadmap from stated vision to review-ready PRs via orchestrated child sessions
 * [Decisions](adrs/) — architecture decision records

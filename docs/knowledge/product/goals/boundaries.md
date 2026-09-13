@@ -24,11 +24,12 @@ This note is the refine stage's *is it in scope?* check. Its counterpart, [the v
 
 - The **engine itself**: the six primitives (Connector, Provider, Mount, Session, Event Stream, Platform Connector) and the three substrates (Docker, SOPS/Age, flat JSON)[^engine].
 - The **CLI** (`al`) and the **JSON/SSE API** — the only surfaces.
-- **Composition outside the engine**: recipes, workflows, schedules, gate disciplines (this product layer).
+- **Composition outside the engine**: playbooks — bundles of skills, recipes, policies, and gates that realize a way of working (the [dogfooding playbook](/dogfooding.md) is the first), plus workflows, schedules, and gate disciplines.
 
 ## Is not (out of scope — deliberate)
 
 - **Presentation in-core.** No web UI, no server-rendered pages; anything graphical is a *separate consumer* of the JSON/SSE API, not part of this repo's engine[^strip-adr].
+- **Companion chat as a product.** Interactive clients serve intake and gate review for orchestrated work — they are separate consumers of the API, never an engine feature. The engine runs agents; playbooks (and their clients) decide how[^engine].
 - **Orchestration in-core.** No DAG/workflow executor in the engine; control flow is a recipe concern[^engine].
 - **Vendor knowledge in-core.** No provider catalog or connector field definitions in the engine; presets live in the CLI[^strip-adr].
 - **Databases / multi-user auth.** Flat JSON + event logs for a single operator.
