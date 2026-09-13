@@ -113,7 +113,7 @@ export function providerEntryFromEnv(
 
   const apiKey = env.get(`${provider.id.toUpperCase()}_API_KEY`);
   if (apiKey) {
-    const entry: Record<string, unknown> = { apiKey };
+    const entry: Record<string, unknown> = { type: "api_key", key: apiKey };
     if (provider.baseUrl) entry.baseUrl = provider.baseUrl;
     if (provider.api) entry.api = provider.api;
     if (provider.models && provider.models.length > 0) {
