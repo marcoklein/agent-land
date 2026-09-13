@@ -82,7 +82,7 @@ graph LR
         direction LR
         connector["Connector<br/>sealed env bag"]:::core
         provider["Provider<br/>LLM backend record"]:::core
-        mount["Mount<br/>durable volume (roadmap)"]:::core
+        mount["Mount<br/>durable volume"]:::core
         session["Session<br/>pi agent in Docker"]:::core
         events["Event Stream<br/>sequenced SSE"]:::core
     end
@@ -148,7 +148,7 @@ graph LR
     api     -->|"watch streams"| main
 ```
 
-Orchestration lives in the feedback loop, outside the engine. A workflow is a script that creates sessions, prompts them, watches their event streams, and reacts. Agent-driven looping (agents spawning agents) arrives with the Platform Connector; today the loop is driven externally via the CLI and the API.
+Orchestration lives in the feedback loop, outside the engine. A workflow is a script that creates sessions, prompts them, watches their event streams, and reacts. Agent-driven looping (agents spawning agents) runs through the Platform Connector's loopback credential — see the [built system](/multi-agent-architecture.md); external scripts drive the same loop via the CLI and the API.
 
 ## Zoom out — the platform on a server
 
@@ -188,4 +188,4 @@ Production is a `git push dokku main:master` that builds the Dockerfile and prov
 1. **Registries outlive sessions.** Connectors, providers, mounts are catalogs; sessions reference but never mutate them.
 2. **Create-time is resolution-time.** Env, engine config, and mounts are fixed when the session starts.
 3. **The platform observes.** The event stream is the only observation channel; its vocabulary is agent-mechanical.
-4. **Vendor knowledge and workflows stay in the composition layer.** Presets, packs, projects, workflows — recipes that build on the primitives.
+4. **Vendor knowledge and workflows stay in the composition layer.** Presets, packs, projects, workflows, playbooks — recipes that build on the primitives.

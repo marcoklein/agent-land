@@ -106,6 +106,6 @@ The orchestrator stops following a fixed stage list and **plans the stage graph 
 
 ## Open questions
 
-- Per-session identity: how does the server mint and revoke ephemeral credentials without a database (flat-JSON constraint, ADR 008)?
-- Where does the orchestrator hold pipeline state across redeploys — the session's event history, the issue's comments, or both?
-- Does the intake agent and the orchestrator merge into one session once Platform Connector lands, or stay separate roles?
+- **Resolved — per-session identity:** ephemeral per-session credentials, minted at create, stored in the flat-JSON session record (`platformToken`), revoked on delete — [Platform Connector design](/product/designs/platform-connector-design.md).
+- **Resolved in practice — pipeline state across redeploys:** the durable trail is the issue's comments and PRs, not the session tree or event history — [the built system](/multi-agent-architecture.md).
+- Does the intake agent and the orchestrator merge into one session, or stay separate roles? (Today intake is the human writing the issue — no intake session exists yet; the [operator model](/dogfooding.md#the-operator-model--two-touchpoints) keeps intake as a touchpoint, not an agent.)

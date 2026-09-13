@@ -3,7 +3,7 @@ type: Process
 title: The product pipeline
 description: How an outcome becomes shipped code — from a stated goal through design review to a green PR — and where the human gates sit.
 status: draft
-generated: { by: opencode/deepseek-v4-pro, at: 2026-09-05T00:00:00Z }
+generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 sources:
   - id: adr
     resource: /adrs/017-product-layer-okf-memory.md
@@ -54,12 +54,14 @@ Gate 0 is additive: it precedes the other gates and does not replace them. A dyn
 
 ## Who does what
 
-- **`product` skill (opencode)** — stages 1 and 2, and the gate discipline. Runs today, no engine dependency.
-- **build agent (opencode or `al run`)** — stage 3, the existing dev loop from `AGENTS.md`.
-- **human** — the three gates. Nothing else.
+Two implementations run this pipeline; the stages and gates are identical:
 
-## The future: agent-land-native
+- **agent-land-native (canonical)** — an orchestrator session plans the stage graph per task ([dynamic orchestration](/product/features/dynamic-orchestration.md)) and spawns research / refine / design / implement children through the loopback API; gates are `waiting_for_input` parks. This is the [built system](/multi-agent-architecture.md).
+- **laptop-side (opencode skills)** — the `product` skill runs stages 1–2 with the same gate discipline; a build agent (opencode or `al run`, following the [dev playbook](/dogfooding.md)) runs stage 3. No engine dependency; works offline and teaches the recipe.
+- **human** — intake plus the gates (plan, outcome, design, merge). Nothing else. The two touchpoints of the [operator model](/dogfooding.md#the-operator-model--two-touchpoints).
 
-The same recipe ports to agent-land sessions once [Platform Connector](/product/features/platform-connector.md) and [Mount](/product/features/mount.md) land — an orchestrator session runs the pipeline on the platform and spawns the build session as a child. The human gates become `waiting_for_input` states. Until then, opencode skills exercise the same flow and teach us what the recipe needs.
+## Agent-land-native — landed
+
+The recipe no longer waits on the engine: [Platform Connector](/product/features/platform-connector.md) and [Mount](/product/features/mount.md) have landed, an orchestrator session runs the pipeline on the platform, and the human gates are `waiting_for_input` states re-prompted with the gate outcome. The opencode skills remain the laptop-side variant of the same flow.
 
 [^archon]: [Inspiration from Archon](/learnings/archon-inspiration.md) — recipe outside the engine, deterministic steps between AI nodes

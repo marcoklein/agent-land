@@ -28,7 +28,7 @@ sources:
 
 # Agent Land engine — the purest form
 
-Agent Land is a **session engine**. It runs long-lived coding agents in Docker containers on your server. Each session gets three capabilities, produces one observable output, and can spawn more sessions through the platform's own API.
+Agent Land is a **session engine**. It runs long-lived agents as isolated sessions in Docker containers on your server. Each session gets three capabilities, produces one observable output, and can spawn more sessions through the platform's own API.
 
 ## The six primitives
 
@@ -50,7 +50,7 @@ Agent Land is a **session engine**. It runs long-lived coding agents in Docker c
 
 ### Loopback
 
-6. **Platform Connector** — at session creation, the engine self-injects `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` as env vars. The agent becomes a first-class client of the platform: it can create child sessions, prompt them, and watch their event streams. Multi-agent composition needs no new primitives. *(roadmap — not yet implemented)*
+6. **Platform Connector** — at session creation, the engine self-injects `AGENT_LAND_URL` and `AGENT_LAND_BASIC_AUTH` as env vars. The agent becomes a first-class client of the platform: it can create child sessions, prompt them, and watch their event streams. Multi-agent composition needs no new primitives. Opt-in per session (`platform: true`); the credential is ephemeral and dies with the session — see [the design](/product/designs/platform-connector-design.md).
 
 ## Substrate (three services)
 
@@ -66,6 +66,7 @@ The engine's contract is the **isolated session plus its event stream** — real
 
 ## The composition layer
 
+- **Playbooks** — bundles of skills, recipes, policies, and gates that encode a proven way of working. The [agent-land playbook](/dogfooding.md) is the first; playbooks speak the public API like any client.
 - **Projects** — a named mount + a recipe (connectors, provider, model, playbook). A use-case convention.
 - **Workflows** — sequences of session / prompt / respond calls. Defined in prompts, scripts, or YAML recipes.
 - **Schedules** — cron or triggers that call the API. External.
@@ -86,5 +87,5 @@ Local dev: `docker compose up --build -d` against `docker-compose.yml`.
 2. Create-time is resolution-time — env, engine config, and mount binds are fixed when the session starts.
 3. The platform observes, never interprets — everything it knows about agent behavior comes from the event stream.
 4. No technology baked into containers — the agent image is node + pi + git + curl.
-5. Every session is a platform client — self-injected auth enables multi-agent composition. *(roadmap)*
+5. Every session is a platform client — self-injected auth enables multi-agent composition.
 6. Everything above is composition — projects, workflows, schedules, gates build from the primitives.
