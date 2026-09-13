@@ -38,9 +38,10 @@ What the agent-land playbook bundles today — all of it composition; none of it
 | Product pipeline | outcome → Feature note → Design note → green PR, with gates | [/product/pipeline.md](/product/pipeline.md) |
 | OKF product memory | the notes the pipeline reads and writes | `docs/knowledge/product/` |
 | Orchestrator recipe + policy | dynamic stage planning, budgets, gate discipline | `agent-image/skills/orchestrator/` |
-| HITD recipe | phase contract + handoff protocol (see below) | operator skill — **to port** |
+| HITD recipe | phase contract + handoff protocol (see below) | operator skill — **to port**; landing shape proposed by the [ticket loop](/playbook/ticket-loop.md#handoff-contract--the-hitd-port) |
 | Dev loop | branch → checks → PR → green loop | `.opencode/skills/dev-playbook/` (legacy name — a recipe, not a playbook) |
 | Trigger | hourly scan for `pipeline-ready` issues | `.github/workflows/pipeline-trigger.yml` |
+| Ticket loop (concept) | the heartbeat: one stateless prompt advancing every ticket by one step per tick, fresh context per step | [/playbook/ticket-loop.md](/playbook/ticket-loop.md) — planned |
 | Clients | `al` CLI today; thin conversational client planned | `packages/cli` |
 
 Structural intent (not yet physical): the playbook consolidates into a single monorepo package (`packages/playbook`), so the vision's swappability claim is folder-visible — today the pieces sit where they grew. With the move, the `dev-playbook` skill renames to `dev-loop` (it is a recipe by the [glossary](/product/goals/product-vision.md#the-two-layers); "playbook" stays unambiguous).
@@ -90,7 +91,7 @@ HITD (Human in the Design) is the operator's proven single-task workflow: Questi
 | Verify | CI + critic child | exists |
 | Artifact + handoff contract | `docs/plans/hitd/<id>/*.md`, `HITD_HANDOFF_V1`, STATUS protocol | **to port** |
 
-What's missing is not engine capability but the recipe's contract layer: durable artifacts on a mount and the phase handoff protocol. **Open question:** port HITD *into* the product pipeline recipe (one recipe, artifact dir alongside OKF notes) or keep it as a sibling recipe for single-task work — decided when the port is specced, not here.
+What's missing is not engine capability but the recipe's contract layer: durable artifacts on a mount and the phase handoff protocol. **Open question:** port HITD *into* the product pipeline recipe (one recipe, artifact dir alongside OKF notes) or keep it as a sibling recipe for single-task work — decided when the port is specced, not here. The [ticket loop](/playbook/ticket-loop.md) concept proposes an answer: the port lands as the sibling heartbeat recipe, with the artifact ladder on per-ticket branches and `HITD_HANDOFF_V1` as the orchestrator↔child protocol.
 
 ## The loop
 
