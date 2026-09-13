@@ -39,11 +39,11 @@ What the agent-land playbook bundles today — all of it composition; none of it
 | OKF product memory | the notes the pipeline reads and writes | `docs/knowledge/product/` |
 | Orchestrator recipe + policy | dynamic stage planning, budgets, gate discipline | `agent-image/skills/orchestrator/` |
 | HITD recipe | phase contract + handoff protocol (see below) | operator skill — **to port** |
-| Dev playbook | branch → checks → PR → green loop | `.opencode/skills/dev-playbook/` |
+| Dev loop | branch → checks → PR → green loop | `.opencode/skills/dev-playbook/` (legacy name — a recipe, not a playbook) |
 | Trigger | hourly scan for `pipeline-ready` issues | `.github/workflows/pipeline-trigger.yml` |
 | Clients | `al` CLI today; thin conversational client planned | `packages/cli` |
 
-Structural intent (not yet physical): the playbook consolidates into a single monorepo package (`packages/playbook`), so the vision's swappability claim is folder-visible — today the pieces sit where they grew.
+Structural intent (not yet physical): the playbook consolidates into a single monorepo package (`packages/playbook`), so the vision's swappability claim is folder-visible — today the pieces sit where they grew. With the move, the `dev-playbook` skill renames to `dev-loop` (it is a recipe by the [glossary](/product/goals/product-vision.md#the-two-layers); "playbook" stays unambiguous).
 
 ## The operator model — two touchpoints
 

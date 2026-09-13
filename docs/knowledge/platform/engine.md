@@ -66,8 +66,8 @@ The engine's contract is the **isolated session plus its event stream** — real
 
 ## The composition layer
 
-- **Projects** — a named mount + a recipe (connectors, provider, model, skills). A use-case convention.
-- **Workflows** — sequences of session / prompt / respond calls. Defined in prompts, scripts, or YAML recipes.
+- **Projects** — a named mount + a workflow (connectors, provider, model, skills). A use-case convention.
+- **Workflows** — sequences of session / prompt / respond calls. Defined in prompts, scripts, or YAML.
 - **Schedules** — cron or triggers that call the API. External.
 - **Connector packs** — field schemas and skill files for specific external systems. Live in mounts and CLI presets.
 - **Provider presets** — base URLs, API dialects, default models for known vendors. Live in CLI presets.

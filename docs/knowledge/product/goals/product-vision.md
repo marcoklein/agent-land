@@ -38,6 +38,8 @@ The engine is neutral machinery. It runs agents as isolated sessions in containe
 
 How you use it lives in **playbooks** — bundles of skills, recipes, policies, and gates that encode proven ways of solving hard problems with agentic workflows. Playbooks are composition: they speak the same JSON/SSE API as every other client, and they are swappable — the engine never grows workflow knowledge[^strip-adr]. They are first-class citizens of the monorepo, bundled as packages, not scattered config. The first playbook is agent-land's own: the [dogfooding playbook](/playbook/dogfooding.md), where you state a problem, review PRs at gates, and everything in between runs itself.
 
+Three words, one chain: a **workflow** is the pattern of orchestrated work; a **recipe** defines one concretely — the control flow that creates, prompts, watches, and reacts to sessions; a **playbook** bundles recipes with skills, policies, gates, and artifacts into a way of working. Platform notes speak only of workflows and composition; recipes and playbooks are defined here and live in the playbook shelf.
+
 ```mermaid
 graph TB
     subgraph comp["PLAYBOOKS — how you use it (your opinion, swappable)"]
