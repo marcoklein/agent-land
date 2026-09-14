@@ -60,6 +60,8 @@ Two implementations run this pipeline; the stages and gates are identical:
 - **laptop-side (opencode skills)** — the `product` skill runs stages 1–2 with the same gate discipline; a build agent (opencode or `al run`, following the [dev playbook](/playbook/dogfooding.md)) runs stage 3. No engine dependency; works offline and teaches the recipe.
 - **human** — intake plus the gates (plan, outcome, design, merge). Nothing else. The two touchpoints of the [operator model](/playbook/dogfooding.md#the-operator-model--two-touchpoints).
 
+A third driver is in conception: the [ticket loop](/playbook/ticket-loop.md) — a continuous heartbeat that advances *every* open ticket by one step per tick instead of one orchestrator owning one issue end-to-end. Same stages, same gates; the orchestrator is stateless, and ticket state lives in git artifacts and GitHub objects rather than in a parked session.
+
 ## Agent-land-native — landed
 
 The recipe no longer waits on the engine: [Platform Connector](/product/features/platform-connector.md) and [Mount](/product/features/mount.md) have landed, an orchestrator session runs the pipeline on the platform, and the human gates are `waiting_for_input` states re-prompted with the gate outcome. The opencode skills remain the laptop-side variant of the same flow.
