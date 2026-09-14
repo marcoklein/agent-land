@@ -147,6 +147,8 @@ Orchestrator → child handoffs use the HITD protocol verbatim[^hitd]: a `HITD_H
 
 GitHub is **backend #1**, not the assumption. The recipe will isolate every backend command in a single "ticket backend" section, so the verbs — *list tickets, read state, park, check gate, comment, claim* — can later grow a second implementation (file-based `.tickets/` markdown, Jira, …) without touching the kernel. Per the dogfooding rule "the playbook is composition", this stays prompt-level for now; the seam is extracted into a real adapter contract only when a second backend actually appears. Likewise, the heartbeat is an external cron today; an **engine-native scheduler** (schedules as a resource beside mounts and connectors) is a candidate product feature — and a fitting *first ticket for the loop to build itself*.
 
+The file-based `.tickets/` backend is now designed: the [ticket layer](/product/designs/ticket-layer-design.md) makes **agent-land-tickets** (a separate git-synced `tk` repo) the system of record and recasts the loop's verbs onto it — `list/read state` = `tk ready`/`tk ls -T`, `claim` = `tk start` + git push, `park`/`check gate` = the `human` tag + `external-ref` PR status ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)). The GitHub backend and the ticket-repo backend are the two implementations of this seam.
+
 ## Shape of the landing (when it comes)
 
 Planned artifacts, all playbook-level, none in the engine:
