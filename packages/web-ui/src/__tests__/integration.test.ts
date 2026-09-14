@@ -158,10 +158,10 @@ describe("web-ui integration", () => {
     expect(res.text).toContain("Work done");
   });
 
-  it("returns 404 page for unknown session", async () => {
+  it("returns 404 for unknown session", async () => {
     engine.setSessions([]);
     const res = await request(app).get("/sessions/nonexist");
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
     expect(res.text).toContain("not found");
   });
 

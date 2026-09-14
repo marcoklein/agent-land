@@ -18,6 +18,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
 
   const port = parseInt(env.PORT || "5000", 10);
+  const quietMs = parseInt(env.QUIET_MS || "500", 10);
 
-  return { engineUrl, authHeader, port, quietMs: 500 };
+  return { engineUrl, authHeader, port, quietMs };
 }

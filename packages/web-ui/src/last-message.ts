@@ -1,4 +1,4 @@
-import type { SessionEvent, Session } from "@agent-land/contracts";
+import type { SessionEvent } from "@agent-land/contracts";
 import type { SseEvent, StreamFn } from "./sse.js";
 import { streamSse } from "./sse.js";
 
@@ -48,7 +48,6 @@ export function lastAssistantText(events: Iterable<SessionEvent>): string {
 }
 
 export interface SessionStatusResult {
-  session: Session;
   lastMessage: string;
 }
 
@@ -101,7 +100,7 @@ export async function getSessionStatus(
     if (quietTimer) clearTimeout(quietTimer);
   }
 
-  return { session: {} as Session, lastMessage: lastAssistantText(events) };
+  return { lastMessage: lastAssistantText(events) };
 }
 
 export function createLastMessageCache() {

@@ -25,6 +25,7 @@ export function createSessionsRouter(engine: EngineApi, config: Config, renderVi
       const envelope = await engine.getSession(id) as any;
       const session = envelope?.session;
       if (!session) {
+        res.status(404);
         return renderView(res, "session", {
           session: null,
           badgeClass: "",
@@ -53,11 +54,13 @@ export function createSessionsRouter(engine: EngineApi, config: Config, renderVi
         error: null,
       });
     } catch (err) {
+      const apiErr = err as { status?: number; message?: string };
+      if (apiErr.status) res.status(apiErr.status);
       return renderView(res, "session", {
         session: null,
         badgeClass: "",
         lastMessage: null,
-        error: (err as Error).message,
+        error: apiErr.message ?? "Unknown error",
       });
     }
   });

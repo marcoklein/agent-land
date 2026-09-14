@@ -8,7 +8,6 @@
   <script src="/vendor/htmx.min.js"></script>
   <style>
     .last-msg { white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
-    .destructive { --pico-primary: #c52f21; --pico-primary-hover: #a3291b; --pico-primary-focus: rgba(197, 47, 33, 0.25); }
   </style>
 </head>
 <body>
