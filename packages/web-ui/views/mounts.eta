@@ -1,0 +1,22 @@
+<h2>Mounts</h2>
+
+<% if (it.error) { %>
+<article class="pico-color-red-100"><p><strong>Error:</strong> <%~ it.error %></p></article>
+<% } %>
+
+<% if (it.mounts && it.mounts.length > 0) { %>
+<table>
+  <thead><tr><th>Name</th><th>Created</th><th>Updated</th></tr></thead>
+  <tbody>
+  <% it.mounts.forEach(function(m) { %>
+  <tr>
+    <td><strong><%= m.name %></strong></td>
+    <td><small><%= new Date(m.createdAt).toLocaleString() %></small></td>
+    <td><small><%= new Date(m.updatedAt).toLocaleString() %></small></td>
+  </tr>
+  <% }); %>
+  </tbody>
+</table>
+<% } else { %>
+<p><em>No mounts defined.</em></p>
+<% } %>

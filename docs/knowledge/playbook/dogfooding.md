@@ -50,7 +50,7 @@ Structural intent (not yet physical): the playbook consolidates into a single mo
 The operator's day shrinks to two moments; everything else is the engine and the playbook:
 
 1. **Intake** — state the problem, from anywhere, on any connection: an issue, the CLI, or (planned) a thin conversational client against the hosted API. The server holds all state, so a dropped connection costs nothing — clients re-attach and the event feed replays what happened while you were in the tunnel.
-2. **Gate review** — approve or send feedback where the playbook parks: spec PR, design PR, merge. Reviewing a PR *is* the interaction; no terminal required.
+2. **Gate review** — approve or send feedback where the playbook parks: spec PR, design PR, merge. Reviewing a PR *is* the interaction; the [Web UI](/platform/web-ui.md) shows which sessions are waiting on you, no terminal required.
 
 ```mermaid
 flowchart TB

@@ -49,6 +49,8 @@ sequenceDiagram
 
 Secrets are decrypted in-memory at launch and injected as container env vars — they never touch disk or the API.
 
+Two clients consume this API: the `al` CLI (shown above) and the hosted [Web UI](/platform/web-ui.md) (a separate Express app, same JSON/SSE endpoints).
+
 ## The atom — a session's lifecycle
 
 ```mermaid

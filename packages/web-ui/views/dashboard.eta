@@ -1,0 +1,118 @@
+<div id="dashboard" hx-get="/" hx-trigger="every 10s" hx-target="#dashboard" hx-swap="innerHTML">
+<% if (it.error) { %>
+<article>
+  <p><strong>Error:</strong> <%~ it.error %></p>
+</article>
+<% } %>
+
+<section>
+  <h2>Needs you</h2>
+  <% if (it.waiting && it.waiting.length > 0) { %>
+    <% it.waiting.forEach(function(s) { %>
+    <article>
+      <header>
+        <strong><a href="/sessions/<%= s.id %>"><%= s.id %></a></strong>
+        <mark class="pico-color-yellow-100"><%= s.waitingFor ? s.waitingFor.method : "" %></mark>
+      </header>
+      <% if (s.waitingFor && s.waitingFor.prompt) { %>
+      <p><small><%~ s.waitingFor.prompt %></small></p>
+      <% } %>
+      <% if (s.lastMessage) { %>
+      <details>
+        <summary>Last message</summary>
+        <div class="last-msg"><%~ s.lastMessage %></div>
+      </details>
+      <% } %>
+      <footer>
+        <small>
+          <%= s.provider ? s.provider + "/" : "" %><%= s.model %> &middot; <%= s.timeAgo %>
+          &middot; connectors: <%= s.connectors && s.connectors.length ? s.connectors.join(", ") : "none" %>
+        </small>
+      </footer>
+    </article>
+    <% }); %>
+  <% } else { %>
+  <p><em>No sessions waiting for input.</em></p>
+  <% } %>
+</section>
+
+<section>
+  <h2>Running</h2>
+  <% if (it.running && it.running.length > 0) { %>
+  <figure>
+  <table role="grid">
+    <thead><tr><th>ID</th><th>Provider/Model</th><th>Connectors</th><th>Updated</th></tr></thead>
+    <tbody>
+    <% it.running.forEach(function(s) { %>
+    <tr>
+      <td><code><a href="/sessions/<%= s.id %>"><%= s.id %></a></code></td>
+      <td><small><%= s.provider ? s.provider + "/" : "" %><%= s.model %></small></td>
+      <td><small><%= s.connectors && s.connectors.length ? s.connectors.join(", ") : "none" %></small></td>
+      <td><small><%= s.timeAgo %></small></td>
+    </tr>
+    <% }); %>
+    </tbody>
+  </table>
+  </figure>
+  <% } else { %>
+  <p><em>No sessions running.</em></p>
+  <% } %>
+</section>
+
+<section>
+  <h2>Idle</h2>
+  <% if (it.idle && it.idle.length > 0) { %>
+  <figure>
+  <table role="grid">
+    <thead><tr><th>ID</th><th>Provider/Model</th><th>Connectors</th><th>Updated</th></tr></thead>
+    <tbody>
+    <% it.idle.forEach(function(s) { %>
+    <tr>
+      <td><code><a href="/sessions/<%= s.id %>"><%= s.id %></a></code></td>
+      <td><small><%= s.provider ? s.provider + "/" : "" %><%= s.model %></small></td>
+      <td><small><%= s.connectors && s.connectors.length ? s.connectors.join(", ") : "none" %></small></td>
+      <td><small><%= s.timeAgo %></small></td>
+    </tr>
+    <% }); %>
+    </tbody>
+  </table>
+  </figure>
+  <% } else { %>
+  <p><em>No idle sessions.</em></p>
+  <% } %>
+</section>
+
+<% if (it.stopped && it.stopped.length > 0) { %>
+<details>
+  <summary>Stopped (<%= it.stopped.length %>)</summary>
+  <figure>
+  <table role="grid">
+    <thead><tr><th>ID</th><th>Provider/Model</th><th>Status</th><th>Updated</th></tr></thead>
+    <tbody>
+    <% it.stopped.forEach(function(s) { %>
+    <tr>
+      <td><code><a href="/sessions/<%= s.id %>"><%= s.id %></a></code></td>
+      <td><small><%= s.provider ? s.provider + "/" : "" %><%= s.model %></small></td>
+      <td><mark class="pico-color-red-100">stopped</mark></td>
+      <td><small><%= s.timeAgo %></small></td>
+    </tr>
+    <% }); %>
+    </tbody>
+  </table>
+  </figure>
+</details>
+<% } %>
+
+<section>
+  <h2>Resources</h2>
+  <figure>
+  <table role="grid">
+    <tbody>
+      <tr><td><strong>Connectors</strong></td><td><%= it.connectorCount %></td><td><a href="/connectors">View</a></td></tr>
+      <tr><td><strong>Providers</strong></td><td><%= it.providerCount %></td><td><a href="/providers">View</a></td></tr>
+      <tr><td><strong>Mounts</strong></td><td><%= it.mountCount %></td><td><a href="/mounts">View</a></td></tr>
+    </tbody>
+  </table>
+  </figure>
+</section>
+</div>

@@ -14,6 +14,9 @@ sources:
   - id: product-adr
     resource: /adrs/017-product-layer-okf-memory.md
     title: Build a Product Layer on OKF Memory with an Agentic Pipeline
+  - id: web-ui-adr
+    resource: /adrs/018-web-ui-separate-consumer.md
+    title: Web UI as separate consumer package
 ---
 
 # Agent Land domain boundary
@@ -28,7 +31,7 @@ This note is the refine stage's *is it in scope?* check. Its counterpart, [the v
 
 ## Is not (out of scope — deliberate)
 
-- **Presentation in-core.** No web UI, no server-rendered pages; anything graphical is a *separate consumer* of the JSON/SSE API, not part of this repo's engine[^strip-adr].
+- **Presentation in-core.** No web UI, no server-rendered pages; anything graphical is a *separate consumer* of the JSON/SSE API, not part of this repo's engine. A separate web-ui consumer package may live in the monorepo (`packages/web-ui`) — it is never part of the engine[^strip-adr][^web-ui-adr].
 - **Companion chat as a product.** Interactive clients serve intake and gate review for orchestrated work — they are separate consumers of the API, never an engine feature. The engine runs agents; playbooks (and their clients) decide how[^engine].
 - **Orchestration in-core.** No DAG/workflow executor in the engine; control flow is a recipe concern[^engine].
 - **Vendor knowledge in-core.** No provider catalog or connector field definitions in the engine; presets live in the CLI[^strip-adr].
@@ -53,3 +56,4 @@ scope deviation: "<outcome>" conflicts with <ADR/boundary>
 [^engine]: [Agent Land engine](/platform/engine.md)
 [^strip-adr]: [Strip Web UI and Vendor Knowledge from Server](/adrs/016-strip-web-ui-and-vendor-knowledge.md)
 [^product-adr]: [Build a Product Layer on OKF Memory with an Agentic Pipeline](/adrs/017-product-layer-okf-memory.md)
+[^web-ui-adr]: [Web UI as separate consumer package](/adrs/018-web-ui-separate-consumer.md)

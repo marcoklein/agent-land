@@ -55,6 +55,7 @@ Agent output streams in real-time via SSE. Each session persists its record to `
 - **RPC-driven sessions** — every session is a running pi agent (`--mode rpc`) with `auto`/`manual` permission policies
 - **Session recovery** — durable event log, graceful drain, and re-attach on redeploy
 - **Terminal client (`al`)** — zero-dependency CLI to create, chat, watch, and script sessions
+- **Web UI** — hosted, phone-friendly observability dashboard at `https://agent-land-ui.host.impromat.app`: see which sessions are running, which are waiting on you, and your resource inventory
 - **Pre-baked agent tools** — git, curl, jq, gh ready in the container
 - **Agent skills** — bundled skill files teach the agent common APIs (github, jira, gmail)
 - **No database** — flat JSON files on mounted volumes

@@ -1,0 +1,42 @@
+<% if (it.error) { %>
+<article><p><strong>Error:</strong> <%~ it.error %></p></article>
+<% } %>
+
+<% if (!it.session) { %>
+<p><a href="/" role="button" class="outline">Back to Dashboard</a></p>
+<% } else { %>
+<article>
+  <header>
+    <h2>Session <code><%= it.session.id %></code></h2>
+    <p><mark class="<%= it.badgeClass %>"><%= it.session.status %></mark></p>
+  </header>
+  <p>
+    <strong>Provider:</strong> <%= it.session.provider || "default" %><br>
+    <strong>Model:</strong> <%= it.session.model %><br>
+    <strong>Policy:</strong> <%= it.session.permissionPolicy %><br>
+    <strong>Connectors:</strong> <%= (it.session.connectors && it.session.connectors.length) ? it.session.connectors.join(", ") : "none" %><br>
+    <strong>Created:</strong> <%= new Date(it.session.createdAt).toLocaleString() %><br>
+    <strong>Updated:</strong> <%= new Date(it.session.updatedAt).toLocaleString() %>
+    <% if (it.session.mounts && it.session.mounts.length) { %>
+    <br><strong>Mounts:</strong> <%= it.session.mounts.map(function(m) { return m.source + ":" + m.target; }).join(", ") %>
+    <% } %>
+  </p>
+
+  <% if (it.session.waitingFor) { %>
+  <div>
+    <h4>Waiting for input</h4>
+    <p><strong>Method:</strong> <%= it.session.waitingFor.method %>
+    <% if (it.session.waitingFor.prompt) { %>&mdash; <%~ it.session.waitingFor.prompt %><% } %></p>
+  </div>
+  <% } %>
+
+  <% if (it.lastMessage) { %>
+  <h4>Last message</h4>
+  <div class="last-msg"><%~ it.lastMessage %></div>
+  <% } %>
+
+  <footer>
+    <a href="/" role="button" class="outline">Back to Dashboard</a>
+  </footer>
+</article>
+<% } %>
