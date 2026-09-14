@@ -42,6 +42,7 @@ What the agent-land playbook bundles today — all of it composition; none of it
 | Dev loop | branch → checks → PR → green loop | `.opencode/skills/dev-playbook/` (legacy name — a recipe, not a playbook) |
 | Trigger | hourly scan for `pipeline-ready` issues | `.github/workflows/pipeline-trigger.yml` |
 | Ticket loop (concept) | the heartbeat: one stateless prompt advancing every ticket by one step per tick, fresh context per step | [/playbook/ticket-loop.md](/playbook/ticket-loop.md) — planned |
+| Ticket layer (design) | the queue's system of record: `agent-land-tickets` git repo (`tk`), phase-label funnel, per-ticket HITD artifacts + thoughts, reconciliation | [/product/designs/ticket-layer-design.md](/product/designs/ticket-layer-design.md) — design gate ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)) |
 | Clients | `al` CLI today; thin conversational client planned | `packages/cli` |
 
 Structural intent (not yet physical): the playbook consolidates into a single monorepo package (`packages/playbook`), so the vision's swappability claim is folder-visible — today the pieces sit where they grew. With the move, the `dev-playbook` skill renames to `dev-loop` (it is a recipe by the [glossary](/product/goals/product-vision.md#the-two-layers); "playbook" stays unambiguous).
