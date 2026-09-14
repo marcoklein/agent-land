@@ -12,9 +12,15 @@ sources:
   - id: dockerfile
     resource: Dockerfile
     title: Orchestrator runtime image
+  - id: dockerfile-web
+    resource: Dockerfile.web
+    title: Web UI runtime image
   - id: deploy-workflow
     resource: .github/workflows/deploy.yml
     title: Dokku deploy workflow
+  - id: adr-018
+    resource: /adrs/018-web-ui-separate-consumer.md
+    title: Web UI as separate consumer package
 ---
 
 # SOPS
@@ -34,7 +40,13 @@ One-time, manual on the host (not in this repo):
 - **HTTP basic auth plugin.** After `dokku http-auth:enable`, `http-auth.conf` is created empty; the auth directives must be written manually.
 - **SSL.** `dokku letsencrypt:enable` can succeed while the nginx SSL config is missing; re-running regenerates it.
 - **Deploy must be a full clone.** CI pushes to Dokku with `fetch-depth: 0` (shallow clones are rejected).[^deploy-workflow]
+- **Deploy lock.** If Dokku is mid-deploy, git push fails. CI retries for 10 min with `sleep 20` between attempts.[^deploy-workflow]
+- **Multi-Dockerfile repos.** When an app needs a non-default Dockerfile (e.g. `Dockerfile.web`), use `dokku builder-dockerfile:set <app> dockerfile-path Dockerfile.web`. The env var `DOKKU_DOCKERFILE_PATH` is silently ignored — Dokku only reads the `dockerfile-path` property.[^adr-018]
+- **nginx.conf permissions.** Dokku generates `/home/dokku/<app>/nginx.conf` with mode `0600` (owner-only). The system nginx worker runs as `www-data`, so it can't read the file — resulting in a silent fallback to the nginx welcome page. Fix: `usermod -aG dokku www-data` (then `chmod 644` + `nginx -s reload` once; group membership survives config rebuilds).
+- **http-auth.conf emptiness.** After `dokku http-auth:enable` with an existing user, the `nginx.conf.d/http-auth.conf` may be generated empty. Write `auth_basic` and `auth_basic_user_file` directives directly into that file, then `chmod 644` the nginx.conf and reload.[^adr-018]
 
 [^sops-service]: SOPS encrypt/decrypt implementation
 [^dockerfile]: Orchestrator runtime image
+[^dockerfile-web]: Web UI runtime image
 [^deploy-workflow]: Dokku deploy workflow
+[^adr-018]: Web UI as separate consumer package

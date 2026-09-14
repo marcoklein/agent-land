@@ -49,7 +49,7 @@ AGENT_LAND_URL=https://agent-land.host.impromat.app \
 
 ## Deployment
 
-The web-ui is a second Dokku app on the same host: `agent-land-ui.host.impromat.app`. It uses `Dockerfile.web` and deploys via `.github/workflows/deploy-web.yml`. The one-time host setup follows the same pattern as the engine's Dokku setup ([deployment pitfalls](/learnings/deployment.md)): app creation, port proxy `http:80:5000`, letsencrypt, and http-auth with the same credentials.
+The web-ui is a second Dokku app on the same host: `agent-land-ui.host.impromat.app`. It uses `Dockerfile.web` (set via `dokku builder-dockerfile:set agent-land-ui dockerfile-path Dockerfile.web`) and deploys via `.github/workflows/deploy-web.yml`. Host setup is IaC-managed in `personal-infra/apps/agent-land-ui.sh`. For deployment gotchas — nginx permissions, http-auth bootstrap, and the dockerfile-path property — see [deployment pitfalls](/learnings/deployment.md).
 
 ## Phase 2 backlog
 
