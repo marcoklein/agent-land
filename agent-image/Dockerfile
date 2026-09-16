@@ -23,9 +23,9 @@ RUN ARCH=$(dpkg --print-architecture) \
     -o /usr/local/bin/sops \
     && chmod +x /usr/local/bin/sops
 
+COPY agent-image/scripts/tk /usr/local/bin/tk
 COPY skills/ /tmp/pi-config/skills/
-
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/tk
 
 ENTRYPOINT ["/entrypoint.sh"]
