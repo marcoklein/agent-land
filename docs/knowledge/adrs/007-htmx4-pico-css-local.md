@@ -6,7 +6,6 @@ deciders: [marcoklein]
 ---
 
 # HTMX 4 + Pico CSS Served Locally
-
 > **Superseded by [016 — Strip Web UI and Vendor Knowledge](016-strip-web-ui-and-vendor-knowledge.md)** — the server-rendered HTML UI (and thus HTMX/Pico) was removed. Retained for decision history only.
 
 **Decision:** Use HTMX 4 with SSE extension and Pico CSS, all bundled and served from the orchestrator. No CDN dependencies. No JavaScript build step.

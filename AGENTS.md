@@ -20,6 +20,7 @@ pnpm build          # tsc (all packages)
 - Never commit secrets, `.env`, `.age-key`, or `secrets/*.yaml` (gitignored)
 - `thoughts/` stays untracked
 - Docs follow the existing `docs/` style: everything lives in the OKF knowledge bundle under `docs/knowledge/` (reference, product, learnings, and ADRs under `docs/knowledge/adrs/`)
+- Write tight — the style contract + line budgets in `.opencode/skills/okf/SKILL.md` bind all notes, ADRs, and PR bodies
 
 ## Development loop
 
@@ -30,6 +31,6 @@ The full contract (auth via injected `GITHUB_TOKEN`, push via `x-access-token`, 
 1. Set git identity, then create a branch off `main` (`fix/…`, `feat/…`, `docs/…`, `refactor/…`, `chore/…`).
 2. Make the change, then `pnpm typecheck` and `pnpm test` — fix failures until both pass.
 3. Commit (conventional message) and push via `https://x-access-token:${GITHUB_TOKEN}@github.com/…`.
-4. Open a PR with `gh pr create` (title + a short body describing what changed and how it was verified).
+4. Open a PR with `gh pr create` (title + ≤ 15-line body: What / Notable / Verified).
 5. `gh pr checks <number> --watch`; if CI is red, fix, commit/push again, and re-watch until green.
 6. Report the PR URL and CI status. Do not merge — merging stays human-gated.

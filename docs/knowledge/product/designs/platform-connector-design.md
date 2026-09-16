@@ -26,15 +26,6 @@ sources:
   - id: adr-014
     resource: /adrs/014-json-api-canonical-machine-interface.md
     title: JSON API is the canonical machine interface
-  - id: session-service
-    resource: packages/server/src/core/session-service.ts
-    title: Session lifecycle and capability injection
-  - id: contracts
-    resource: packages/contracts/src/session.ts
-    title: Session contracts (zod)
-  - id: config
-    resource: packages/server/src/config.ts
-    title: Server config (env-driven)
 ---
 
 # Platform Connector

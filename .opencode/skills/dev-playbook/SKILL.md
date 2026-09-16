@@ -28,7 +28,7 @@ The contract every agent-land session must follow when making a change here. It 
 4. **Verify** — `pnpm typecheck` and `pnpm test`; fix failures until both pass.
 5. **Commit** — conventional message (`type(scope): description`, imperative, no period). Never commit secrets, `.env`, `.age-key`, or `secrets/*.yaml`.
 6. **Push** — via `x-access-token` (see above).
-7. **Open PR** — `gh pr create` with a title and a short body: what changed and how it was verified.
+7. **Open PR** — `gh pr create`, body ≤ 15 lines: **What** (1–2 sentences), **Notable** (≤ 3 bullets — decisions a reviewer could veto; link details, never re-narrate the diff), **Verified** (checks run). Style contract: okf skill.
 8. **Watch CI** — `gh pr checks <number> --watch`; if red, fix, commit/push again, and re-watch until green.
 9. **Report** — the PR URL and CI status. Do **not** merge; merging stays human-gated.
 

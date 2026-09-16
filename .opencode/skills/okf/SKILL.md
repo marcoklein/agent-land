@@ -3,6 +3,24 @@ name: okf
 description: Write knowledge documents in OKF (Open Knowledge Format) v0.2. Active when capturing learnings, writing reference docs, or creating files under docs/knowledge/.
 ---
 
+## Style — write tight
+
+- First sentence of every section carries the point; headings + first sentences alone must summarize the doc.
+- Short sentences, one claim each. No flourish, no selling, no metaphor stacks, no empty adjectives ("clean", "crash-proof").
+- State each rationale exactly once, where it owns (decision → ADR, design reasoning → Design note). Everywhere else links, never restates.
+- Tables for enumerations; prose only for reasoning a table cannot hold. A diagram only when it shows a shape prose cannot.
+- Cut: preambles ("This note describes…"), summaries that repeat content, and any sentence whose removal loses no decision or risk.
+
+Line budgets (whole file, frontmatter included):
+
+| Doc | Budget |
+|---|---|
+| ADR | ≤ 15 |
+| Feature note | ≤ 60 |
+| Design note | ≤ 120 |
+| PR body | ≤ 15 (template in the dev-playbook skill) |
+| Any other note | as long as the content needs, not longer |
+
 ## Concept template
 
 Every concept is a markdown file with YAML frontmatter:
