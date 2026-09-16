@@ -42,5 +42,6 @@ deciders: [agent]
 - **Decision:** Must be one sentence. Be specific.
 - **Why:** Must be one sentence. Focus on the primary reason.
 - **Alternatives:** List at least one alternative and why it was rejected.
+- **Budget:** ≤ 15 lines whole file (okf style contract). If a field wants more than one sentence, sharpen the decision instead of lengthening the prose.
 
 Write ADRs in `docs/knowledge/adrs/`. Update the status to `accepted` after implementation.

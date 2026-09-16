@@ -53,7 +53,7 @@ Answer the Feature note's open questions here, or mark them explicitly deferred.
 
 ### 3. Design review handoff (stop)
 
-Open a PR containing only the Design note (and the Feature note if new). The PR body summarizes the design in a paragraph. The design is approved by merging the PR — comments on the PR are the review dialogue. Do **not** start implementation before the design PR is merged.
+Open a PR containing only the Design note (and the Feature note if new), body per the dev-playbook PR template (≤ 15 lines): link the Design note, list ≤ 3 reviewable decisions — never re-narrate it. The design is approved by merging the PR — comments on the PR are the review dialogue. Do **not** start implementation before the design PR is merged.
 
 ### 4. After approval
 
@@ -61,6 +61,7 @@ Implementation is a separate run of the standard dev loop (`branch → typecheck
 
 ## Rules
 
+- Write tight — the okf style contract bounds notes (Feature ≤ 60, Design ≤ 120 lines) and PR bodies (≤ 15).
 - Product memory lives only in `docs/knowledge/product/` — never in `thoughts/` or prose docs.
 - Use OKF frontmatter and `generated.by` set to your own identity (`opencode/<model>`), never the user.
 - Only set `verified` when a human actually confirmed content.
