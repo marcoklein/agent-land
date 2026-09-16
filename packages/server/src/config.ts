@@ -19,6 +19,7 @@ export interface Config {
   gitUserEmail: string;
   agentLandUrl: string;
   operatorBasicAuth?: OperatorBasicAuth;
+  hostMounts: Record<string, string>;
 }
 
 /** Splits a "user:password" value at the first colon. */
@@ -49,6 +50,8 @@ export function getConfig(): Config {
     };
   }
 
+  const hostMounts = parseHostMounts(process.env.AGENT_LAND_HOST_MOUNTS);
+
   return {
     port,
     secretsDir: path.resolve(process.env.SECRETS_DIR || "./secrets"),
@@ -63,5 +66,19 @@ export function getConfig(): Config {
     gitUserEmail: process.env.GIT_USER_EMAIL ?? "",
     agentLandUrl: (process.env.AGENT_LAND_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
     operatorBasicAuth,
+    hostMounts,
   };
+}
+
+function parseHostMounts(raw?: string): Record<string, string> {
+  if (!raw) return {};
+  const map: Record<string, string> = {};
+  for (const item of raw.split(",")) {
+    const idx = item.indexOf(":");
+    if (idx <= 0) continue;
+    const name = item.slice(0, idx).trim();
+    const hostPath = item.slice(idx + 1).trim();
+    if (name && hostPath) map[name] = path.resolve(hostPath);
+  }
+  return map;
 }

@@ -207,7 +207,12 @@ export class SessionService {
         image: this.deps.config.agentImage,
         sessionVolume: SESSION_VOLUME_NAME,
         workspaceVolume,
-        extraBinds: mounts.map((m) => `${mountVolumeName(m.source)}:${m.target}`),
+        extraBinds: mounts.map((m) => {
+          const hostPath = this.deps.config.hostMounts[m.source];
+          return hostPath != null
+            ? `${hostPath}:${m.target}`
+            : `${mountVolumeName(m.source)}:${m.target}`;
+        }),
       });
       containerId = container.id;
       session.containerId = container.id;
