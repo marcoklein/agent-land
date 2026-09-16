@@ -22,6 +22,10 @@ pnpm build          # tsc (all packages)
 - Docs follow the existing `docs/` style: everything lives in the OKF knowledge bundle under `docs/knowledge/` (reference, product, learnings, and ADRs under `docs/knowledge/adrs/`)
 - Write tight — the style contract + line budgets in `.opencode/skills/okf/SKILL.md` bind all notes, ADRs, and PR bodies
 
+## Ticket layer
+
+Work state lives in [agent-land-tickets](https://github.com/marcoklein/agent-land-tickets) — a separate git-synced `tk` repo with a phase-label funnel. This repo stays the gated home of OKF memory and code (ADR 019). The loop driver is `scripts/loop.sh`; the sync protocol and label ladder are in that repo's `AGENTS.md`.
+
 ## Development loop
 
 When asked to implement a change, drive it to a green PR and report the result — do not stop after a single step or wait to be nudged between steps.
