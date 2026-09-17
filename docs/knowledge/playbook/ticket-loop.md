@@ -1,7 +1,7 @@
 ---
 type: Strategy
 title: Ticket loop — the dogfooding heartbeat
-description: A stateless single-prompt loop that advances every open ticket by exactly one step per tick, with fresh context per step — concept, state model, gates, and how it relates to the product pipeline. Conception only; not yet implemented.
+description: A stateless single-prompt loop that advances every open ticket by exactly one step per tick, with fresh context per step — concept, state model, gates, and how it relates to the product pipeline. As-built in agent-land-tickets/scripts/loop.sh.
 status: draft
 tags: [dogfooding, orchestration, hitd, heartbeat, tickets]
 generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
@@ -27,7 +27,7 @@ sources:
 
 **One-liner:** One prompt, run forever: every tick scans all open tickets, picks the single most pressing next step, spawns a *fresh* agent to execute it, reports, and stops — all state lives in git and GitHub, never in an agent's context.
 
-> **Status: conception.** This note captures the pattern at the concept level. Nothing here is implemented yet — no skill, no workflow, no labels. The planned artifacts are listed in [Shape of the landing](#shape-of-the-landing-when-it-comes).
+> **Status: as-built.** The loop is implemented as `loop.sh` in `agent-land-tickets`; this note is the reference model, with the divergences recorded in [As-built](#as-built--how-it-actually-landed).
 
 ## Why a loop next to the pipeline
 
@@ -149,16 +149,20 @@ GitHub is **backend #1**, not the assumption. The recipe will isolate every back
 
 The file-based `.tickets/` backend is now designed: the [ticket layer](/product/designs/ticket-layer-design.md) makes **agent-land-tickets** (a separate git-synced `tk` repo) the system of record ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)) — `list/read state` = `tk ready`/`tk ls -T`, `claim` = `tk start` + git push, `park`/`check gate` = the `human` tag + `external-ref` PR status.
 
-## Shape of the landing (when it comes)
+## As-built — how it actually landed
 
-Planned artifacts, all playbook-level, none in the engine:
+The concept held — heartbeat, fresh context per step, gates as human checkpoints — but the concrete shape differs from the plan below:
 
-| Piece | Home |
+| Planned | As-built |
 |---|---|
-| Loop recipe (kernel + GitHub backend section + child prompt templates) | `agent-image/skills/ticket-loop/SKILL.md` |
-| Heartbeat workflow (cron + dispatch, lock-mount spawn, stale guard) | `.github/workflows/ticket-loop.yml` |
-| Labels `loop`, `human`; lock mount `ticket-loop` | one-time operator setup |
-| First ticket: engine-native scheduler | a `loop`-labeled issue |
+| GitHub Actions cron heartbeat | `agent-land-tickets/scripts/loop.sh` — a bash driver invoked from the laptop (or, soon, the [scheduler](/product/designs/alt-daj9-engine-native-scheduler-design.md) it produced) |
+| Work branch `hitd/<issue>-<slug>` per ticket | push-to-main: each phase is a commit on `main`, artifacts under `work/<id>/` |
+| `.tickets/` backend as a future seam | `.tickets/` tk markdown is already the system of record ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)) |
+| Phase derived from artifact existence | phase is a `needs-*` label on the ticket, advanced by `loop.sh` |
+| Design gate = PR promoting the design note into agent-land | unchanged — a PR on `agent-land`, merge = approval |
+| First ticket: engine-native scheduler | built (`alt-daj9` → `scripts/scheduler.sh`), see [the run](/learnings/first-ticket-loop-run.md) |
+
+The step child is a fresh `al run` session bound to the tickets repo with the GitHub connector; the orchestrator-tick role collapsed into `loop.sh` itself rather than a separate platform session.
 
 ## Open questions
 

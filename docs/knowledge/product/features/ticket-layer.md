@@ -44,9 +44,9 @@ The pipeline and the loop need one shared, durable place to answer *"what is the
 ## Open questions
 
 - **Design-gate home.** Promote into agent-land OKF (default here, keeps ADR 017), or PR in agent-land-tickets + a web-ui render?
-- **Loop driver.** Laptop cron first, or the [engine-native scheduler](/playbook/ticket-loop.md#generalization-seam-deliberately-thin) as the loop's first self-built ticket?
-- **Thoughts mechanism.** `tk add-note`, a separate `thoughts.md`, or both?
 - **Label vs artifact authority.** On disagreement the Design note proposes artifacts win, label re-derived.
 - **Scope.** agent-land-only in v1, or a cross-repo queue (tickets carrying `repo` + `branch`)?
+
+Resolved since draft: the loop driver is the laptop bash `loop.sh` first, then the composition-layer scheduler built by `alt-daj9` (not an in-core engine primitive); the thoughts mechanism is both — `tk add-note` (Notes trail) *and* `work/<id>/thoughts.md` (HITD STATUS trail).
 
 [^adr-019]: [ADR 019 — ticket layer in a separate git-synced repo](/adrs/019-ticket-layer-git-synced-repo.md)

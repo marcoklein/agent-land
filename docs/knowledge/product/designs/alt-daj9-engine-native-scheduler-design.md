@@ -97,5 +97,3 @@ No new ADR is required for the recommended composition-layer v1. The design foll
 - Loop/config in `agent-land-tickets`: schedule parsing, due-time evaluation, atomic claims, launch/watch, timeout, recovery, and append-only run records.
 - Loop tests: cron evaluation, overlap and crash recovery, busy mounts, timeout, and run identity.
 - No `packages/server` changes, no new API routes, no database, and no DAG/workflow executor.
-
-This note is a draft for design-gate review. Merge of its PR is the approval signal; implementation is a later phase.
