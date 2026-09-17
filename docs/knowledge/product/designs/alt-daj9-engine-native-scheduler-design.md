@@ -2,7 +2,7 @@
 type: Design
 title: Engine-native scheduler
 description: A platform-native external scheduler that launches due sessions through the existing JSON/SSE API while keeping scheduling and orchestration outside the engine.
-status: draft
+status: stable
 generated: { by: pi/gpt-5.6-luna, at: 2026-09-17T14:15:00Z }
 sources:
   - id: engine
