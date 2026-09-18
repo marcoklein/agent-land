@@ -4,7 +4,7 @@ title: Scheduled maintenance — weekly dep-bump + stale-PR triage
 description: One GitHub Actions workflow (weekly cron + workflow_dispatch) running two deterministic, human-gated jobs — dependency bump and stale-PR triage — idempotent via a fixed-branch/title latch and a weekly marker comment, never merging or deploying.
 status: draft
 tags: [dogfooding, maintenance, github-actions, schedule, composition]
-generated: { by: opencode/deepseek-v4-pro, at: 2026-09-17T14:53:20Z }
+generated: { by: opencode/deepseek-v4-pro, at: 2026-09-18T03:19:11Z }
 sources:
   - id: feature
     resource: /product/features/scheduled-maintenance.md
@@ -120,6 +120,8 @@ last_human_activity = max(
 
 "Human" excludes bots — `github-actions[bot]`, `dependabot[bot]`, and any actor with `type: Bot`. `updated_at` is **not** used: it is bumped by the bot's own nudge comment, CI status events, and label changes, so it would keep a PR "fresh" forever. Excluding the bot's own comments is exactly what lets the nudge fire again next week without resetting the clock.
 
+**Excluded from triage entirely.** Two categories are skipped before the staleness check even runs, because a nudge there would be pure noise: **draft PRs** (`isDraft: true` — "not ready for review" is the author's explicit signal) and PRs carrying a `human` or `blocked` label (they are already awaiting a human or blocked on something, so a stale nag is redundant). Both are filtered with the same `gh pr list`/`gh pr view` JSON the staleness check uses.
+
 **Idempotency mechanism.** A **weekly marker comment**, mirroring the `pipeline-trigger` marker-comment latch but keyed by ISO week. The comment body is fixed and deterministic:
 
 ```
@@ -171,3 +173,5 @@ No `packages/*` changes, no API route, no new secret, no new ADR, no engine diff
 - **Runner vs engine:** plain script steps on the GHA runner, no agent session, no loopback.
 - **Dependency posture:** inline scripts + the three `ci.yml`-pinned setup actions; no third-party maintenance actions.
 - **Concurrency:** `concurrency: group: maintenance, cancel-in-progress: false`.
+- **Failure mode:** a failed dep-bump or triage job surfaces as a **red workflow run** in the Actions tab — the operator's only signal, no issue spam and no silent swallow. The next scheduled run retries naturally, and every latch is idempotent, so a retry is always safe (a half-finished run leaves no partial state behind). `pnpm outdated`'s non-zero exit is explicitly neutralized with `|| true` so detection failure can't masquerade as "nothing to do"; any *other* step failure fails the job loudly.
+- **Secrets:** `GITHUB_TOKEN` only, per-job scoped; no operator secret, no `AGENT_LAND_URL`/`AGENT_LAND_BASIC_AUTH` (no agent session to authenticate).
