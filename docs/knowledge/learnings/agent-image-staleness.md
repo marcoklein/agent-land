@@ -23,5 +23,7 @@ sources:
 
 **Confirmed in practice (2026-09-05):** the first on-platform implementation run had to carry its dev-playbook inline in the prompt — the session launched from an image built before the skills were bundled, so `dev-playbook`/`product`/`okf`/`adr` were not present in it. Until the rebuild fix lands, treat image-bundled skills as absent on deployed hosts and inline any playbook the prompt depends on.
 
+**Confirmed again (2026-09-19):** the P3 cutover smoke test failed because both the production `agent-land-pi:0.4` and the local `agent-land-pi:latest` predated P1's `COPY runner/ /runner/`, so the runner entrypoint died with `MODULE_NOT_FOUND /runner/agent-runner.mjs`. Rebuilt as `0.5` (prod) and `latest` (local) to unblock — exactly what the content-hash fix would have prevented.
+
 [^docker]: `packages/server/src/infra/docker.ts`, `ensureAgentImage()`
 [^dockerfile]: `Dockerfile`, runtime stage

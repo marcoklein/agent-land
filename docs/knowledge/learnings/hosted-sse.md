@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: SSE over the hosted edge proxy
-description: The three proxy gotchas that broke SSE for non-browser clients, and their fixes.
+description: The proxy and buffering gotchas that broke SSE for non-browser clients, and their fixes.
 status: stable
 generated: { by: opencode/deepseek-v4-pro, at: 2026-08-19T00:00:00Z }
 verified: { by: human:marcoklein, at: 2026-09-01T00:00:00Z }
@@ -12,6 +12,9 @@ sources:
   - id: cli-ops
     resource: packages/cli/src/lib/ops.ts
     title: CLI SSE consumer (replay + dedupe)
+  - id: runner-transport
+    resource: packages/server/src/infra/sse-post-runner-transport.ts
+    title: Runner channel SSE transport
 ---
 
 The hosted platform sits behind an openresty edge proxy. Three behaviors broke the SSE stream for Node's HTTP/1.1-only client and were fixed in `api-sessions.ts`.[^api-sessions]
@@ -34,6 +37,12 @@ History was read before the live subscription started, so events in that window 
 
 Fix: **subscribe first, then replay**, and stamp every event (replayed and live) with a per-session `seq`. The server drops live events with `seq` below the replay length; the client drops anything `seq <=` last-seen.[^cli-ops]
 
+# 4. Headers not flushed until the first write
+
+`res.writeHead()` marks the headers but does not push them to the socket — they go out on the first `res.write()`. A stream with nothing to send yet therefore holds its headers until the first heartbeat (~30s). The runner's `/engine/runner/:id/stream` hit exactly this: its `fetch` never resolved, registration missed the control plane's accept window, and `prompt()` failed with "runner is not connected".[^runner-transport]
+
+Fix: `res.flushHeaders()` plus an immediate `: connected` comment on stream open. Time-to-first-byte dropped from ~30s to 0.0035s.
+
 # Route details
 
 - `GET /api/sessions/:id/events` — replays the full jsonl history, then streams live.
@@ -42,3 +51,4 @@ Fix: **subscribe first, then replay**, and stamp every event (replayed and live)
 
 [^api-sessions]: `packages/server/src/presentation/http/api-sessions.ts`
 [^cli-ops]: `packages/cli/src/lib/ops.ts`
+[^runner-transport]: `packages/server/src/infra/sse-post-runner-transport.ts`
