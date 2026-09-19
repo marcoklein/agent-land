@@ -25,7 +25,6 @@ export interface InteractiveContainerOptions {
   sessionVolume: string;
   workspaceVolume: string;
   extraBinds?: string[];
-  runtime?: "exec" | "runner";
 }
 
 export class DockerService implements DockerPort {
@@ -162,8 +161,8 @@ export class DockerService implements DockerPort {
     const container = await this.docker.createContainer({
       name: agentContainerId(options.id),
       Image: options.image,
-      Entrypoint: options.runtime === "runner" ? ["node", "/runner/agent-runner.mjs"] : ["/bin/sleep"],
-      Cmd: options.runtime === "runner" ? [] : ["infinity"],
+      Entrypoint: ["node", "/runner/agent-runner.mjs"],
+      Cmd: [],
       Labels: {
         app: "agent-land",
         "agent-land/interactive": "true",

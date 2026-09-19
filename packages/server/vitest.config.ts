@@ -17,7 +17,6 @@ export default defineConfig({
       DATA_DIR: path.join(configDir, "src/__tests__/tmp-test-data"),
       OPENCODE_API_KEY: "test-key",
       SSE_HEARTBEAT_MS: "50",
-      SESSION_RUNTIME: "exec",
     },
   },
 });

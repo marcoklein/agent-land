@@ -61,7 +61,7 @@ function makeService(
     connectors,
     providers,
     mounts: {} as never,
-    harness: {} as never,
+    runnerHarness: {} as never,
     eventLog: {} as never,
     config,
   });

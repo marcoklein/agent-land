@@ -19,7 +19,11 @@ sources:
 
 **Consequence:** PR #46 (dev-playbook skill) and this change (product/okf/adr skills) reach the host's `/agent-image` directory but **not** the running sessions — they launch from the stale image until it is rebuilt.
 
-**Candidate fix (future feature):** stamp built images with a content hash of `/agent-image` (label), and have `ensureAgentImage` rebuild when the label mismatches. Until then, updating skills or the agent Dockerfile on a deployed host requires manually removing the old image (host access).
+**Fixed (P4):** the server now content-hashes `/agent-image` at boot and tags the built
+image `agent-land-pi:<hash>` unless `AGENT_IMAGE` is pinned explicitly. A runner/skill
+change therefore yields a new tag that `ensureAgentImage` builds instead of reusing a
+stale image — no manual rebuild on the host. See
+`packages/server/src/infra/agent-image.ts`, `computeAgentImageTag()`.
 
 **Confirmed in practice (2026-09-05):** the first on-platform implementation run had to carry its dev-playbook inline in the prompt — the session launched from an image built before the skills were bundled, so `dev-playbook`/`product`/`okf`/`adr` were not present in it. Until the rebuild fix lands, treat image-bundled skills as absent on deployed hosts and inline any playbook the prompt depends on.
 

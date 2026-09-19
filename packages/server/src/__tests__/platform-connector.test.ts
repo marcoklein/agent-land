@@ -23,15 +23,17 @@ describe("Platform Connector — credential minting and injection", () => {
     await cleanupDataDir();
   });
 
-  it("injects AGENT_LAND_URL and a scoped credential only when platform is true", async () => {
+  it("injects AGENT_LAND_URL and a scoped credential into every session (all run the runner)", async () => {
     await ctx.sessionService.createSession({ platform: true });
     await ctx.sessionService.createSession({});
 
     const [platform, plain] = ctx.mockDocker.created;
     expect(platform.envVars.AGENT_LAND_URL).toBe(getConfig().agentLandUrl);
     expect(platform.envVars.AGENT_LAND_BASIC_AUTH).toMatch(/^session-[a-f0-9]{8}:[A-Za-z0-9_-]{40,}$/);
-    expect(plain.envVars.AGENT_LAND_URL).toBeUndefined();
-    expect(plain.envVars.AGENT_LAND_BASIC_AUTH).toBeUndefined();
+    expect(plain.envVars.AGENT_LAND_URL).toBe(getConfig().agentLandUrl);
+    expect(plain.envVars.AGENT_LAND_BASIC_AUTH).toMatch(/^session-[a-f0-9]{8}:[A-Za-z0-9_-]{40,}$/);
+    expect(plain.envVars.AGENT_LAND_SESSION_ID).toBe(plain.id);
+    expect(plain.envVars.AGENT_RUNNER_PI_ARGV).toBeDefined();
   });
 
   it("mints a unique token per session and persists it in the flat-JSON record", async () => {

@@ -27,7 +27,6 @@ interface SessionHandle {
   containerId: string;
   pendingPersists: Set<Promise<void>>;
   pendingAppends: Set<Promise<void>>;
-  draining?: boolean;
 }
 
 interface SessionServiceDeps {
@@ -37,8 +36,7 @@ interface SessionServiceDeps {
   connectors: ConnectorRepository;
   providers: ProviderRepository;
   mounts: MountRepository;
-  harness: AgentHarness;
-  runnerHarness?: AgentHarness;
+  runnerHarness: AgentHarness;
   eventLog: SessionEventLog;
   config: Config;
   piConfigProvisioner?: { provision(session: AgentSession, containerId: string): Promise<void> };
@@ -71,14 +69,7 @@ export class SessionStoppedError extends Error {
 export class SessionService {
   private handles = new Map<string, SessionHandle>();
 
-  constructor(private deps: SessionServiceDeps, private drainSettleTimeoutMs = 4000) {}
-
-  private harnessFor(session: AgentSession): AgentHarness {
-    if (session.runtime === "runner" && this.deps.runnerHarness) {
-      return this.deps.runnerHarness;
-    }
-    return this.deps.harness;
-  }
+  constructor(private deps: SessionServiceDeps) {}
 
   async resolveAgentEnv(connectorNames: string[], providerId?: string): Promise<Map<string, string>> {
     const connectorsData = await this.deps.connectors.list();
@@ -184,19 +175,11 @@ export class SessionService {
         ? options.parentSessionId.trim()
         : undefined;
 
-    const runtime: "exec" | "runner" =
-      this.deps.config.sessionRuntime === "runner" ? "runner" : "exec";
-
-    let platformToken: string | undefined;
-    if (platform || runtime === "runner") {
-      platformToken = mintPlatformToken();
-      envVarsMap.set("AGENT_LAND_URL", this.deps.config.agentLandUrl);
-      envVarsMap.set("AGENT_LAND_BASIC_AUTH", `${PLATFORM_SESSION_PREFIX}${id}:${platformToken}`);
-      if (runtime === "runner") {
-        envVarsMap.set("AGENT_LAND_SESSION_ID", id);
-        envVarsMap.set("AGENT_RUNNER_PI_ARGV", JSON.stringify(piArgv(id, provider, model)));
-      }
-    }
+    const platformToken = mintPlatformToken();
+    envVarsMap.set("AGENT_LAND_URL", this.deps.config.agentLandUrl);
+    envVarsMap.set("AGENT_LAND_BASIC_AUTH", `${PLATFORM_SESSION_PREFIX}${id}:${platformToken}`);
+    envVarsMap.set("AGENT_LAND_SESSION_ID", id);
+    envVarsMap.set("AGENT_RUNNER_PI_ARGV", JSON.stringify(piArgv(id, provider, model)));
 
     const session: AgentSession = {
       id,
@@ -210,7 +193,6 @@ export class SessionService {
       platform,
       parentSessionId,
       platformToken,
-      runtime,
       createdAt: now,
       updatedAt: now,
     };
@@ -223,7 +205,6 @@ export class SessionService {
         image: this.deps.config.agentImage,
         sessionVolume: SESSION_VOLUME_NAME,
         workspaceVolume,
-        runtime,
         extraBinds: mounts.map((m) => {
           const hostPath = this.deps.config.hostMounts[m.source];
           return hostPath != null
@@ -240,7 +221,7 @@ export class SessionService {
         await this.deps.piConfigProvisioner.provision(session, container.id);
       }
 
-      const harness = await this.harnessFor(session).start(session);
+      const harness = await this.deps.runnerHarness.start(session);
       const handle: SessionHandle = {
         session,
         harness,
@@ -431,7 +412,7 @@ export class SessionService {
 
         try {
           const history = await this.deps.eventLog.read(session.id);
-          const harness = await this.harnessFor(session).start(session);
+          const harness = await this.deps.runnerHarness.start(session);
           const trimmed = history.slice(-HISTORY_CAP);
           const handle: SessionHandle = {
             session,
@@ -447,49 +428,12 @@ export class SessionService {
           handle.unsubscribe = harness.events().subscribe((e) => this.onEvent(handle, e));
           this.handles.set(session.id, handle);
           await this.markReattached(handle);
-        } catch (err) {
-          // A runner session re-attaches on its own next registration; the harness
-          // keeps accepting. Only exec sessions — whose pi stream we own — get marked
-          // stopped when their stream cannot be re-established.
-          if (session.runtime === "runner") return;
-          await this.markStopped(session);
+        } catch {
+          // The runner re-attaches on its own next registration; the harness keeps
+          // accepting. Nothing to reconcile here.
         }
       })
     );
-  }
-
-  async drainAll(): Promise<void> {
-    await Promise.all(
-      [...this.handles.values()]
-        .filter((handle) => handle.session.runtime !== "runner")
-        .map(async (handle) => {
-          handle.draining = true;
-          await this.waitForSettle(handle);
-          try {
-            await handle.harness.stop();
-          } catch {}
-        })
-    );
-  }
-
-  private waitForSettle(handle: SessionHandle): Promise<void> {
-    if (handle.session.status !== "running") return Promise.resolve();
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        unsubscribe();
-        resolve();
-      };
-      const timer = setTimeout(finish, this.drainSettleTimeoutMs);
-      const unsubscribe = handle.harness.events().subscribe((e) => {
-        if (e.type === "agent_settled" || (e.type === "status" && e.status === "stopped")) {
-          finish();
-        }
-      });
-    });
   }
 
   private async markReattached(handle: SessionHandle): Promise<void> {
@@ -519,7 +463,6 @@ export class SessionService {
   }
 
   private onEvent(handle: SessionHandle, event: SessionEvent): void {
-    if (handle.draining) return;
     this.push(handle, event);
 
     switch (event.type) {
