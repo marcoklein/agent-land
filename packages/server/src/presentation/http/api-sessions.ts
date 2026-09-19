@@ -109,6 +109,7 @@ export function sessionsApiRouter(sessionService: SessionService, config: Config
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     });
+    res.flushHeaders();
 
     const sseWrite = (data: string) => {
       res.write(`data: ${data.replace(/\n/g, "\ndata: ")}\n\n`);
