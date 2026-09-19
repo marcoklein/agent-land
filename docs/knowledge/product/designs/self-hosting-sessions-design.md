@@ -2,7 +2,7 @@
 type: Design
 title: Self-hosting sessions — session runtime ownership in the agent container
 description: Split the platform into a stateless control plane and a self-hosting session runtime, so a merge/deploy never interrupts a running agent session.
-status: draft
+status: stable
 tags: [engine, session, architecture, deploy, harness, rollover]
 generated: { by: opencode-go/deepseek-v4.1-flash, at: 2026-09-19T08:32:53Z }
 sources:
