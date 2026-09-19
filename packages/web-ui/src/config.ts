@@ -3,6 +3,7 @@ export interface Config {
   authHeader?: string;
   port: number;
   quietMs: number;
+  boardFile?: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -19,6 +20,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
   const port = parseInt(env.PORT || "5000", 10);
   const quietMs = parseInt(env.QUIET_MS || "500", 10);
+  const boardFile = env.TICKETS_BOARD_FILE;
 
-  return { engineUrl, authHeader, port, quietMs };
+  return { engineUrl, authHeader, port, quietMs, boardFile };
 }

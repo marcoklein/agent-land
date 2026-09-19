@@ -14,6 +14,7 @@ import { parseDialogAnswer, parseSelectAnswer } from "./lib/dialogs.js";
 import { formatAge } from "./lib/format.js";
 import { gatherChoices, type SelectOption } from "./lib/new-wizard.js";
 import { buildSessionTree, renderSessionTree } from "./lib/tree.js";
+import { commands } from "./commands/index.js";
 import type { AgentEvent, ConnectorSummary, MountSummary, ProviderSummary, RenderLine, SessionSummary, WaitingForInput } from "./lib/types.js";
 
 const USAGE = `al — terminal chat client for agent-land
@@ -79,6 +80,9 @@ Usage:
 
   al watch [<session-id> | --all]
       tail live events and print "<id>: settled" notifications (stdout only)
+
+  al board [--file <board.json>]
+      render the agent-land-tickets funnel (reads a "tk board" JSON snapshot)
 
 Config (env):
   AGENT_LAND_URL             default https://agent-land.host.impromat.app
@@ -649,6 +653,18 @@ async function main() {
 
   const config = loadConfig();
   const client = createApiClient(config);
+
+  const plugin = commands.find((c) => c.name === cmd);
+  if (plugin) {
+    await plugin.run({
+      client,
+      opts,
+      positional,
+      print: (s) => process.stdout.write(s),
+      fail,
+    });
+    return;
+  }
 
   let provider = opts.provider;
   let model = opts.model;

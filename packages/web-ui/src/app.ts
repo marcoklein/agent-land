@@ -7,6 +7,7 @@ import { createEngineApi } from "./engine-api.js";
 import { createDashboardRouter } from "./routes/index.js";
 import { createSessionsRouter } from "./routes/sessions.js";
 import { createResourcesRouter } from "./routes/resources.js";
+import { plugins } from "./plugins/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const viewsDir = join(__dirname, "..", "views");
@@ -17,6 +18,8 @@ export function createApp(config: Config) {
   const eta = new Eta({ views: viewsDir, autoTrim: false });
   const app = express();
 
+  const navPlugins: { label: string; href: string }[] = [];
+
   const renderView = async (res: Response, view: string, data: Record<string, unknown>) => {
     const isHtmx = !!res.req.headers["hx-request"];
     try {
@@ -24,7 +27,7 @@ export function createApp(config: Config) {
       if (isHtmx) {
         res.type("html").send(body);
       } else {
-        const full = await eta.renderAsync("layout", { ...data, body }) as string;
+        const full = await eta.renderAsync("layout", { ...data, body, navPlugins }) as string;
         res.type("html").send(full);
       }
     } catch (err) {
@@ -41,6 +44,11 @@ export function createApp(config: Config) {
   app.use("/", dashboardRouter);
   app.use("/sessions", sessionsRouter);
   app.use("/", resourcesRouter);
+
+  for (const plugin of plugins) {
+    app.use(plugin.path, plugin.createRouter({ engine, config, renderView }));
+    if (plugin.navLabel) navPlugins.push({ label: plugin.navLabel, href: plugin.path });
+  }
 
   return app;
 }
