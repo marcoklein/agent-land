@@ -28,7 +28,7 @@ import { providersApiRouter } from "../../presentation/http/api-providers.js";
 import { modelsApiRouter } from "../../presentation/http/api-models.js";
 import { mountsApiRouter } from "../../presentation/http/api-mounts.js";
 import { createApiAuthMiddleware } from "../../presentation/http/auth.js";
-import { getConfig } from "../../config.js";
+import { getConfig, type Config } from "../../config.js";
 
 const execFileAsync = promisify(execFile);
 const testConfig = getConfig();
@@ -194,9 +194,11 @@ export interface AgentTestApp {
   mountService: MountService;
 }
 
-export function createAgentTestApp(): AgentTestApp {
+export function createAgentTestApp(configOverrides?: Partial<Config>): AgentTestApp {
   const app = express();
   app.use(express.json());
+
+  const config = configOverrides ? { ...testConfig, ...configOverrides } : testConfig;
 
   const sops = new SopsService(testConfig.secretsDir, testConfig.ageKeyFile);
   const sessionRepository = new JsonSessionRepository(testConfig.dataDir);
@@ -224,14 +226,14 @@ export function createAgentTestApp(): AgentTestApp {
       harness: fakeHarness,
       runnerHarness: fakeRunnerHarness,
       eventLog,
-      config: testConfig,
+      config,
       piConfigProvisioner,
     },
     20
   );
 
-  app.use("/api", createApiAuthMiddleware(sessionService, testConfig));
-  app.use("/api/sessions", sessionsApiRouter(sessionService, testConfig));
+  app.use("/api", createApiAuthMiddleware(sessionService, config));
+  app.use("/api/sessions", sessionsApiRouter(sessionService, config));
   app.use("/api/connectors", connectorsApiRouter(connectorService));
   app.use("/api/providers", providersApiRouter(providerService));
   app.use("/api/models", modelsApiRouter(modelCatalog));

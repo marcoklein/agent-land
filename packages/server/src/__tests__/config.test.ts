@@ -11,6 +11,9 @@ const ENV_KEYS = [
   "AGENT_LAND_AUTH_USER",
   "AGENT_LAND_AUTH_PASSWORD",
   "SESSION_RUNTIME",
+  "SESSION_REAP_TTL_MS",
+  "SESSION_MAX_LIVE",
+  "SESSION_REAP_INTERVAL_MS",
 ] as const;
 const saved: Record<string, string | undefined> = {};
 
@@ -101,5 +104,46 @@ describe("getConfig", () => {
     stash();
     setEnv("SESSION_RUNTIME", "exec");
     expect(getConfig().sessionRuntime).toBe("exec");
+  });
+
+  it("defaults session reaping to 6h TTL, 100 live cap, and a 60s interval", () => {
+    stash();
+    setEnv("SESSION_REAP_TTL_MS", undefined);
+    setEnv("SESSION_MAX_LIVE", undefined);
+    setEnv("SESSION_REAP_INTERVAL_MS", undefined);
+    expect(getConfig().sessionReapTtlMs).toBe(21_600_000);
+    expect(getConfig().sessionMaxLive).toBe(100);
+    expect(getConfig().sessionReapIntervalMs).toBe(60_000);
+  });
+
+  it("reads session reaping settings from env", () => {
+    stash();
+    setEnv("SESSION_REAP_TTL_MS", "1000");
+    setEnv("SESSION_MAX_LIVE", "5");
+    setEnv("SESSION_REAP_INTERVAL_MS", "2000");
+    const config = getConfig();
+    expect(config.sessionReapTtlMs).toBe(1000);
+    expect(config.sessionMaxLive).toBe(5);
+    expect(config.sessionReapIntervalMs).toBe(2000);
+  });
+
+  it("allows a zero TTL and zero cap to disable reaping", () => {
+    stash();
+    setEnv("SESSION_REAP_TTL_MS", "0");
+    setEnv("SESSION_MAX_LIVE", "0");
+    expect(getConfig().sessionReapTtlMs).toBe(0);
+    expect(getConfig().sessionMaxLive).toBe(0);
+  });
+
+  it("throws on a negative SESSION_MAX_LIVE", () => {
+    stash();
+    setEnv("SESSION_MAX_LIVE", "-1");
+    expect(() => getConfig()).toThrow(/Invalid SESSION_MAX_LIVE/);
+  });
+
+  it("throws on a non-positive SESSION_REAP_INTERVAL_MS", () => {
+    stash();
+    setEnv("SESSION_REAP_INTERVAL_MS", "0");
+    expect(() => getConfig()).toThrow(/Invalid SESSION_REAP_INTERVAL_MS/);
   });
 });

@@ -23,6 +23,9 @@ export interface Config {
   operatorBasicAuth?: OperatorBasicAuth;
   hostMounts: Record<string, string>;
   sessionRuntime: SessionRuntime;
+  sessionReapTtlMs: number;
+  sessionMaxLive: number;
+  sessionReapIntervalMs: number;
 }
 
 /** Splits a "user:password" value at the first colon. */
@@ -42,6 +45,10 @@ export function getConfig(): Config {
   if (!Number.isFinite(sseHeartbeatMs) || sseHeartbeatMs <= 0) {
     throw new Error(`Invalid SSE_HEARTBEAT_MS: ${process.env.SSE_HEARTBEAT_MS} (expected a positive number)`);
   }
+
+  const sessionReapTtlMs = parseNonNegativeInt("SESSION_REAP_TTL_MS", 21_600_000);
+  const sessionMaxLive = parseNonNegativeInt("SESSION_MAX_LIVE", 100);
+  const sessionReapIntervalMs = parsePositiveInt("SESSION_REAP_INTERVAL_MS", 60_000);
 
   let operatorBasicAuth: OperatorBasicAuth | undefined;
   if (process.env.AGENT_LAND_BASIC_AUTH) {
@@ -72,7 +79,30 @@ export function getConfig(): Config {
     hostMounts,
     // Runner is the default (P3 cutover); SESSION_RUNTIME=exec is the rollback escape hatch.
     sessionRuntime: process.env.SESSION_RUNTIME === "exec" ? "exec" : "runner",
+    sessionReapTtlMs,
+    sessionMaxLive,
+    sessionReapIntervalMs,
   };
+}
+
+function parseNonNegativeInt(envKey: string, fallback: number): number {
+  const raw = process.env[envKey];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`Invalid ${envKey}: ${raw} (expected a non-negative integer)`);
+  }
+  return value;
+}
+
+function parsePositiveInt(envKey: string, fallback: number): number {
+  const raw = process.env[envKey];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`Invalid ${envKey}: ${raw} (expected a positive integer)`);
+  }
+  return value;
 }
 
 function parseHostMounts(raw?: string): Record<string, string> {

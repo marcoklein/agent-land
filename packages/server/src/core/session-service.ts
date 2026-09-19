@@ -335,6 +335,7 @@ export class SessionService {
       if (session.status !== "stopped") {
         await this.markStopped(session);
       }
+      await this.deps.docker.removeContainer(agentContainerId(id)).catch(() => {});
       await this.deps.docker.removeVolume(workspaceVolumeName(id)).catch(() => {});
       return;
     }
@@ -370,8 +371,48 @@ export class SessionService {
       await drainWrites(handle);
     }
     this.handles.delete(id);
+    await this.deps.docker.removeVolume(workspaceVolumeName(id)).catch(() => {});
     await this.deps.sessions.delete(id);
     await this.deps.eventLog.delete(id);
+  }
+
+  async reapIdleSessions(now: number = Date.now()): Promise<number> {
+    const sessions = await this.deps.sessions.list();
+    const { sessionReapTtlMs, sessionMaxLive } = this.deps.config;
+
+    const reaped = new Set<string>();
+
+    // Cap: when live sessions exceed the limit, stop the oldest idle sessions first.
+    const live = sessions.filter((s) => s.status !== "stopped");
+    if (sessionMaxLive > 0 && live.length > sessionMaxLive) {
+      const overflow = live.length - sessionMaxLive;
+      const oldestIdle = live
+        .filter((s) => s.status === "idle")
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .slice(0, overflow);
+      for (const s of oldestIdle) {
+        await this.kill(s.id).catch(() => {});
+        await this.remove(s.id).catch(() => {});
+        reaped.add(s.id);
+      }
+    }
+
+    // TTL: reap idle/stopped sessions whose last update is past the TTL.
+    if (sessionReapTtlMs > 0) {
+      const stale = sessions.filter((s) => {
+        if (s.status === "running" || s.status === "waiting_for_input") return false;
+        const updated = new Date(s.updatedAt).getTime();
+        return now - updated >= sessionReapTtlMs;
+      });
+      for (const s of stale) {
+        if (reaped.has(s.id)) continue;
+        await this.kill(s.id).catch(() => {});
+        await this.remove(s.id).catch(() => {});
+        reaped.add(s.id);
+      }
+    }
+
+    return reaped.size;
   }
 
   async recover(): Promise<void> {
