@@ -7,5 +7,10 @@
     <li><a href="/connectors">Connectors</a></li>
     <li><a href="/providers">Providers</a></li>
     <li><a href="/mounts">Mounts</a></li>
+    <% if (it.navPlugins && it.navPlugins.length) { %>
+      <% it.navPlugins.forEach(function (p) { %>
+        <li><a href="<%= p.href %>"><%= p.label %></a></li>
+      <% }) %>
+    <% } %>
   </ul>
 </nav>
