@@ -26,6 +26,11 @@ import { createApiAuthMiddleware } from "./presentation/http/auth.js";
 
 const config = getConfig();
 
+// Let an in-flight turn finish before stopping its harness. Bounded so the whole
+// shutdown stays inside Dokku's ~30s SIGTERM grace (drain grace + hard-exit backstop).
+const DRAIN_GRACE_MS = 25_000;
+const HARD_EXIT_MS = DRAIN_GRACE_MS + 3_000;
+
 const sops = new SopsService(config.secretsDir, config.ageKeyFile);
 const docker = new DockerService();
 const sessionRepository = new JsonSessionRepository(config.dataDir);
@@ -51,7 +56,7 @@ const sessionService = new SessionService({
   eventLog,
   config,
   piConfigProvisioner,
-});
+}, DRAIN_GRACE_MS);
 
 const app = express();
 
@@ -74,10 +79,10 @@ const server = app.listen(config.port, () => {
 });
 
 async function shutdown(signal: string): Promise<void> {
-  console.log(`${signal} received, draining agent sessions...`);
+  console.log(`${signal} received, finishing in-flight turns (up to ${DRAIN_GRACE_MS / 1000}s)...`);
+  setTimeout(() => process.exit(0), HARD_EXIT_MS).unref();
   await sessionService.drainAll().catch(() => {});
   server.close(() => process.exit(0));
-  setTimeout(() => process.exit(0), 5000).unref();
 }
 
 process.once("SIGTERM", () => void shutdown("SIGTERM"));

@@ -398,11 +398,7 @@ export class SessionService {
     await Promise.all(
       [...this.handles.values()].map(async (handle) => {
         handle.draining = true;
-        const settled = this.waitForSettle(handle);
-        try {
-          await handle.harness.abort();
-        } catch {}
-        await settled;
+        await this.waitForSettle(handle);
         try {
           await handle.harness.stop();
         } catch {}
@@ -411,6 +407,7 @@ export class SessionService {
   }
 
   private waitForSettle(handle: SessionHandle): Promise<void> {
+    if (handle.session.status !== "running") return Promise.resolve();
     return new Promise((resolve) => {
       let settled = false;
       const finish = () => {
