@@ -169,10 +169,25 @@ export class FakeHarness implements AgentHarness {
   }
 }
 
+export class FakeRunnerHarness implements AgentHarness {
+  handles: FakeHandle[] = [];
+
+  reset() {
+    this.handles = [];
+  }
+
+  async start(_session: AgentSession): Promise<AgentHandle> {
+    const handle = new FakeHandle();
+    this.handles.push(handle);
+    return handle;
+  }
+}
+
 export interface AgentTestApp {
   app: express.Express;
   mockDocker: MockDockerPort;
   fakeHarness: FakeHarness;
+  fakeRunnerHarness: FakeRunnerHarness;
   sessionService: SessionService;
   connectorService: ConnectorService;
   providerService: ProviderService;
@@ -195,6 +210,7 @@ export function createAgentTestApp(): AgentTestApp {
 
   const mockDocker = new MockDockerPort();
   const fakeHarness = new FakeHarness();
+  const fakeRunnerHarness = new FakeRunnerHarness();
   const mountService = new MountService(mountRepository, mockDocker, sessionRepository);
   const piConfigProvisioner = new PiConfigProvisioner(mockDocker, providerRepository, sops);
   const sessionService = new SessionService(
@@ -206,6 +222,7 @@ export function createAgentTestApp(): AgentTestApp {
       providers: providerRepository,
       mounts: mountRepository,
       harness: fakeHarness,
+      runnerHarness: fakeRunnerHarness,
       eventLog,
       config: testConfig,
       piConfigProvisioner,
@@ -220,7 +237,7 @@ export function createAgentTestApp(): AgentTestApp {
   app.use("/api/models", modelsApiRouter(modelCatalog));
   app.use("/api/mounts", mountsApiRouter(mountService));
 
-  return { app, mockDocker, fakeHarness, sessionService, connectorService, providerService, mountService };
+  return { app, mockDocker, fakeHarness, fakeRunnerHarness, sessionService, connectorService, providerService, mountService };
 }
 
 export async function setupDataDir() {

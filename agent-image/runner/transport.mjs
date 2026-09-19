@@ -28,7 +28,22 @@ export class RunnerClient {
     return res.json();
   }
 
-  async connect() {
+  onMessage(handler) {
+    this.messageHandlers.push(handler);
+    return () => {
+      this.messageHandlers = this.messageHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  onClose(handler) {
+    this.closeHandlers.push(handler);
+    return () => {
+      this.closeHandlers = this.closeHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  /** Opens the downstream SSE stream; returns once the stream is established. */
+  async open() {
     const res = await fetch(`${this.baseUrl}/engine/runner/${this.sessionId}/stream`, {
       headers: this.headers(),
     });
@@ -36,12 +51,14 @@ export class RunnerClient {
     this.readLoop(res.body);
   }
 
-  onMessage(handler) {
-    this.messageHandlers.push(handler);
-  }
-
-  onClose(handler) {
-    this.closeHandlers.push(handler);
+  /** Resolves when the current stream drops. */
+  waitClose() {
+    return new Promise((resolve) => {
+      const off = this.onClose(() => {
+        off();
+        resolve();
+      });
+    });
   }
 
   async readLoop(body) {
@@ -63,7 +80,7 @@ export class RunnerClient {
     } catch {
       // connection dropped — signal close below
     }
-    for (const handler of this.closeHandlers) handler();
+    for (const handler of [...this.closeHandlers]) handler();
   }
 
   handleFrame(frame) {
@@ -71,7 +88,7 @@ export class RunnerClient {
       if (!line.startsWith("data: ")) continue;
       try {
         const message = decodeMessage(line.slice("data: ".length));
-        for (const handler of this.messageHandlers) handler(message);
+        for (const handler of [...this.messageHandlers]) handler(message);
       } catch {
         // malformed frame — ignore
       }
