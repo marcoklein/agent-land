@@ -72,6 +72,10 @@ export class SsePostRunnerTransport implements RunnerTransport {
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     });
+    // Flush the headers immediately so the runner's `fetch` resolves on connect
+    // instead of waiting for the first heartbeat (~30s) to push data through.
+    res.flushHeaders();
+    res.write(": connected\n\n");
 
     const sink: SseSink = {
       write: (message) => {
