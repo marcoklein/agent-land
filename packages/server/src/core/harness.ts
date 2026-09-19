@@ -27,21 +27,25 @@ export function agentContainerId(sessionId: string): string {
   return `agent-land-pi-${sessionId}`;
 }
 
+export function piArgv(id: string, provider: string | undefined, model: string): string[] {
+  return [
+    "pi",
+    "--mode",
+    "rpc",
+    "--provider",
+    provider ?? DEFAULT_PROVIDER_ID,
+    "--model",
+    model,
+    "--session-dir",
+    `/sessions/${id}`,
+    "--session-id",
+    id,
+  ];
+}
+
 export function piRpcPreset(session: AgentSession): ProgramSpec {
   return {
-    argv: [
-      "pi",
-      "--mode",
-      "rpc",
-      "--provider",
-      session.provider ?? DEFAULT_PROVIDER_ID,
-      "--model",
-      session.model,
-      "--session-dir",
-      session.sessionDir,
-      "--session-id",
-      session.id,
-    ],
+    argv: piArgv(session.id, session.provider, session.model),
     tty: false,
   };
 }

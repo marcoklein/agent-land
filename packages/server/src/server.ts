@@ -4,6 +4,8 @@ import { getConfig } from "./config.js";
 import { SopsService } from "./infra/sops.js";
 import { DockerService } from "./infra/docker.js";
 import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
+import { RemoteAgentHarness } from "./infra/remote-agent-harness.js";
+import { SsePostRunnerTransport } from "./infra/sse-post-runner-transport.js";
 import { PiConfigProvisioner } from "./infra/pi-config-provisioner.js";
 import {
   JsonSessionRepository,
@@ -44,6 +46,8 @@ const providerService = new ProviderService(providerRepository, sops);
 const modelCatalog = new ModelCatalog(providerService, sops);
 const mountService = new MountService(mountRepository, docker, sessionRepository);
 const harness = new PiRpcHarness(docker);
+const runnerTransport = new SsePostRunnerTransport();
+const runnerHarness = new RemoteAgentHarness(runnerTransport);
 const piConfigProvisioner = new PiConfigProvisioner(docker, providerRepository, sops);
 const sessionService = new SessionService({
   docker,
@@ -53,6 +57,7 @@ const sessionService = new SessionService({
   providers: providerRepository,
   mounts: mountRepository,
   harness,
+  runnerHarness,
   eventLog,
   config,
   piConfigProvisioner,
@@ -69,6 +74,8 @@ app.use("/api/connectors", connectorsApiRouter(connectorService));
 app.use("/api/providers", providersApiRouter(providerService));
 app.use("/api/models", modelsApiRouter(modelCatalog));
 app.use("/api/mounts", mountsApiRouter(mountService));
+
+app.use("/engine/runner", createApiAuthMiddleware(sessionService, config), runnerTransport.router());
 
 await sessionService.recover().catch((err) => {
   console.error("Session recovery failed:", err);

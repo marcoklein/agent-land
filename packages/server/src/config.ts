@@ -5,6 +5,8 @@ export interface OperatorBasicAuth {
   password: string;
 }
 
+export type SessionRuntime = "exec" | "runner";
+
 export interface Config {
   port: number;
   secretsDir: string;
@@ -20,6 +22,7 @@ export interface Config {
   agentLandUrl: string;
   operatorBasicAuth?: OperatorBasicAuth;
   hostMounts: Record<string, string>;
+  sessionRuntime: SessionRuntime;
 }
 
 /** Splits a "user:password" value at the first colon. */
@@ -67,6 +70,7 @@ export function getConfig(): Config {
     agentLandUrl: (process.env.AGENT_LAND_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
     operatorBasicAuth,
     hostMounts,
+    sessionRuntime: process.env.SESSION_RUNTIME === "runner" ? "runner" : "exec",
   };
 }
 

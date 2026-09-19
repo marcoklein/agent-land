@@ -25,6 +25,7 @@ RUN ARCH=$(dpkg --print-architecture) \
 
 COPY scripts/tk /usr/local/bin/tk
 COPY skills/ /tmp/pi-config/skills/
+COPY runner/ /runner/
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh /usr/local/bin/tk
 

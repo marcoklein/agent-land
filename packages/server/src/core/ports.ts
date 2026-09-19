@@ -21,6 +21,7 @@ export interface DockerPort {
     sessionVolume: string;
     workspaceVolume: string;
     extraBinds?: string[];
+    runtime?: "exec" | "runner";
   }): Promise<Docker.Container>;
   execInteractive(containerId: string, args: string[], tty: boolean): Promise<InteractiveExec>;
   execCommand(containerId: string, args: string[]): Promise<ExecResult>;

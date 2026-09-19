@@ -21,3 +21,4 @@ Architecture Decision Records — the platform's design decisions as a numbered 
 * [017 — Product layer on OKF memory](017-product-layer-okf-memory.md) — product knowledge as OKF, pipeline outside the engine
 * [018 — Web UI as a separate consumer package](018-web-ui-separate-consumer.md) — standalone read-only observability UI, engine stays API-only
 * [019 — Ticket layer in a separate git-synced repo](019-ticket-layer-git-synced-repo.md) — **proposed** (this design gate): work queue as `tk` markdown in `agent-land-tickets`, git push/pull as the sync layer
+* [020 — Make the session runtime replaceable](020-session-runtime-replaceable.md) — **proposed**: a runner owns pi's stdio and dials out; exec stays default
