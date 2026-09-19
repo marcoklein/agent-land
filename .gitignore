@@ -10,3 +10,5 @@ packages/server/src/__tests__/fixtures/secrets/
 packages/server/src/__tests__/tmp-test-data/
 packages/server/src/__tests__/fixtures/.sops.yaml
 thoughts/
+
+.worktrees/
