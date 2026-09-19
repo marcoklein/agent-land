@@ -15,7 +15,7 @@ import type {
 import { SESSION_VOLUME_NAME } from "../infra/docker.js";
 import { mountVolumeName, MountNotFoundError, MountInUseError } from "./mount-service.js";
 import type { Config } from "../config.js";
-import { agentContainerId } from "./harness.js";
+import { agentContainerId, piArgv } from "./harness.js";
 
 interface SessionHandle {
   session: AgentSession;
@@ -38,6 +38,7 @@ interface SessionServiceDeps {
   providers: ProviderRepository;
   mounts: MountRepository;
   harness: AgentHarness;
+  runnerHarness?: AgentHarness;
   eventLog: SessionEventLog;
   config: Config;
   piConfigProvisioner?: { provision(session: AgentSession, containerId: string): Promise<void> };
@@ -71,6 +72,13 @@ export class SessionService {
   private handles = new Map<string, SessionHandle>();
 
   constructor(private deps: SessionServiceDeps, private drainSettleTimeoutMs = 4000) {}
+
+  private harnessFor(session: AgentSession): AgentHarness {
+    if (session.runtime === "runner" && this.deps.runnerHarness) {
+      return this.deps.runnerHarness;
+    }
+    return this.deps.harness;
+  }
 
   async resolveAgentEnv(connectorNames: string[], providerId?: string): Promise<Map<string, string>> {
     const connectorsData = await this.deps.connectors.list();
@@ -176,11 +184,18 @@ export class SessionService {
         ? options.parentSessionId.trim()
         : undefined;
 
+    const runtime: "exec" | "runner" =
+      this.deps.config.sessionRuntime === "runner" ? "runner" : "exec";
+
     let platformToken: string | undefined;
-    if (platform) {
+    if (platform || runtime === "runner") {
       platformToken = mintPlatformToken();
       envVarsMap.set("AGENT_LAND_URL", this.deps.config.agentLandUrl);
       envVarsMap.set("AGENT_LAND_BASIC_AUTH", `${PLATFORM_SESSION_PREFIX}${id}:${platformToken}`);
+      if (runtime === "runner") {
+        envVarsMap.set("AGENT_LAND_SESSION_ID", id);
+        envVarsMap.set("AGENT_RUNNER_PI_ARGV", JSON.stringify(piArgv(id, provider, model)));
+      }
     }
 
     const session: AgentSession = {
@@ -195,6 +210,7 @@ export class SessionService {
       platform,
       parentSessionId,
       platformToken,
+      runtime,
       createdAt: now,
       updatedAt: now,
     };
@@ -207,6 +223,7 @@ export class SessionService {
         image: this.deps.config.agentImage,
         sessionVolume: SESSION_VOLUME_NAME,
         workspaceVolume,
+        runtime,
         extraBinds: mounts.map((m) => {
           const hostPath = this.deps.config.hostMounts[m.source];
           return hostPath != null
@@ -223,7 +240,7 @@ export class SessionService {
         await this.deps.piConfigProvisioner.provision(session, container.id);
       }
 
-      const harness = await this.deps.harness.start(session);
+      const harness = await this.harnessFor(session).start(session);
       const handle: SessionHandle = {
         session,
         harness,
@@ -372,7 +389,7 @@ export class SessionService {
 
       try {
         const history = await this.deps.eventLog.read(session.id);
-        const harness = await this.deps.harness.start(session);
+        const harness = await this.harnessFor(session).start(session);
         const trimmed = history.slice(-HISTORY_CAP);
         const handle: SessionHandle = {
           session,
