@@ -140,7 +140,7 @@ describe("Session recovery", () => {
     expect(events.at(-1)).toEqual({ type: "status", status: "idle" });
   });
 
-  it("aborts and stops every live harness on drain without persisting stopped", async () => {
+  it("stops every live harness on drain without aborting or persisting stopped", async () => {
     const first = await ctx.sessionService.createSession({});
     await ctx.sessionService.createSession({});
     expect(ctx.fakeHarness.handles.length).toBe(2);
@@ -148,10 +148,37 @@ describe("Session recovery", () => {
     await ctx.sessionService.drainAll();
 
     for (const handle of ctx.fakeHarness.handles) {
-      expect(handle.aborted).toBe(true);
+      expect(handle.aborted).toBe(false);
       expect(handle.stopped).toBe(true);
     }
     expect((await readPersistedSession(first.id)).status).not.toBe("stopped");
+  });
+
+  it("lets an in-flight turn settle before stopping the harness on drain", async () => {
+    const session = await ctx.sessionService.createSession({});
+    await ctx.sessionService.prompt(session.id, "work");
+    const handle = ctx.fakeHarness.handles[0];
+
+    const drained = ctx.sessionService.drainAll();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(handle.stopped).toBe(false);
+
+    handle.emit({ type: "agent_settled" });
+    await drained;
+
+    expect(handle.aborted).toBe(false);
+    expect(handle.stopped).toBe(true);
+  });
+
+  it("stops an unfinished turn once the drain grace period elapses", async () => {
+    const session = await ctx.sessionService.createSession({});
+    await ctx.sessionService.prompt(session.id, "work");
+    const handle = ctx.fakeHarness.handles[0];
+
+    await ctx.sessionService.drainAll();
+
+    expect(handle.aborted).toBe(false);
+    expect(handle.stopped).toBe(true);
   });
 
   it("re-attaches a drained session in a fresh service instance", async () => {
