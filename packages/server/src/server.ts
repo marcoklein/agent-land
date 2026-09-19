@@ -86,6 +86,13 @@ await sessionService.recover().catch((err) => {
   console.error("Session recovery failed:", err);
 });
 
+const reapTimer = setInterval(() => {
+  void sessionService.reapIdleSessions().catch((err) => {
+    console.error("Session reaper failed:", err);
+  });
+}, config.sessionReapIntervalMs);
+reapTimer.unref?.();
+
 const server = app.listen(config.port, () => {
   console.log(`Agent Land orchestrator running on http://localhost:${config.port}`);
 });
