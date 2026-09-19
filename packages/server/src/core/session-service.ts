@@ -376,50 +376,58 @@ export class SessionService {
 
   async recover(): Promise<void> {
     const sessions = await this.deps.sessions.list();
-    for (const session of sessions) {
-      if (this.handles.has(session.id)) continue;
+    await Promise.all(
+      sessions.map(async (session) => {
+        if (this.handles.has(session.id)) return;
 
-      const containerId = agentContainerId(session.id);
-      const exists = await this.deps.docker.containerExists(containerId).catch(() => false);
+        const containerId = agentContainerId(session.id);
+        const exists = await this.deps.docker.containerExists(containerId).catch(() => false);
 
-      if (!exists) {
-        await this.markStopped(session);
-        continue;
-      }
+        if (!exists) {
+          await this.markStopped(session);
+          return;
+        }
 
-      try {
-        const history = await this.deps.eventLog.read(session.id);
-        const harness = await this.harnessFor(session).start(session);
-        const trimmed = history.slice(-HISTORY_CAP);
-        const handle: SessionHandle = {
-          session,
-          harness,
-          unsubscribe: () => {},
-          subscribers: new Set(),
-          history: trimmed.map((event, seq) => ({ seq, event })),
-          seqCounter: trimmed.length,
-          containerId,
-          pendingPersists: new Set(),
-          pendingAppends: new Set(),
-        };
-        handle.unsubscribe = harness.events().subscribe((e) => this.onEvent(handle, e));
-        this.handles.set(session.id, handle);
-        await this.markReattached(handle);
-      } catch {
-        await this.markStopped(session);
-      }
-    }
+        try {
+          const history = await this.deps.eventLog.read(session.id);
+          const harness = await this.harnessFor(session).start(session);
+          const trimmed = history.slice(-HISTORY_CAP);
+          const handle: SessionHandle = {
+            session,
+            harness,
+            unsubscribe: () => {},
+            subscribers: new Set(),
+            history: trimmed.map((event, seq) => ({ seq, event })),
+            seqCounter: trimmed.length,
+            containerId,
+            pendingPersists: new Set(),
+            pendingAppends: new Set(),
+          };
+          handle.unsubscribe = harness.events().subscribe((e) => this.onEvent(handle, e));
+          this.handles.set(session.id, handle);
+          await this.markReattached(handle);
+        } catch (err) {
+          // A runner session re-attaches on its own next registration; the harness
+          // keeps accepting. Only exec sessions — whose pi stream we own — get marked
+          // stopped when their stream cannot be re-established.
+          if (session.runtime === "runner") return;
+          await this.markStopped(session);
+        }
+      })
+    );
   }
 
   async drainAll(): Promise<void> {
     await Promise.all(
-      [...this.handles.values()].map(async (handle) => {
-        handle.draining = true;
-        await this.waitForSettle(handle);
-        try {
-          await handle.harness.stop();
-        } catch {}
-      })
+      [...this.handles.values()]
+        .filter((handle) => handle.session.runtime !== "runner")
+        .map(async (handle) => {
+          handle.draining = true;
+          await this.waitForSettle(handle);
+          try {
+            await handle.harness.stop();
+          } catch {}
+        })
     );
   }
 

@@ -94,16 +94,50 @@ client.onMessage((message) => {
   }
 });
 
+const RECONNECT_DELAY_MS = 2000;
+const REGISTER_ATTEMPTS = 10;
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function register() {
+  for (let attempt = 0; attempt < REGISTER_ATTEMPTS; attempt++) {
+    try {
+      await client.post({
+        type: "register",
+        sessionId,
+        runnerVersion: "0.1.0",
+        protocolVersion: 1,
+        lastAckedSeq: spool.lastAckedSeq,
+      });
+      return;
+    } catch {
+      await delay(RECONNECT_DELAY_MS);
+    }
+  }
+}
+
+async function runChannel() {
+  for (;;) {
+    let opened = false;
+    try {
+      await client.open();
+      opened = true;
+    } catch {
+      // control plane unreachable — retry
+    }
+    if (opened) await register();
+    if (opened) {
+      // Reconnect after the stream drops; `registered` on the next hop replays
+      // the unacked spool from the resume seq the control plane reports.
+      await client.waitClose();
+    }
+    await delay(RECONNECT_DELAY_MS);
+  }
+}
+
 async function main() {
   startPi(); // pi owns the session before the channel is up, so a control-plane outage cannot block a start
-  await client.connect();
-  await client.post({
-    type: "register",
-    sessionId,
-    runnerVersion: "0.1.0",
-    protocolVersion: 1,
-    lastAckedSeq: spool.lastSeq,
-  });
+  await runChannel();
 }
 
 main().catch((err) => {

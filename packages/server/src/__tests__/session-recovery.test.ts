@@ -140,6 +140,32 @@ describe("Session recovery", () => {
     expect(events.at(-1)).toEqual({ type: "status", status: "idle" });
   });
 
+  it("recovers a runner session through the runner harness without re-exec", async () => {
+    const session = makeSession({ runtime: "runner", id: "runnerabc" });
+    await persistSession(session);
+    ctx.mockDocker.containers.add(containerName("runnerabc"));
+
+    await ctx.sessionService.recover();
+
+    expect(ctx.fakeRunnerHarness.handles.length).toBe(1);
+    expect(ctx.fakeHarness.handles.length).toBe(0);
+    const persisted = await readPersistedSession("runnerabc");
+    expect(persisted.status).toBe("idle");
+  });
+
+  it("drainAll leaves runner-runtime sessions untouched", async () => {
+    const session = makeSession({ runtime: "runner", id: "runnerabc" });
+    await persistSession(session);
+    ctx.mockDocker.containers.add(containerName("runnerabc"));
+
+    await ctx.sessionService.recover();
+    expect(ctx.fakeRunnerHarness.handles.length).toBe(1);
+
+    await ctx.sessionService.drainAll();
+
+    expect(ctx.fakeRunnerHarness.handles[0].stopped).toBe(false);
+  });
+
   it("stops every live harness on drain without aborting or persisting stopped", async () => {
     const first = await ctx.sessionService.createSession({});
     await ctx.sessionService.createSession({});

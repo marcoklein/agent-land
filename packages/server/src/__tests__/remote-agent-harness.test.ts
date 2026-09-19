@@ -43,6 +43,18 @@ class FakeRunnerTransport implements RunnerTransport {
   abandon(_sessionId: string) {}
 }
 
+class ReconnectingTransport implements RunnerTransport {
+  conns: FakeRunnerConnection[] = [];
+  acceptCount = 0;
+
+  async accept(_session: AgentSession, _opts: { lastAckedSeq: number; timeoutMs?: number }) {
+    const conn = this.conns[Math.min(this.acceptCount, this.conns.length - 1)];
+    this.acceptCount++;
+    return conn;
+  }
+  abandon(_sessionId: string) {}
+}
+
 function makeSession(): AgentSession {
   return {
     id: "abc123",
@@ -123,5 +135,56 @@ describe("RemoteAgentHarness", () => {
 
     await handle.stop();
     expect(transport.conn.closed).toBe(true);
+  });
+});
+
+describe("RemoteAgentHarness reconnection", () => {
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it("re-accepts after a channel drop without emitting stopped", async () => {
+    const transport = new ReconnectingTransport();
+    transport.conns = [new FakeRunnerConnection(), new FakeRunnerConnection()];
+    const harness = new RemoteAgentHarness(transport);
+    const handle = await harness.start(makeSession());
+
+    const got: SessionEvent[] = [];
+    handle.events().subscribe((e) => got.push(e));
+
+    transport.conns[0].deliver({ type: "event", seq: 1, event: { type: "turn_start" } });
+    expect(got).toContainEqual({ type: "turn_start" });
+
+    transport.conns[0].close();
+    await flush();
+
+    transport.conns[1].deliver({ type: "event", seq: 2, event: { type: "agent_settled" } });
+    expect(got).toContainEqual({ type: "agent_settled" });
+    expect(got).not.toContainEqual({ type: "status", status: "stopped" });
+  });
+
+  it("dedupes replayed events by runner seq across a reconnect", async () => {
+    const transport = new ReconnectingTransport();
+    transport.conns = [new FakeRunnerConnection(), new FakeRunnerConnection()];
+    const harness = new RemoteAgentHarness(transport);
+    const handle = await harness.start(makeSession());
+
+    const got: SessionEvent[] = [];
+    handle.events().subscribe((e) => got.push(e));
+
+    transport.conns[0].deliver({ type: "event", seq: 1, event: { type: "turn_start" } });
+    transport.conns[0].deliver({ type: "event", seq: 2, event: { type: "agent_settled" } });
+
+    transport.conns[0].close();
+    await flush();
+
+    transport.conns[1].deliver({
+      type: "event_batch",
+      events: [
+        { seq: 2, event: { type: "agent_settled" } },
+        { seq: 3, event: { type: "status", status: "stopped" } },
+      ],
+    });
+
+    expect(got.filter((e) => e.type === "agent_settled").length).toBe(1);
+    expect(got).toContainEqual({ type: "status", status: "stopped" });
   });
 });
