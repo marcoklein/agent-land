@@ -1,0 +1,16 @@
+{
+  "healthchecks": {
+    "web": [
+      {
+        "type": "startup",
+        "name": "web health",
+        "description": "app responds to /health",
+        "path": "/health",
+        "port": 3000,
+        "attempts": 10,
+        "timeout": 20,
+        "wait": 5
+      }
+    ]
+  }
+}
