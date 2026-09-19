@@ -202,6 +202,11 @@ spec.
   literal).
 - **Event-log ownership** — runner-owned log vs control-plane spool.
 
+**Resolved in P1** — the three decisions, the deploy-model amendment, and the invariant #4
+clarification are specified in
+[Self-hosting sessions P1 — runtime seam](/product/designs/self-hosting-sessions-p1-seam-design.md)
+and codified in ADR 020.
+
 [^engine]: [Agent Land engine — the purest form](/platform/engine.md)
 [^boundary]: [Agent Land domain boundary](/product/goals/boundaries.md)
 [^adr-002]: [Docker socket sibling containers](/adrs/002-docker-socket-sibling-containers.md)
