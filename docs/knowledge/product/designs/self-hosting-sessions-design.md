@@ -131,7 +131,7 @@ same port; `pi --mode rpc` remains the reference runtime[^engine]. This is exact
   `Entrypoint: ["/bin/sleep"], Cmd: ["infinity"]` override[^docker]); the session credential
   and `AGENT_LAND_URL` are already injected.
 - **`recover()`** — reconcile durable records + accept runner (re)registrations; no pi re-exec.
-- **`drainAll()`** — no session drain on control-plane shutdown; close HTTP only.
+- **Shutdown** — no session drain; the control plane just closes HTTP (sessions survive).
 - **Deploy** — the control plane is stateless, so zero-downtime blue-green is trivially
   correct.
 
@@ -157,18 +157,19 @@ The `AgentHarness` port makes the runtime replaceable; every phase ships indepen
   channel + durable replay.
 - **P3 — cutover.** Runner as default; blue-green control-plane deploy; **prove a merge
   mid-turn leaves a session uninterrupted.**
-- **P4 — cleanup.** Remove the exec harness for pi; content-hash the agent image (so new
-  runner versions actually reach new sessions[^staleness]); update docs.
+- **P4 — cleanup (shipped).** Removed the exec harness for pi and content-hashed the agent
+  image (so new runner versions actually reach new sessions[^staleness]); docs updated.
 
 ### Rollout & rollback
 
-- **Rollout.** Merge P3; `SESSION_RUNTIME` defaults to `runner`, so new sessions spawn the
-  runner as the container entrypoint. Zero-downtime deploys come from the `/health` endpoint
-  plus the `healthchecks` in `app.json` (Dokku health-checks the new container before the
-  proxy switch).
-- **Rollback.** `dokku config:set agent-land SESSION_RUNTIME=exec` (then deploy) restores the
-  exec harness for new sessions; running runner sessions are unaffected, and exec is not
-  removed until P4. To disable zero-downtime: `dokku checks:disable agent-land`.
+- **Rollout.** Every session spawns the runner as the container entrypoint. The agent image
+  is content-hashed at boot (`agent-land-pi:<hash>`), so a runner change reaches new sessions
+  without a manual rebuild. Zero-downtime deploys come from the `/health` endpoint plus the
+  `healthchecks` in `app.json` (Dokku health-checks the new container before the proxy
+  switch).
+- **Rollback.** Pin a known-good image with `dokku config:set agent-land AGENT_IMAGE=<tag>`
+  (then deploy); new sessions launch from that tag. To disable zero-downtime:
+  `dokku checks:disable agent-land`.
 
 ## Architecture fit
 

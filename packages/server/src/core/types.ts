@@ -21,8 +21,6 @@ export type {
  */
 export type AgentSession = Session & {
   platformToken?: string;
-  /** Which runtime realizes the session: the exec harness (default) or the in-container runner. */
-  runtime?: "exec" | "runner";
 };
 export type ProviderConfig = Provider;
 export type MountRecord = Mount;

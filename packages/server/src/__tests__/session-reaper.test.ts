@@ -93,15 +93,22 @@ describe("Session reaper", () => {
 
   it("stops the oldest idle session when the live cap is exceeded", async () => {
     const capped = createAgentTestApp({ sessionMaxLive: 2 });
-    const a = await capped.sessionService.createSession({});
-    const b = await capped.sessionService.createSession({});
-    const c = await capped.sessionService.createSession({});
+    const oldest = makeSession({ id: "oldest001", createdAt: "2026-01-01T00:00:00Z" });
+    const middle = makeSession({ id: "middle001", createdAt: "2026-01-02T00:00:00Z" });
+    const newest = makeSession({ id: "newest001", createdAt: "2026-01-03T00:00:00Z" });
+    await persistSession(oldest);
+    await persistSession(middle);
+    await persistSession(newest);
+    capped.mockDocker.containers.add(containerName(oldest.id));
+    capped.mockDocker.containers.add(containerName(middle.id));
+    capped.mockDocker.containers.add(containerName(newest.id));
 
-    await capped.sessionService.reapIdleSessions();
+    const reaped = await capped.sessionService.reapIdleSessions();
 
-    expect(await capped.sessionService.getSession(a.id)).toBeNull();
-    expect(await capped.sessionService.getSession(b.id)).not.toBeNull();
-    expect(await capped.sessionService.getSession(c.id)).not.toBeNull();
+    expect(reaped).toBe(1);
+    expect(await capped.sessionService.getSession(oldest.id)).toBeNull();
+    expect(await capped.sessionService.getSession(middle.id)).not.toBeNull();
+    expect(await capped.sessionService.getSession(newest.id)).not.toBeNull();
   });
 
   it("respects the cap when no session is idle enough to stop", async () => {

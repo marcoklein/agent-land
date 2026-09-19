@@ -5,13 +5,12 @@ export interface OperatorBasicAuth {
   password: string;
 }
 
-export type SessionRuntime = "exec" | "runner";
-
 export interface Config {
   port: number;
   secretsDir: string;
   dataDir: string;
   agentImage: string;
+  agentImageDir: string;
   ageKeyFile: string;
   opencodeGoApiKey: string;
   opencodeGoUrl: string;
@@ -22,7 +21,6 @@ export interface Config {
   agentLandUrl: string;
   operatorBasicAuth?: OperatorBasicAuth;
   hostMounts: Record<string, string>;
-  sessionRuntime: SessionRuntime;
   sessionReapTtlMs: number;
   sessionMaxLive: number;
   sessionReapIntervalMs: number;
@@ -67,6 +65,7 @@ export function getConfig(): Config {
     secretsDir: path.resolve(process.env.SECRETS_DIR || "./secrets"),
     dataDir: path.resolve(process.env.DATA_DIR || "./data"),
     agentImage: process.env.AGENT_IMAGE || "agent-land-pi:latest",
+    agentImageDir: path.resolve(process.env.AGENT_IMAGE_DIR || "/agent-image"),
     ageKeyFile: path.resolve(process.env.AGE_KEY_FILE || "./.age-key"),
     opencodeGoUrl: process.env.OPENCODE_API_URL || "https://opencode.ai/zen/go/v1",
     opencodeGoApiKey: process.env.OPENCODE_API_KEY || "",
@@ -77,8 +76,6 @@ export function getConfig(): Config {
     agentLandUrl: (process.env.AGENT_LAND_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
     operatorBasicAuth,
     hostMounts,
-    // Runner is the default (P3 cutover); SESSION_RUNTIME=exec is the rollback escape hatch.
-    sessionRuntime: process.env.SESSION_RUNTIME === "exec" ? "exec" : "runner",
     sessionReapTtlMs,
     sessionMaxLive,
     sessionReapIntervalMs,

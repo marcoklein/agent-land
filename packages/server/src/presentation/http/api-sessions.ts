@@ -11,7 +11,7 @@ import { errorMessage, sessionErrorResponse } from "./errors.js";
 
 /** Strips the internal loopback token from a session record before it reaches the wire. */
 function publicSession(session: AgentSession): Session {
-  const { platformToken: _platformToken, runtime: _runtime, ...rest } = session;
+  const { platformToken: _platformToken, ...rest } = session;
   return rest;
 }
 

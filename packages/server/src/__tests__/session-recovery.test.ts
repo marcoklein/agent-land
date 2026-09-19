@@ -57,7 +57,7 @@ describe("Session recovery", () => {
 
     await ctx.sessionService.recover();
 
-    expect(ctx.fakeHarness.handles.length).toBe(1);
+    expect(ctx.fakeRunnerHarness.handles.length).toBe(1);
     const persisted = await readPersistedSession(session.id);
     expect(persisted.status).toBe("idle");
 
@@ -71,7 +71,7 @@ describe("Session recovery", () => {
 
     await ctx.sessionService.recover();
 
-    expect(ctx.fakeHarness.handles.length).toBe(0);
+    expect(ctx.fakeRunnerHarness.handles.length).toBe(0);
     const persisted = await readPersistedSession(session.id);
     expect(persisted.status).toBe("stopped");
 
@@ -100,7 +100,7 @@ describe("Session recovery", () => {
 
     await ctx.sessionService.recover();
 
-    expect(ctx.fakeHarness.handles.length).toBe(1);
+    expect(ctx.fakeRunnerHarness.handles.length).toBe(1);
     const persisted = await readPersistedSession(session.id);
     expect(persisted.status).toBe("idle");
   });
@@ -140,85 +140,15 @@ describe("Session recovery", () => {
     expect(events.at(-1)).toEqual({ type: "status", status: "idle" });
   });
 
-  it("recovers a runner session through the runner harness without re-exec", async () => {
-    const session = makeSession({ runtime: "runner", id: "runnerabc" });
+  it("recovers a persisted session through the runner harness", async () => {
+    const session = makeSession({ id: "runnerabc" });
     await persistSession(session);
     ctx.mockDocker.containers.add(containerName("runnerabc"));
 
     await ctx.sessionService.recover();
 
     expect(ctx.fakeRunnerHarness.handles.length).toBe(1);
-    expect(ctx.fakeHarness.handles.length).toBe(0);
     const persisted = await readPersistedSession("runnerabc");
-    expect(persisted.status).toBe("idle");
-  });
-
-  it("drainAll leaves runner-runtime sessions untouched", async () => {
-    const session = makeSession({ runtime: "runner", id: "runnerabc" });
-    await persistSession(session);
-    ctx.mockDocker.containers.add(containerName("runnerabc"));
-
-    await ctx.sessionService.recover();
-    expect(ctx.fakeRunnerHarness.handles.length).toBe(1);
-
-    await ctx.sessionService.drainAll();
-
-    expect(ctx.fakeRunnerHarness.handles[0].stopped).toBe(false);
-  });
-
-  it("stops every live harness on drain without aborting or persisting stopped", async () => {
-    const first = await ctx.sessionService.createSession({});
-    await ctx.sessionService.createSession({});
-    expect(ctx.fakeHarness.handles.length).toBe(2);
-
-    await ctx.sessionService.drainAll();
-
-    for (const handle of ctx.fakeHarness.handles) {
-      expect(handle.aborted).toBe(false);
-      expect(handle.stopped).toBe(true);
-    }
-    expect((await readPersistedSession(first.id)).status).not.toBe("stopped");
-  });
-
-  it("lets an in-flight turn settle before stopping the harness on drain", async () => {
-    const session = await ctx.sessionService.createSession({});
-    await ctx.sessionService.prompt(session.id, "work");
-    const handle = ctx.fakeHarness.handles[0];
-
-    const drained = ctx.sessionService.drainAll();
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(handle.stopped).toBe(false);
-
-    handle.emit({ type: "agent_settled" });
-    await drained;
-
-    expect(handle.aborted).toBe(false);
-    expect(handle.stopped).toBe(true);
-  });
-
-  it("stops an unfinished turn once the drain grace period elapses", async () => {
-    const session = await ctx.sessionService.createSession({});
-    await ctx.sessionService.prompt(session.id, "work");
-    const handle = ctx.fakeHarness.handles[0];
-
-    await ctx.sessionService.drainAll();
-
-    expect(handle.aborted).toBe(false);
-    expect(handle.stopped).toBe(true);
-  });
-
-  it("re-attaches a drained session in a fresh service instance", async () => {
-    const session = await ctx.sessionService.createSession({});
-    await ctx.sessionService.drainAll();
-    expect(ctx.fakeHarness.handles.length).toBe(1);
-
-    const ctx2 = createAgentTestApp();
-    ctx2.mockDocker.containers.add(containerName(session.id));
-
-    await ctx2.sessionService.recover();
-
-    expect(ctx2.fakeHarness.handles.length).toBe(1);
-    const persisted = await readPersistedSession(session.id);
     expect(persisted.status).toBe("idle");
   });
 });

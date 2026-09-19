@@ -21,8 +21,6 @@ export interface AgentHandle {
   stop(): Promise<void>;
 }
 
-export type ProgramSpec = { argv: string[]; tty: boolean };
-
 export function agentContainerId(sessionId: string): string {
   return `agent-land-pi-${sessionId}`;
 }
@@ -41,11 +39,4 @@ export function piArgv(id: string, provider: string | undefined, model: string):
     "--session-id",
     id,
   ];
-}
-
-export function piRpcPreset(session: AgentSession): ProgramSpec {
-  return {
-    argv: piArgv(session.id, session.provider, session.model),
-    tty: false,
-  };
 }

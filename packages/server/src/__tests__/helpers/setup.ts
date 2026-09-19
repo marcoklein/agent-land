@@ -155,20 +155,6 @@ export class FakeHandle implements AgentHandle {
   }
 }
 
-export class FakeHarness implements AgentHarness {
-  handles: FakeHandle[] = [];
-
-  reset() {
-    this.handles = [];
-  }
-
-  async start(_session: AgentSession): Promise<AgentHandle> {
-    const handle = new FakeHandle();
-    this.handles.push(handle);
-    return handle;
-  }
-}
-
 export class FakeRunnerHarness implements AgentHarness {
   handles: FakeHandle[] = [];
 
@@ -186,7 +172,6 @@ export class FakeRunnerHarness implements AgentHarness {
 export interface AgentTestApp {
   app: express.Express;
   mockDocker: MockDockerPort;
-  fakeHarness: FakeHarness;
   fakeRunnerHarness: FakeRunnerHarness;
   sessionService: SessionService;
   connectorService: ConnectorService;
@@ -211,7 +196,6 @@ export function createAgentTestApp(configOverrides?: Partial<Config>): AgentTest
   const modelCatalog = new ModelCatalog(providerService, sops);
 
   const mockDocker = new MockDockerPort();
-  const fakeHarness = new FakeHarness();
   const fakeRunnerHarness = new FakeRunnerHarness();
   const mountService = new MountService(mountRepository, mockDocker, sessionRepository);
   const piConfigProvisioner = new PiConfigProvisioner(mockDocker, providerRepository, sops);
@@ -223,13 +207,11 @@ export function createAgentTestApp(configOverrides?: Partial<Config>): AgentTest
       connectors: connectorRepository,
       providers: providerRepository,
       mounts: mountRepository,
-      harness: fakeHarness,
       runnerHarness: fakeRunnerHarness,
       eventLog,
       config,
       piConfigProvisioner,
-    },
-    20
+    }
   );
 
   app.use("/api", createApiAuthMiddleware(sessionService, config));
@@ -239,7 +221,7 @@ export function createAgentTestApp(configOverrides?: Partial<Config>): AgentTest
   app.use("/api/models", modelsApiRouter(modelCatalog));
   app.use("/api/mounts", mountsApiRouter(mountService));
 
-  return { app, mockDocker, fakeHarness, fakeRunnerHarness, sessionService, connectorService, providerService, mountService };
+  return { app, mockDocker, fakeRunnerHarness, sessionService, connectorService, providerService, mountService };
 }
 
 export async function setupDataDir() {

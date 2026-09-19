@@ -3,10 +3,10 @@ import express from "express";
 import { getConfig } from "./config.js";
 import { SopsService } from "./infra/sops.js";
 import { DockerService } from "./infra/docker.js";
-import { PiRpcHarness } from "./infra/pi-rpc-harness.js";
 import { RemoteAgentHarness } from "./infra/remote-agent-harness.js";
 import { SsePostRunnerTransport } from "./infra/sse-post-runner-transport.js";
 import { PiConfigProvisioner } from "./infra/pi-config-provisioner.js";
+import { computeAgentImageTag } from "./infra/agent-image.js";
 import {
   JsonSessionRepository,
   JsonConnectorRepository,
@@ -28,10 +28,17 @@ import { createApiAuthMiddleware } from "./presentation/http/auth.js";
 
 const config = getConfig();
 
-// Let an in-flight turn finish before stopping its harness. Bounded so the whole
-// shutdown stays inside Dokku's ~30s SIGTERM grace (drain grace + hard-exit backstop).
-const DRAIN_GRACE_MS = 25_000;
-const HARD_EXIT_MS = DRAIN_GRACE_MS + 3_000;
+// Derive the agent image tag from the baked-in /agent-image contents unless the
+// operator pinned one explicitly. Content-hashing means a runner change yields a
+// new tag that `ensureAgentImage` will build instead of reusing a stale image.
+if (!process.env.AGENT_IMAGE) {
+  config.agentImage = await computeAgentImageTag(config.agentImageDir);
+}
+
+// Hard-exit backstop for shutdown: SSE streams are long-lived, so a bare
+// `server.close()` may never finish. Keep the whole exit inside Dokku's ~30s
+// SIGTERM grace.
+const SHUTDOWN_GRACE_MS = 3_000;
 
 const sops = new SopsService(config.secretsDir, config.ageKeyFile);
 const docker = new DockerService();
@@ -45,7 +52,6 @@ const connectorService = new ConnectorService(connectorRepository, sops);
 const providerService = new ProviderService(providerRepository, sops);
 const modelCatalog = new ModelCatalog(providerService, sops);
 const mountService = new MountService(mountRepository, docker, sessionRepository);
-const harness = new PiRpcHarness(docker);
 const runnerTransport = new SsePostRunnerTransport();
 const runnerHarness = new RemoteAgentHarness(runnerTransport);
 const piConfigProvisioner = new PiConfigProvisioner(docker, providerRepository, sops);
@@ -56,12 +62,11 @@ const sessionService = new SessionService({
   connectors: connectorRepository,
   providers: providerRepository,
   mounts: mountRepository,
-  harness,
   runnerHarness,
   eventLog,
   config,
   piConfigProvisioner,
-}, DRAIN_GRACE_MS);
+});
 
 const app = express();
 
@@ -98,9 +103,8 @@ const server = app.listen(config.port, () => {
 });
 
 async function shutdown(signal: string): Promise<void> {
-  console.log(`${signal} received, finishing in-flight turns (up to ${DRAIN_GRACE_MS / 1000}s)...`);
-  setTimeout(() => process.exit(0), HARD_EXIT_MS).unref();
-  await sessionService.drainAll().catch(() => {});
+  console.log(`${signal} received, closing HTTP...`);
+  setTimeout(() => process.exit(0), SHUTDOWN_GRACE_MS).unref();
   server.close(() => process.exit(0));
 }
 

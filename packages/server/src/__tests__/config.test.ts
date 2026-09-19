@@ -10,7 +10,6 @@ const ENV_KEYS = [
   "AGENT_LAND_BASIC_AUTH",
   "AGENT_LAND_AUTH_USER",
   "AGENT_LAND_AUTH_PASSWORD",
-  "SESSION_RUNTIME",
   "SESSION_REAP_TTL_MS",
   "SESSION_MAX_LIVE",
   "SESSION_REAP_INTERVAL_MS",
@@ -92,18 +91,6 @@ describe("getConfig", () => {
     setEnv("AGENT_LAND_AUTH_USER", undefined);
     setEnv("AGENT_LAND_AUTH_PASSWORD", undefined);
     expect(getConfig().operatorBasicAuth).toBeUndefined();
-  });
-
-  it("defaults the session runtime to runner", () => {
-    stash();
-    setEnv("SESSION_RUNTIME", undefined);
-    expect(getConfig().sessionRuntime).toBe("runner");
-  });
-
-  it("opts into the exec runtime via SESSION_RUNTIME=exec", () => {
-    stash();
-    setEnv("SESSION_RUNTIME", "exec");
-    expect(getConfig().sessionRuntime).toBe("exec");
   });
 
   it("defaults session reaping to 6h TTL, 100 live cap, and a 60s interval", () => {

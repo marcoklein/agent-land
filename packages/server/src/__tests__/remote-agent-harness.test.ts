@@ -65,7 +65,6 @@ function makeSession(): AgentSession {
     model: "deepseek-v4-pro",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    runtime: "runner",
   };
 }
 
