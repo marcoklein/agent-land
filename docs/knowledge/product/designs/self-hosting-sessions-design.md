@@ -110,7 +110,7 @@ flowchart TB
 `start(session) → AgentHandle { events, prompt, respond, abort, stop }`[^harness] stays the
 engine's contract. The change is a **new implementation** (`RemoteAgentHarness`) behind the
 same port; `pi --mode rpc` remains the reference runtime[^engine]. This is exactly the
-"alternative runtimes are earned through the same port" seam.
+"alternative runtimes are earned through the same port" claim.
 
 ### Runner channel — engine-internal
 
@@ -147,11 +147,11 @@ same port; `pi --mode rpc` remains the reference runtime[^engine]. This is exact
 
 ## Migration (incremental, no big bang)
 
-The `AgentHarness` port is the seam; every phase ships independently.
+The `AgentHarness` port makes the runtime replaceable; every phase ships independently.
 
 - **P0 — interim.** `drainAll` lets the current turn finish (bounded) and auto-resumes on
   boot. Removes most pain now; no ADR required.
-- **P1 — seam.** Define the runner protocol + `RemoteAgentHarness`; add the runner to the
+- **P1 — replaceable runtime.** Define the runner protocol + `RemoteAgentHarness`; add the runner to the
   agent image behind a flag; run both harnesses in parallel.
 - **P2 — reconcile.** Make `recover()`/`drainAll()` transport-agnostic; serve SSE from the
   channel + durable replay.
@@ -164,7 +164,7 @@ The `AgentHarness` port is the seam; every phase ships independently.
 
 - **No new primitive.** Composes the six primitives[^engine]; only the `Session` primitive's
   *realization* moves.
-- **Lands on the declared seam** — the `AgentHarness` port.
+- **Lands on the declared port** — `AgentHarness`.
 - **Strengthens invariants** — observation stays event-stream-only (#3); the runner is itself
   a platform client (#5).
 - **Consistent with ADR 002** — leans on sibling containers.
@@ -204,7 +204,7 @@ spec.
 
 **Resolved in P1** — the three decisions, the deploy-model amendment, and the invariant #4
 clarification are specified in
-[Self-hosting sessions P1 — runtime seam](/product/designs/self-hosting-sessions-p1-seam-design.md)
+[Self-hosting sessions P1 — a replaceable session runtime](/product/designs/self-hosting-sessions-p1-design.md)
 and codified in ADR 020.
 
 [^engine]: [Agent Land engine — the purest form](/platform/engine.md)

@@ -7,4 +7,4 @@ Approved technical designs — the handoff from product to implementation. Each 
 * [Platform Connector](platform-connector-design.md) — per-session loopback credentials + lineage, so agents spawn and watch child sessions
 * [Ticket layer](ticket-layer-design.md) — `agent-land-tickets` repo, tk schema, phase-label funnel, bash loop v1, sync protocol, gates, reconciliation
 * [Self-hosting sessions](self-hosting-sessions-design.md) — the container runner owns pi's stdio; a deploy never interrupts a running session
-* [Self-hosting sessions P1 — runtime seam](self-hosting-sessions-p1-seam-design.md) — the container runner dials out and owns pi's stdio; `RemoteAgentHarness` behind the unchanged port; exec stays default
+* [Self-hosting sessions P1 — a replaceable session runtime](self-hosting-sessions-p1-design.md) — the container runner owns pi's stdio; a second `AgentHarness` implementation; exec stays default

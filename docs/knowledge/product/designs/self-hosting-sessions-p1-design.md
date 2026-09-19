@@ -1,6 +1,6 @@
 ---
 type: Design
-title: Self-hosting sessions P1 — session runtime seam
+title: Self-hosting sessions P1 — a replaceable session runtime
 description: Let the agent container own pi's input/output, so deploying agent-land no longer kills a running session.
 status: draft
 tags: [engine, session, runner, harness, self-hosting]
@@ -15,15 +15,9 @@ sources:
   - id: docker
     resource: packages/server/src/infra/docker.ts
     title: DockerService — create + exec
-  - id: event-log
-    resource: packages/server/src/infra/repositories.ts
-    title: JsonSessionEventLog — durable observation log
-  - id: lifecycle
-    resource: /learnings/session-lifecycle.md
-    title: Session lifecycle & redeploy resilience
 ---
 
-# Self-hosting sessions P1 — session runtime seam
+# Self-hosting sessions P1 — a replaceable session runtime
 
 ## Problem
 
@@ -41,7 +35,8 @@ own refinement agent during the last deploy wave.
 ## Decision requested
 
 Approve P1 as the first slice of the [parent design](/product/designs/self-hosting-sessions-design.md):
-**build the seam, change no default.** It resolves the parent's three open decisions:
+**make the session runtime replaceable, change no default.** It resolves the parent's three
+open decisions:
 
 1. **Transport — the runner dials out** to the control plane (SSE downstream, JSON POST
    upstream) on an engine-internal path. *Rejected:* the control plane dials into the
@@ -52,21 +47,23 @@ Approve P1 as the first slice of the [parent design](/product/designs/self-hosti
    the durable observation log. *Rejected:* the control plane owns the spool (the runner
    would re-derive state from the process we are trying to make disposable).
 
-P1 does not end the interruption by itself; it builds the seam P2–P4 land on. **It is a
-no-op in production unless `SESSION_RUNTIME=runner`.**
+P1 does not end the interruption by itself; it makes the runtime replaceable so P2–P4 can
+land on it. **It is a no-op in production unless `SESSION_RUNTIME=runner`.**
 
 ## Approach
 
-Move the one non-disposable thing — pi's stdio — out of the disposable platform process and
-into the agent container:
+Make the session runtime replaceable by moving the one non-disposable thing — pi's stdio —
+out of the disposable platform process and into the agent container:
 
 - A small **runner** in the container owns pi's stdin/stdout and translates pi-RPC into the
   existing `SessionEvent` vocabulary.
-- **`RemoteAgentHarness`** implements the existing `AgentHarness` port and talks to it.
+- **`RemoteAgentHarness`** is a second implementation of the existing `AgentHarness` port
+  and talks to that runner.
 - The runner **dials out** and reconnects on its own, so a platform restart is invisible to
   a running session.
 
-`PiRpcHarness` (today's exec harness) stays the default; both harnesses run in parallel.
+`PiRpcHarness` (today's exec harness) stays the default; both implementations run in
+parallel.
 
 ### Channel
 
@@ -85,7 +82,7 @@ delivery is at-least-once and converges.
 - `AgentHarness` — **unchanged**; `RemoteAgentHarness` is a second implementation.
 - **Runner delivery** — when `SESSION_RUNTIME=runner`, the container entrypoint is the
   runner; otherwise the current `sleep` + `docker exec` path is byte-for-byte unchanged. The
-  chosen runtime is stored on the session so `recover()` picks the same harness.
+  chosen runtime is stored on the session so `recover()` picks the same implementation.
 - A new `RunnerTransport` port keeps the harness testable without HTTP; production binds an
   SSE + POST implementation.
 
@@ -113,7 +110,8 @@ delivery is at-least-once and converges.
 
 New: `runner-protocol`, `RunnerTransport`, `RemoteAgentHarness` and tests in
 `packages/server`, plus the runner program under `agent-image/runner/`. Modified: session
-types/config/docker/service (add `runtime`, select the harness), `agent-image/Dockerfile`.
+types/config/docker/service (add `runtime`, select the implementation),
+`agent-image/Dockerfile`.
 
 On merge, **ADR 020** records the three decisions and two amendments: the control plane and
 session runtime now have **separate lifecycles**, and the runner is harness plumbing (like
