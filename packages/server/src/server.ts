@@ -67,6 +67,11 @@ const app = express();
 
 app.use(express.json());
 
+// Unauthenticated liveness probe for Dokku zero-downtime checks (CHECKS file).
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.use("/api", createApiAuthMiddleware(sessionService, config));
 
 app.use("/api/sessions", sessionsApiRouter(sessionService, config));
