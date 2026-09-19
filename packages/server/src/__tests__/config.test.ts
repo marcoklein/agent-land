@@ -10,6 +10,7 @@ const ENV_KEYS = [
   "AGENT_LAND_BASIC_AUTH",
   "AGENT_LAND_AUTH_USER",
   "AGENT_LAND_AUTH_PASSWORD",
+  "SESSION_RUNTIME",
 ] as const;
 const saved: Record<string, string | undefined> = {};
 
@@ -88,5 +89,17 @@ describe("getConfig", () => {
     setEnv("AGENT_LAND_AUTH_USER", undefined);
     setEnv("AGENT_LAND_AUTH_PASSWORD", undefined);
     expect(getConfig().operatorBasicAuth).toBeUndefined();
+  });
+
+  it("defaults the session runtime to runner", () => {
+    stash();
+    setEnv("SESSION_RUNTIME", undefined);
+    expect(getConfig().sessionRuntime).toBe("runner");
+  });
+
+  it("opts into the exec runtime via SESSION_RUNTIME=exec", () => {
+    stash();
+    setEnv("SESSION_RUNTIME", "exec");
+    expect(getConfig().sessionRuntime).toBe("exec");
   });
 });

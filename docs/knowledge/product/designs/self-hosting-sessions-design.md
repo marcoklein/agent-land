@@ -160,6 +160,15 @@ The `AgentHarness` port makes the runtime replaceable; every phase ships indepen
 - **P4 — cleanup.** Remove the exec harness for pi; content-hash the agent image (so new
   runner versions actually reach new sessions[^staleness]); update docs.
 
+### Rollout & rollback
+
+- **Rollout.** Merge P3; `SESSION_RUNTIME` defaults to `runner`, so new sessions spawn the
+  runner as the container entrypoint. Zero-downtime deploys come from the `/health` endpoint
+  plus the `CHECKS` file (Dokku health-checks the new container before the proxy switch).
+- **Rollback.** `dokku config:set agent-land SESSION_RUNTIME=exec` (then deploy) restores the
+  exec harness for new sessions; running runner sessions are unaffected, and exec is not
+  removed until P4. To disable zero-downtime: `dokku checks:disable agent-land`.
+
 ## Architecture fit
 
 - **No new primitive.** Composes the six primitives[^engine]; only the `Session` primitive's

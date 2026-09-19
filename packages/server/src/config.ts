@@ -70,7 +70,8 @@ export function getConfig(): Config {
     agentLandUrl: (process.env.AGENT_LAND_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
     operatorBasicAuth,
     hostMounts,
-    sessionRuntime: process.env.SESSION_RUNTIME === "runner" ? "runner" : "exec",
+    // Runner is the default (P3 cutover); SESSION_RUNTIME=exec is the rollback escape hatch.
+    sessionRuntime: process.env.SESSION_RUNTIME === "exec" ? "exec" : "runner",
   };
 }
 
