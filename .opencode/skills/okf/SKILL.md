@@ -5,6 +5,7 @@ description: Write knowledge documents in OKF (Open Knowledge Format) v0.2. Acti
 
 ## Style — write tight
 
+- **Write for the reviewer.** They decide; the doc must let them. Open with the problem in plain language — no jargon, no acronyms, no internal names (a note that needs a glossary has failed). Then state what the reviewer is asked to decide. Detail that does not change the decision is a link or an appendix, never the lead.
 - First sentence of every section carries the point; headings + first sentences alone must summarize the doc.
 - Short sentences, one claim each. No flourish, no selling, no metaphor stacks, no empty adjectives ("clean", "crash-proof").
 - State each rationale exactly once, where it owns (decision → ADR, design reasoning → Design note). Everywhere else links, never restates.
@@ -20,6 +21,8 @@ Line budgets (whole file, frontmatter included):
 | Design note | ≤ 120 |
 | PR body | ≤ 15 (template in the dev-playbook skill) |
 | Any other note | as long as the content needs, not longer |
+
+The budget is a gate, not a target: run `wc -l` on the file before opening the PR and cut until it fits. Over budget is a defect — a note is an argument for a decision, not a spec dump.
 
 ## Concept template
 

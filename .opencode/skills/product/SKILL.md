@@ -41,13 +41,17 @@ Cross-link the underlying engine primitives from `/platform/engine.md`. Present 
 
 ### 2. Design (Feature → Design note)
 
-After the outcome gate passes, write `docs/knowledge/product/designs/<slug>-design.md` as an OKF note (`type: Design`, `status: draft`) containing:
+After the outcome gate passes, write `docs/knowledge/product/designs/<slug>-design.md` as an OKF note (`type: Design`, `status: draft`) containing, **in this order**:
 
+- **Problem** — the human problem in plain language: one paragraph, no jargon, no acronyms. State what breaks today and why it matters in terms a reviewer outside the codebase understands (e.g. "deploy agent-land while developing agent-land").
+- **Decision requested** — 1–3 bullets: exactly what the reviewer is approving, each naming the choice and the main rejected alternative.
 - **Approach** — the shape of the change.
 - **Interfaces** — contracts, routes, env, CLI surface that change.
 - **Risks & mitigations**.
 - **ADR pointers** — link or flag a new `docs/knowledge/adrs/NNN-*.md` if the change is architecturally significant.
 - **Minimal change set** — files/packages touched.
+
+Keep it ≤ 120 lines: state the decision, not the spec. Protocol tables, wire formats, and field-by-field detail belong in the implementation (ADR/code), not the design gate.
 
 Answer the Feature note's open questions here, or mark them explicitly deferred.
 
