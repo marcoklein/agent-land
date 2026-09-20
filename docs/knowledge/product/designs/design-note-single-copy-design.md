@@ -2,7 +2,7 @@
 type: Design
 title: Design phase — one design note in agent-land, none in the tickets repo
 description: The loop's design step writes one copy — the OKF Design note in agent-land, opened as a PR — and records the PR number on the ticket; the tickets design.md copy is removed.
-status: draft
+status: stable
 tags: [tickets, hitd, loop, okf]
 generated: { by: opencode-go/deepseek-v4-pro, at: 2026-09-20T13:25:00Z }
 sources:

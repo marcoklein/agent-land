@@ -2,7 +2,7 @@
 type: Design
 title: Loop reconciles gates — merged PR advances, review feedback sends back
 description: The loop reads a parked ticket's recorded pull request and advances, closes, or unparks it — merge and comment become the only two inputs at a gate.
-status: draft
+status: stable
 tags: [tickets, hitd, loop, okf]
 generated: { by: pi/deepseek-v4-pro, at: 2026-09-20T16:20:00Z }
 sources:

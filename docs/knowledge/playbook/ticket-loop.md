@@ -1,8 +1,8 @@
 ---
 type: Strategy
 title: Ticket loop — the dogfooding heartbeat
-description: A stateless single-prompt loop that advances every open ticket by exactly one step per tick, with fresh context per step — concept, state model, gates, and how it relates to the product pipeline. Conception only; not yet implemented.
-status: draft
+description: The heartbeat that advances every open ticket by one step per tick, with fresh context per step — concept, state model, gates, and how it relates to the product pipeline. Shipped as the curl-based bash driver (see the ticket layer design); this note keeps the original orchestrator-tick concept.
+status: stable
 tags: [dogfooding, orchestration, hitd, heartbeat, tickets]
 generated: { by: opencode/qwen3.8-max, at: 2026-09-13T00:00:00Z }
 sources:
@@ -27,7 +27,7 @@ sources:
 
 **One-liner:** One prompt, run forever: every tick scans all open tickets, picks the single most pressing next step, spawns a *fresh* agent to execute it, reports, and stops — all state lives in git and GitHub, never in an agent's context.
 
-> **Status: conception.** This note captures the pattern at the concept level. Nothing here is implemented yet — no skill, no workflow, no labels. The planned artifacts are listed in [Shape of the landing](#shape-of-the-landing-when-it-comes).
+> **Status: shipped, simplified.** The loop landed as the curl-based bash driver in `agent-land-tickets/scripts/loop.sh` (host cron), not the platform orchestrator tick below — see the [ticket layer design](/product/designs/ticket-layer-design.md). This note keeps the original orchestrator-tick concept and its decision rule as prior art.
 
 ## Why a loop next to the pipeline
 
@@ -126,12 +126,12 @@ Within the same priority, oldest ticket first. Exactly **one child per tick** �
 
 ## Human gates
 
-Both gates stay human, per the trust ladder ("merge rights are earned, not granted")[^dogfooding]:
+Merge rights stay human, per the trust ladder ("merge rights are earned, not granted")[^dogfooding]: the loop never approves or merges. Un-parking is no longer human — `reconcile_gate` reads each parked ticket's `external-ref` PR and advances, closes, or unparks it (see the [gate-reconciliation design](/product/designs/alt-sj6u-loop-gate-reconciliation-design.md)):
 
-- **Design gate** — a PR on the artifacts; merge = approval. The child parks the ticket with the `human` label; only the human removes it.
-- **Merge gate** — the implementation PR. The loop may *respond* to review comments and fix red CI, but it never approves, never merges, never bypasses.
+- **Design gate** — a PR on the OKF note; merge = approval. `MERGED` advances to structure; `CHANGES_REQUESTED` sends the ticket back.
+- **Merge gate** — the implementation PR. `MERGED` closes the ticket; `CHANGES_REQUESTED` sends it back.
 
-The loop's relationship to a gate is always: *advance work up to the gate, park, report, move on to another ticket.* It never waits — waiting is what the next tick is for.
+The loop's relationship to a gate is always: *advance work up to the gate, park, reconcile on the next tick, move on.* It never waits — waiting is what the next tick is for.
 
 ## Handoff contract — the HITD port
 
@@ -149,7 +149,7 @@ GitHub is **backend #1**, not the assumption. The recipe will isolate every back
 
 The file-based `.tickets/` backend is now designed: the [ticket layer](/product/designs/ticket-layer-design.md) makes **agent-land-tickets** (a separate git-synced `tk` repo) the system of record ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)) — `list/read state` = `tk ready`/`tk ls -T`, `claim` = `tk start` + git push, `park`/`check gate` = the `human` tag + `external-ref` PR status.
 
-Intake is now an agent too: the [product-owner](/playbook/product-owner.md) session writes loop-ready tickets from raw outcomes, and the loop runs on the host as a systemd timer (`agent-land-tickets/deploy/`) rather than a laptop cron.
+Intake is now an agent too: the [product-owner](/playbook/product-owner.md) session writes loop-ready tickets from raw outcomes, and the loop runs on the host as a cron (`personal-infra/server/05-ticket-loop.sh`) rather than a laptop cron.
 
 ## Shape of the landing (when it comes)
 
