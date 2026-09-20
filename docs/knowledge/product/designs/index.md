@@ -11,3 +11,4 @@ Approved technical designs — the handoff from product to implementation. Each 
 * [Skills out of the agent image](skills-out-of-image-design.md) — deliver skills from a host-path mount the loop binds, not baked into the image
 * [Design phase single copy](design-note-single-copy-design.md) — the design step writes only the agent-land OKF note and records the PR on the ticket, not a tickets design.md
 * [Loop gate reconciliation](alt-sj6u-loop-gate-reconciliation-design.md) — the loop reads a parked ticket's PR and advances, closes, or unparks it; merge and comment become the only gate inputs
+* [Schedule contract and loader](alt-jp4q-schedule-contract-loader-design.md) — the schedule file is JSON read by a standalone loader that emits one validated, normalized schedule list; a bad schedule fails at load, not at its first due tick
