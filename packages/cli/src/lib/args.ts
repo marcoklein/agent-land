@@ -1,4 +1,6 @@
-const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "status", "models", "connectors", "providers", "mounts", "run", "watch"]);
+import { commandFlags, commandNames, flagSpecs } from "../commands/index.js";
+
+const COMMANDS = new Set(["new", "chat", "ls", "rm", "log", "status", "models", "connectors", "providers", "mounts", "run", "watch", ...commandNames]);
 
 interface FlagSpec {
   key: string;
@@ -48,6 +50,13 @@ const COMMAND_FLAGS: Record<string, string[]> = {
   run: ["--connectors", "--model", "--provider", "--manual", "--platform", "--rm", "--timeout", "--verbose", "--mount"],
   watch: ["--all"],
 };
+
+for (const [flag, spec] of Object.entries(flagSpecs)) {
+  FLAGS[flag] = { key: spec.key, type: spec.type, multiple: spec.multiple };
+}
+for (const [cmd, flags] of Object.entries(commandFlags)) {
+  COMMAND_FLAGS[cmd] = flags;
+}
 
 export interface ParsedArgs {
   cmd: string | null;
