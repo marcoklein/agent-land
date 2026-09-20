@@ -34,7 +34,7 @@ stateDiagram-v2
     [*] --> needs_refinement: tk create, tags [loop]
     needs_refinement --> needs_questions: task.md (refine, split epics, set deps)
     needs_questions --> needs_research: questions.md
-    needs_research --> needs_design: research.md (file:line refs)
+    needs_research --> needs_design: research.md (file-line refs)
     needs_design --> DesignGate: design.md + PR on agent-land, +human
     DesignGate --> needs_design: PR feedback, -human
     DesignGate --> needs_structure: PR merged, OKF note stable, -human
@@ -72,6 +72,43 @@ external-ref: gh-104               # agent-land PR — join key for reconciliati
 3. Spawn a fresh agent with the phase's `HITD_HANDOFF_V1` prompt, bound to an agent-land checkout; it does exactly one phase, writes artifacts, appends thoughts, returns `STATUS`. `PROGRESS` leaves the label; the next tick resumes at `plan.md`'s first unchecked item.
 4. Loop retags (or `+human` at a gate) → commit → `pull --rebase` → push. Stop; next tick, next step.
 
+Where the pieces run — the loop driver is a client of the platform, never part of it:
+
+```mermaid
+flowchart LR
+    subgraph HOST["OPERATOR HOST - laptop / cron"]
+        driver["scripts/loop.sh<br/>bash loop driver"]:::loop
+        tkclone[("agent-land-tickets<br/>local clone<br/>.tickets/ / work/")]:::store
+        driver -->|"git pull --rebase / push"| tkclone
+    end
+
+    subgraph SERVER["AGENT-LAND SERVER (Dokku)"]
+        nginx["nginx / SSL / basic auth"]:::outside
+        api["JSON/SSE API"]:::engine
+        dk["Docker daemon"]:::substrate
+        agents["agent containers<br/>al run --platform"]:::engine
+        nginx --> api --> dk --> agents
+    end
+
+    subgraph GH["GITHUB"]
+        tickets[("agent-land-tickets<br/>push-to-main")]:::store
+        alrepo[("agent-land<br/>PR-gated")]:::store
+    end
+
+    driver -->|"al run --platform / spawn session"| nginx
+    tkclone -->|"pull --rebase / push"| tickets
+    agents -->|"gh clone / git push"| tickets
+    agents -->|"git push / gh pr create"| alrepo
+
+    classDef loop fill:#e65100,stroke:#ff9800,color:#fff3e0
+    classDef engine fill:#1b5e20,stroke:#4caf50,color:#e8f5e9
+    classDef outside fill:#4a2c88,stroke:#8e6fd1,color:#f0e8ff
+    classDef substrate fill:#37474f,stroke:#78909c,color:#eceff1
+    classDef store fill:#37474f,stroke:#90a4ae,color:#eceff1
+```
+
+The one line that matters is `loop → nginx`: `loop.sh` never runs inside agent-land — it calls the platform over the same public API as any other client. Only the spawned agents touch the repos, cloning `agent-land-tickets` to work a phase and opening PRs on `agent-land`.
+
 ## Gates
 
 - **Design gate** — the agent drafts `work/<id>/design.md`, opens a PR promoting it to an agent-land OKF Design note, tags `human`, parks. Merge = approval, note → `stable`; feedback → `-human`, retag, revise.
@@ -85,6 +122,12 @@ A ticket is **done** only when closed *and* its `external-ref` PR is merged. The
 
 - Bake `tk` + `jq` into `agent-image/Dockerfile`; mount agent-land-tickets into sessions (`TICKETS_DIR`); code workspaces stay per-session; lock-mount mutex + stale guard per the heartbeat design[^ticket-loop].
 - Laptop cron → engine-native scheduler, as the loop's first self-built ticket. Read-only board as a web-ui consumer of `tk query` JSON (ADR 018).
+
+## Operator model
+
+- **Intake** — the [product-owner](/playbook/product-owner.md) agent turns outcomes into loop-ready tickets (split, deps, `loop` tag), instead of hand-run `tk create`.
+- **Host loop** — `scripts/loop.sh` runs unattended as a systemd timer on the server (`agent-land-tickets/deploy/`), not on the laptop.
+- **Gates** — unchanged: design (PR on the OKF note) and merge (implementation PR); the loop parks at `human`, the operator unparks.
 
 ## Answers to the Feature's open questions
 
