@@ -19,3 +19,4 @@ Operational and empirical findings that live here because the code can't express
 * [First orchestrated run](first-orchestrated-run.md) — phases 1–3 built by platform sessions: stall-and-re-prompt discipline, the workflow-scope token wall, and why the orchestrator must verify every worker PR
 * [First end-to-end pipeline run](first-pipeline-run.md) — label → merged product memory: stage-transition stalls, the watch-loop/gh-auth fixes, the critic that caught a wrong claim, and gate delegation
 * [First dynamic-orchestration run (Phase 4)](first-dynamic-orchestration-run.md) — the planner's first dogfood: a visibly different stage graph that went to three green PRs, and the plan-comment substitution + Dokku deploy-lock bugs it surfaced
+* [First hosted loop run (curl scheduler)](first-hosted-loop-run.md) — the external curl loop driving a ticket through the ladder on cron, and the env-export, `set -e`/`$()`, and stale-board-mount bugs it surfaced
