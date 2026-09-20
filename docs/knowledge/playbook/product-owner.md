@@ -41,14 +41,14 @@ flowchart LR
 The `product-owner` skill is baked into the agent image, so **one persistent session is your whole intake**. Start it once, then chat over many turns:
 
 ```bash
-al new --connectors github      # pick provider/model, then:
+al new                          # pick provider/model, and the GitHub connector ("GitHub Personal All Repos"), then:
 #   you> you are the product owner
 #   you> here are my outcomes: add a health-check endpoint; make "al board" group by phase
 ```
 
 Each turn the agent refines whatever you give it into loop-ready tickets — `tk create` with `loop,needs-refinement`, splits epics, wires deps — and pushes them to `agent-land-tickets`. It reports the ticket ids back. The loop then advances them phase by phase; you only re-enter at the two gates.
 
-One-shot (no chat): `al run "you are the product owner: …" --connectors github`.
+One-shot (no chat): `al run "you are the product owner: …" --connectors "GitHub Personal All Repos"`.
 
 ## The loop runs on the host
 
