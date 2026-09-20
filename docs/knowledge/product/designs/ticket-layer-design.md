@@ -1,8 +1,8 @@
 ---
 type: Design
 title: Ticket layer — agent-land-tickets
-description: Design for the git-synced ticket repo backing the loop — tk schema, phase-label funnel, HITD artifacts and thoughts, bash loop v1, sync protocol, gates, reconciliation.
-status: draft
+description: Design for the git-synced ticket repo backing the loop — tk schema, phase-label funnel, HITD artifacts and thoughts, bash loop, sync protocol, gates, reconciliation.
+status: stable
 tags: [tickets, hitd, playbook]
 generated: { by: opencode/qwen3.8-max, at: 2026-09-14T00:00:00Z }
 sources:
@@ -35,15 +35,15 @@ stateDiagram-v2
     needs_refinement --> needs_questions: task.md (refine, split epics, set deps)
     needs_questions --> needs_research: questions.md
     needs_research --> needs_design: research.md (file-line refs)
-    needs_design --> DesignGate: design.md + PR on agent-land, +human
-    DesignGate --> needs_design: PR feedback, -human
-    DesignGate --> needs_structure: PR merged, OKF note stable, -human
+    needs_design --> DesignGate: OKF note + PR on agent-land, +human
+    DesignGate --> needs_design: CHANGES_REQUESTED (reconcile_gate)
+    DesignGate --> needs_structure: PR merged (reconcile_gate)
     needs_structure --> needs_plan: structure.md
     needs_plan --> needs_implementation: plan.md (verification checkboxes)
     needs_implementation --> MergeGate: code PR, CI green, +human
-    MergeGate --> needs_implementation: review or red CI, -human
-    MergeGate --> Done: human merges
-    Done --> [*]: tk close, reconcile
+    MergeGate --> needs_implementation: CHANGES_REQUESTED (reconcile_gate)
+    MergeGate --> Done: PR merged (reconcile_gate)
+    Done --> [*]: tk close
 ```
 
 ## Interfaces — layout and ticket schema
@@ -65,7 +65,7 @@ external-ref: gh-104               # agent-land PR — join key for reconciliati
 
 ## Loop v1 and sync protocol
 
-`scripts/loop.sh` — one tick, one step; laptop-side (opencode) first, engine-side later. No locks (why beads went to Dolt); git + small files + discipline give safety:
+`scripts/loop.sh` — one tick, one step; a curl-based bash driver on host cron first, engine-native scheduler later. No locks (why beads went to Dolt); git + small files + discipline give safety:
 
 1. `git pull --rebase`; pick from `tk ready` (open, deps resolved) — highest priority, oldest first; none → stop. Phases may be skipped by retagging[^ticket-loop].
 2. Precondition — still open and unclaimed? Claim via `tk start` (assignee = session identity) → commit → push. **Failed push invalidates the action**: re-pull, re-check, retry or back off; never force-push. Two claims on one small file surface as a rebase conflict — the concurrency detector.
@@ -111,12 +111,14 @@ The one line that matters is `loop → nginx`: `loop.sh` never runs inside agent
 
 ## Gates
 
-- **Design gate** — the agent drafts `work/<id>/design.md`, opens a PR promoting it to an agent-land OKF Design note, tags `human`, parks. Merge = approval, note → `stable`; feedback → `-human`, retag, revise.
-- **Merge gate** — the implementation PR on agent-land; the loop may answer review comments and fix red CI, never approve or merge[^ticket-loop].
+- **Design gate** — the agent writes the agent-land OKF Design note only (no tickets `design.md`), opens the PR, records `external-ref: gh-<n>`, parks at `[loop, human, needs-design]`. Merge = approval; `CHANGES_REQUESTED` sends it back.
+- **Merge gate** — the implementation PR on agent-land; the loop never approves or merges[^ticket-loop].
+
+Both gates are reconciled by `reconcile_gate`: each tick, before the `human` skip, reads the parked ticket's `external-ref` PR via `gh pr view --json state,reviewDecision` and acts — design `MERGED` advances to `needs-structure`, implementation `MERGED` closes the ticket, `CHANGES_REQUESTED` unparks back to the phase (see the [gate-reconciliation design](/product/designs/alt-sj6u-loop-gate-reconciliation-design.md)). The operator's only inputs are merge and change-request.
 
 ## Reconciliation
 
-A ticket is **done** only when closed *and* its `external-ref` PR is merged. The report step (loop tick, `tk-funnel` plugin, or cron) joins the product funnel (intake → designed → approved) against the engineering funnel (planned → implemented → merged): throughput, leakage (approved design unmerged after N days; stalled labels), per-label conversion.
+`reconcile_gate` runs each tick before the `human` skip: for a parked ticket with an `external-ref` PR, `gh pr view --json state,reviewDecision` decides advance / close / unpark / stay, keyed on the parked phase tag. A ticket is **done** only when closed *and* its `external-ref` PR is merged. The report step (loop tick, `tk-funnel` plugin, or cron) joins the product funnel (intake → designed → approved) against the engineering funnel (planned → implemented → merged): throughput, leakage (approved design unmerged after N days; stalled labels), per-label conversion.
 
 ## Engine phase (later)
 
@@ -126,8 +128,8 @@ A ticket is **done** only when closed *and* its `external-ref` PR is merged. The
 ## Operator model
 
 - **Intake** — the [product-owner](/playbook/product-owner.md) agent turns outcomes into loop-ready tickets (split, deps, `loop` tag), instead of hand-run `tk create`.
-- **Host loop** — `scripts/loop.sh` runs unattended as a systemd timer on the server (`agent-land-tickets/deploy/`), not on the laptop.
-- **Gates** — unchanged: design (PR on the OKF note) and merge (implementation PR); the loop parks at `human`, the operator unparks.
+- **Host loop** — `scripts/loop.sh` runs unattended as a host cron (managed by `personal-infra/server/05-ticket-loop.sh`), not on the laptop.
+- **Gates** — design (PR on the OKF note) and merge (implementation PR); the loop parks at `[loop, human, <phase>]` and reconciles it each tick — merge and change-request are the only operator inputs.
 
 ## Answers to the Feature's open questions
 

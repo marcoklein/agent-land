@@ -2,7 +2,7 @@
 type: Design
 title: Skills out of the agent image
 description: Stop shipping the skills folder inside the agent image; deliver it from a host-path mount the loop binds at session creation, keeping vendor knowledge out of the engine.
-status: draft
+status: stable
 tags: [playbook, mount, loop]
 generated: { by: pi/deepseek-v4-pro, at: 2026-09-20T11:50:00Z }
 sources:
