@@ -2,7 +2,7 @@
 type: Reference
 title: Multi-agent pipeline architecture — the built system
 description: How the dogfooding product pipeline is actually assembled: intake, trigger, orchestrator session, stage children, gates, and the loopback primitive that lets sessions compose.
-status: draft
+status: deprecated
 tags: [architecture, orchestration, pipeline, platform-connector, dogfooding]
 generated: { by: opencode/deepseek-v4-pro, at: 2026-09-06T00:00:00Z }
 sources:
@@ -24,9 +24,6 @@ sources:
   - id: orch-skill
     resource: agent-image/skills/orchestrator/SKILL.md
     title: The static orchestrator recipe
-  - id: trigger-learn
-    resource: /learnings/scheduled-pipeline-trigger.md
-    title: Scheduled pipeline trigger
   - id: loopback-learn
     resource: /learnings/first-loopback-run.md
     title: First loopback run
@@ -37,7 +34,9 @@ sources:
 
 # Multi-agent pipeline architecture — the built system
 
-This describes the *dogfooding product pipeline* as it is actually assembled and running, not the roadmap intent. It is a composition built on the [engine](/platform/engine.md) primitives — nothing here adds a workflow executor to the engine; control flow lives in a recipe and a GitHub Actions trigger that shell out to the JSON/SSE API[^engine].
+Deprecated 2026-09-20 — the pipeline trigger (`.github/workflows/pipeline-trigger.yml`) was removed; unattended work now flows through the [ticket loop](/playbook/ticket-loop.md). Kept as the record of how the trigger-driven pipeline was assembled; the orchestrator recipe itself still exists for manual runs.
+
+This describes the *dogfooding product pipeline* as it was assembled and running, not the roadmap intent. It is a composition built on the [engine](/platform/engine.md) primitives — nothing here adds a workflow executor to the engine; control flow lives in a recipe and a GitHub Actions trigger that shell out to the JSON/SSE API[^engine].
 
 ## The whole at one glance
 
@@ -81,7 +80,7 @@ Six moving parts. Read them top-to-bottom as the flow of one issue.
 
 ## 1. Intake — an issue, not a UI
 
-A human states the outcome as a **GitHub issue** and adds the **`pipeline-ready`** label. There is no intake agent, no form, no UI — the issue body *is* the requirements document, and the label *is* the "start me" signal[^pipeline][^trigger-learn].
+A human states the outcome as a **GitHub issue** and adds the **`pipeline-ready`** label. There is no intake agent, no form, no UI — the issue body *is* the requirements document, and the label *is* the "start me" signal[^pipeline].
 
 - One issue = one pipeline run.
 - `pipeline-ready` = eligible for the trigger.
@@ -89,7 +88,7 @@ A human states the outcome as a **GitHub issue** and adds the **`pipeline-ready`
 
 ## 2. Trigger — the only "scheduled" part
 
-`.github/workflows/pipeline-trigger.yml` runs hourly (`cron: 0 * * * *`) and on `workflow_dispatch`. It is a GitHub Actions job, not an agent-land session, so it authenticates to the platform as the **operator** via the `AGENT_LAND_URL` / `AGENT_LAND_BASIC_AUTH` repo secrets[^trigger-learn].
+`.github/workflows/pipeline-trigger.yml` runs hourly (`cron: 0 * * * *`) and on `workflow_dispatch`. It is a GitHub Actions job, not an agent-land session, so it authenticates to the platform as the **operator** via the `AGENT_LAND_URL` / `AGENT_LAND_BASIC_AUTH` repo secrets.
 
 For each `pipeline-ready` issue it:
 
@@ -193,6 +192,5 @@ The architecture's one hard rule, carried over from the design notes: **control 
 [^conn]: [Platform Connector feature note](/product/features/platform-connector.md)
 [^conn-design]: [Platform Connector design note](/product/designs/platform-connector-design.md)
 [^orch-skill]: [Orchestrator recipe](../../../agent-image/skills/orchestrator/SKILL.md)
-[^trigger-learn]: [Scheduled pipeline trigger](/learnings/scheduled-pipeline-trigger.md)
 [^loopback-learn]: [First loopback run](/learnings/first-loopback-run.md)
 [^orch-learn]: [First orchestrated run](/learnings/first-orchestrated-run.md)

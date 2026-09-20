@@ -83,12 +83,9 @@ Sequential stages respect the Mount single-writer invariant: the server hard-enf
 - **Deliverable:** one prompt ("run the pipeline on issue #N") → two open PRs (spec + design) plus a review summary from the critic child.
 - **Recipe home:** the orchestrator's stage list lives as a skill in the agent image — `agent-image/skills/orchestrator/SKILL.md` — not in the server. The skill is the canonical Phase 2 recipe (stage prompts, exact `curl`/`jq` loops, gate mechanics, and a no-platform-injection fallback). **Achieved:** PR #62, built by a platform session. End-to-end pipeline run (issue → spec PR + design PR) is the next proof.
 
-### Phase 3 — Scheduled trigger (cron first, webhooks later) — landed 2026-09-05
+### Phase 3 — Scheduled trigger — retired 2026-09-20
 
-Remove the human nudge that *starts* and *resumes* the pipeline. The cheap first step needs no engine change: a **scheduled GitHub Actions workflow** (or host cron) runs a polling session that scans for issues labeled `pipeline-ready` and orchestrators parked at a cleared gate, and advances them. Once the polling loop proves the value, a follow-up may replace it with a **webhook endpoint** on the server (issue labeled → session created; PR reviewed → orchestrator re-prompted).
-
-- **Deliverable:** label an issue → spec and design PRs appear with nobody at a terminal; review feedback on a design PR → revised design on the next poll. **Achieved:** PR #63 — `.github/workflows/pipeline-trigger.yml` (hourly + dispatch), `pipeline-ready` label, secrets set, dispatch verified green. See [scheduled pipeline trigger](/learnings/scheduled-pipeline-trigger.md).
-- **Maps to:** dogfooding Phase 4 (scheduled maintenance).
+Landed as `.github/workflows/pipeline-trigger.yml` (hourly + dispatch, `pipeline-ready` label), then removed — the unattended cron kept producing maintenance/docs PRs the operator did not want. The pipeline can still run manually; unattended work now routes through the [ticket loop](/playbook/ticket-loop.md).
 
 ### Phase 4 — Dynamic orchestration
 

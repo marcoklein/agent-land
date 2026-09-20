@@ -42,7 +42,7 @@ The ticket loop inverts this. It is the **heartbeat**: a stateless tick that ask
 | Context | accumulates over the run | fresh per step |
 | Lifetime | as long as the ticket | seconds to minutes per tick |
 | Crash recovery | resume/re-prompt the orchestrator | nothing to recover — the next tick re-derives state |
-| Driver | `pipeline-trigger.yml` (one orchestrator per labeled issue) | heartbeat cron (one tick, repeated) |
+| Driver | GitHub Actions trigger (retired 2026-09-20) | heartbeat cron (one tick, repeated) |
 
 The two coexist and cross-pollinate: the loop is the continuous driver of everyday ticket flow; the pipeline remains the heavy, budgeted treatment for a single large outcome. Long term the loop could even *spawn* a pipeline orchestrator as one of its steps when a ticket deserves it.
 
@@ -50,7 +50,7 @@ The two coexist and cross-pollinate: the loop is the continuous driver of everyd
 
 Three roles, none of them new to the engine:
 
-1. **Heartbeat** — an external cron (GitHub Actions, like [`pipeline-trigger.yml`](../../../.github/workflows/pipeline-trigger.yml)) that spawns one orchestrator session per tick. External schedule, public API: "humans, crons, and agents are peer clients" — no engine change[^dogfooding].
+1. **Heartbeat** — an external cron that spawns one orchestrator session per tick. External schedule, public API: "humans, crons, and agents are peer clients" — no engine change[^dogfooding].
 2. **Orchestrator tick** — a platform-enabled session with *no repo checkout*. It scans ticket state through the backend (GitHub), decides the one next step by a fixed priority table, spawns a step child, watches it settle, posts the step report, deletes the child, and stops.
 3. **Step child** — a fresh session bound to the repo mount with the GitHub connector. It receives a single-step handoff, does exactly that step, commits and pushes its artifacts, and answers with a STATUS block.
 
@@ -148,6 +148,8 @@ Orchestrator → child handoffs use the HITD protocol verbatim[^hitd]: a `HITD_H
 GitHub is **backend #1**, not the assumption. The recipe will isolate every backend command in a single "ticket backend" section, so the verbs — *list tickets, read state, park, check gate, comment, claim* — can later grow a second implementation (file-based `.tickets/` markdown, Jira, …) without touching the kernel. Per the dogfooding rule "the playbook is composition", this stays prompt-level for now; the seam is extracted into a real adapter contract only when a second backend actually appears. Likewise, the heartbeat is an external cron today; an **engine-native scheduler** (schedules as a resource beside mounts and connectors) is a candidate product feature — and a fitting *first ticket for the loop to build itself*.
 
 The file-based `.tickets/` backend is now designed: the [ticket layer](/product/designs/ticket-layer-design.md) makes **agent-land-tickets** (a separate git-synced `tk` repo) the system of record ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)) — `list/read state` = `tk ready`/`tk ls -T`, `claim` = `tk start` + git push, `park`/`check gate` = the `human` tag + `external-ref` PR status.
+
+Intake is now an agent too: the [product-owner](/playbook/product-owner.md) session writes loop-ready tickets from raw outcomes, and the loop runs on the host as a systemd timer (`agent-land-tickets/deploy/`) rather than a laptop cron.
 
 ## Shape of the landing (when it comes)
 

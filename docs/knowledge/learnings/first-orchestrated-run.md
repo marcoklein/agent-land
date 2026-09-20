@@ -12,9 +12,6 @@ sources:
   - id: loopback
     resource: /learnings/first-loopback-run.md
     title: First loopback run
-  - id: trigger
-    resource: /learnings/scheduled-pipeline-trigger.md
-    title: Scheduled pipeline trigger
 ---
 
 # First orchestrated run — phases 1–3 executed by platform sessions
