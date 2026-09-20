@@ -22,3 +22,4 @@ Architecture Decision Records — the platform's design decisions as a numbered 
 * [018 — Web UI as a separate consumer package](018-web-ui-separate-consumer.md) — standalone read-only observability UI, engine stays API-only
 * [019 — Ticket layer in a separate git-synced repo](019-ticket-layer-git-synced-repo.md) — **proposed** (this design gate): work queue as `tk` markdown in `agent-land-tickets`, git push/pull as the sync layer
 * [020 — Make the session runtime replaceable](020-session-runtime-replaceable.md) — **proposed**: a runner owns pi's stdio and dials out; exec stays default
+* [021 — Verify loop phase completion from artifacts](021-verify-loop-completion-from-artifacts.md) — **proposed**: the loop re-derives completion from artifacts + per-phase handoff, never from a self-reported STATUS string; tick holds a `flock` mutex
