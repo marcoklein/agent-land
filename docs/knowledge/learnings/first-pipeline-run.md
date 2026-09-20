@@ -15,14 +15,11 @@ sources:
   - id: skill
     resource: agent-image/skills/orchestrator/SKILL.md
     title: The static orchestrator recipe
-  - id: trigger
-    resource: /learnings/scheduled-pipeline-trigger.md
-    title: Scheduled pipeline trigger
 ---
 
 # First end-to-end pipeline run — label to merged product memory
 
-On 2026-09-05/06 the whole stack ran in anger for the first time: issue #57 got the `pipeline-ready` label → the [pipeline trigger](/learnings/scheduled-pipeline-trigger.md) workflow spawned an orchestrator session → research, refine, design, critic, and close children ran in sequence → **spec PR #65, design PR #67, and close PR #68 all merged**, and the feature note was promoted `draft → stable` with a real critic-driven revision loop in between. The human role was exactly the designed one: gate decisions and merge — everything else was agents.
+On 2026-09-05/06 the whole stack ran in anger for the first time: issue #57 got the `pipeline-ready` label → the pipeline-trigger workflow spawned an orchestrator session → research, refine, design, critic, and close children ran in sequence → **spec PR #65, design PR #67, and close PR #68 all merged**, and the feature note was promoted `draft → stable` with a real critic-driven revision loop in between. The human role was exactly the designed one: gate decisions and merge — everything else was agents.
 
 The composition-level lessons live in [first orchestrated run](/learnings/first-orchestrated-run.md). These are the *pipeline-run* lessons, stage by stage.
 

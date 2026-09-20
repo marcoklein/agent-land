@@ -40,7 +40,6 @@ What the agent-land playbook bundles today — all of it composition; none of it
 | Orchestrator recipe + policy | dynamic stage planning, budgets, gate discipline | `agent-image/skills/orchestrator/` |
 | HITD recipe | phase contract + handoff protocol (see below) | operator skill — **to port**; landing shape proposed by the [ticket loop](/playbook/ticket-loop.md#handoff-contract--the-hitd-port) |
 | Dev loop | branch → checks → PR → green loop | `.opencode/skills/dev-playbook/` (legacy name — a recipe, not a playbook) |
-| Trigger | hourly scan for `pipeline-ready` issues | `.github/workflows/pipeline-trigger.yml` |
 | Ticket loop (concept) | the heartbeat: one stateless prompt advancing every ticket by one step per tick, fresh context per step | [/playbook/ticket-loop.md](/playbook/ticket-loop.md) — planned |
 | Ticket layer | the queue's system of record: `agent-land-tickets` git repo (`tk`), phase-label funnel, per-ticket HITD artifacts + thoughts, reconciliation | [/product/designs/ticket-layer-design.md](/product/designs/ticket-layer-design.md) — v1 live ([ADR 019](/adrs/019-ticket-layer-git-synced-repo.md)); initial tickets created, loop driver next |
 | Clients | `al` CLI today; thin conversational client planned | `packages/cli` |
@@ -124,7 +123,7 @@ The human is in the loop at **review** and (for now) **merge**. The agent owns e
 | Watch CI, react to red | ✅ Works — `gh pr checks` / `gh run watch` | A checked-in playbook so it's automatic, not ad-hoc |
 | Respond to review comments | ✅ Works — `gh api` to read + reply | A trigger loop; today the human re-prompts |
 | Split work across agents | ✅ Works (2026-09-05) | [Platform Connector](/product/features/platform-connector.md) live: `platform: true` sessions spawn children via the API; see [first loopback run](/learnings/first-loopback-run.md) and the [multi-agent roadmap](/playbook/multi-agent-workflow.md) |
-| Recurring maintenance (release notes, deps) | ⚠️ Partial | [Pipeline trigger](/learnings/scheduled-pipeline-trigger.md) runs hourly for `pipeline-ready` issues; generic maintenance crons still open — [multi-agent roadmap Phase 3](/playbook/multi-agent-workflow.md) |
+| Recurring maintenance (release notes, deps) | — retired | the scheduled-trigger cron was removed (2026-09-20); no unattended maintenance runs |
 | Merge after green CI + approval | ⚠️ Works (`gh pr merge`) but ungated | Keep human-gated until trust is earned |
 | Deploy + verify live | ✅ Works — CI on merge to `main` pushes to Dokku and health-checks ([deploy.yml](../../../.github/workflows/deploy.yml)) | Merge stays human-gated |
 | Agent image updates reach the host | ❌ Gap | `ensureAgentImage` only builds when the tag is absent — see [agent-image staleness](/learnings/agent-image-staleness.md) |
@@ -163,11 +162,9 @@ The agent reads PR review comments (`gh api`), addresses them, replies, and requ
 - **Deliverable:** a PR that goes red → review → green → merge with the agent driving the middle.
 - **Exercises:** multi-turn steering, event history replay.
 
-### Phase 4 — Scheduled maintenance
+### Phase 4 — Scheduled maintenance (retired)
 
-Recurring work runs on its own: weekly release notes, dependency bumps, stale-PR triage. Depends on the scheduled-workflow milestone from [the product vision](/product/goals/product-vision.md).
-
-- **Deliverable:** a cron workflow that opens a maintenance PR every week without being asked.
+Not pursued — the unattended maintenance cron (and the trigger that fed it) was removed 2026-09-20. Recurring work now routes through the [ticket loop](/playbook/ticket-loop.md), human-gated like any other ticket.
 
 ### Phase 5 — Gated self-service (merge + deploy)
 

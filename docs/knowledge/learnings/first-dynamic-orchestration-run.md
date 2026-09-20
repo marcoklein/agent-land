@@ -12,9 +12,6 @@ sources:
   - id: skill
     resource: agent-image/skills/orchestrator/SKILL.md
     title: The planner recipe
-  - id: trigger
-    resource: .github/workflows/pipeline-trigger.yml
-    title: Scheduled pipeline trigger
   - id: deployment
     resource: /learnings/deployment.md
     title: Deployment gotchas
@@ -57,5 +54,4 @@ The plan was validated by `plan.mjs` (clean, including `--run-budget`) and poste
 
 [^design]: [Dynamic Orchestration Design note](/product/designs/dynamic-orchestration-design.md)
 [^skill]: [The planner recipe](agent-image/skills/orchestrator/SKILL.md)
-[^trigger]: [Scheduled pipeline trigger](.github/workflows/pipeline-trigger.yml)
 [^deployment]: [Deployment gotchas](/learnings/deployment.md)
