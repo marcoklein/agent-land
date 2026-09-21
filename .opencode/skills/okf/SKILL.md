@@ -18,11 +18,13 @@ Line budgets (whole file, frontmatter included):
 |---|---|
 | ADR | ≤ 15 |
 | Feature note | ≤ 60 |
-| Design note | ≤ 120 |
+| Design note | ≤ 45 |
 | PR body | ≤ 15 (template in the dev-playbook skill) |
 | Any other note | as long as the content needs, not longer |
 
 The budget is a gate, not a target: run `wc -l` on the file before opening the PR and cut until it fits. Over budget is a defect — a note is an argument for a decision, not a spec dump.
+
+A Design note is exactly two sections — `## Problem` (the failure in plain language) and `## Decision requested` (≤3 bullets, each naming the choice and the main rejected alternative). No approach, interfaces, risks, ADR-pointer, or change-set sections — those are structure/plan material that follows approval.
 
 ## Concept template
 
