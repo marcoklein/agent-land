@@ -10,6 +10,7 @@ Operational and empirical findings that live here because the code can't express
 * [Stale-document discovery](stale-document-discovery.md) — the staleness classes that drift in, and how mechanical detection keeps the base converging
 * [Inspiration from Archon](archon-inspiration.md) — what to borrow from Archon's workflow-engine approach, and what to refuse
 * [Agent Land and Archon — how they compose](archon-composition.md) — recipe layer vs runtime, and where they overlap
+* [Agent Land and Emdash — how they compose](emdash-composition.md) — desktop cockpit vs headless runtime; skills sync and scheduler overlap
 * [First dogfooding run (Phase 0)](first-dogfooding-run.md) — the first `al run` that opened a real agent-land PR, and the gaps it surfaced
 * [Agent image staleness on deploy](agent-image-staleness.md) — deployed hosts keep the once-built agent image; skill changes don't reach sessions until it is rebuilt
 * [Custom API key providers](custom-api-key-provider.md) — two integration traps with pi: auth.json shape and base URL doubling; both are now fixed
