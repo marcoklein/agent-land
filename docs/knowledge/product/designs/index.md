@@ -16,3 +16,4 @@ Approved technical designs — the handoff from product to implementation. Each 
 * [Due-time evaluation and coalescing](alt-nlby-due-time-evaluation-coalescing-design.md) — a schedule is due at a whole minute in its own timezone with a stable run id; missed minutes fold into one run and replay is bounded, never unbounded
 * [Implementation gate closes on completion](alt-ggbz-tickets-only-close-design.md) — the loop closes a tickets-only implementation on completion and gates only on a pull request the implementation actually opened
 * [Ticket driver's own code needs a review gate](alt-h61d-loop-runtime-review-gate-design.md) — changes to the scripts that run the ticket driver go through a pull request review, not a direct push
+* [Loop host GitHub token](alt-x5gr-loop-host-gh-token-design.md) — swap the loop host's broad personal GitHub token for a dedicated fine-grained token, read-only on the two repos the driver reads
